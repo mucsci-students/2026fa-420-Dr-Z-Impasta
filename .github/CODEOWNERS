@@ -1,0 +1,4 @@
+* @mucsci-students/dr-z-impasta
+
+.github/CODEOWNERS @mucsci-students/420-admin
+.github/workflows/release.yaml @mucsci-students/420-admin
