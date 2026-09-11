@@ -1,0 +1,35 @@
+[project]
+name = "2026fa-420-dr-z-impasta"
+version = "0.1.0"
+description = "Dr. ZImpasta: an interactive shell around the course-constraint-scheduler library"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "course-constraint-scheduler>=3.0.0",
+]
+
+[project.scripts]
+zimpasta = "zimpasta.cli:main"
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+    "ruff>=0.6",
+]
+
+[build-system]
+requires = ["uv_build>=0.12.13,<0.13.0"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-name = "zimpasta"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
