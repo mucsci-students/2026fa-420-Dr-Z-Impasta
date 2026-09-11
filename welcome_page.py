@@ -1,5 +1,5 @@
-# File: display.py
-# Author: Mohamed Mussa
+# File: welcome-page.py
+
 
 def welcome():
     print("\n" * 5)

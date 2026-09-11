@@ -1,4 +1,4 @@
-from display import welcome
+from welcome_page import welcome
 
 
 def main():
