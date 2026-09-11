@@ -1,11 +1,18 @@
 from tests.helpers import ScriptedConsole
+from zimpasta.export import ExportFormat
 from zimpasta.prompts import (
     INVALID_CHOICE,
     INVALID_YES_NO,
     MENU_PROMPT,
     NON_NUMERIC,
+    OUTPUT_FILE_PROMPT,
+    UNSUPPORTED_FORMAT,
+    UNWRITABLE_FILENAME,
+    VALID_FILENAME_PROMPT,
+    ask_format,
     ask_int,
     ask_menu,
+    ask_output_path,
     ask_yes_no,
 )
 
@@ -41,6 +48,14 @@ def test_ask_yes_no_reprompts_until_valid():
     assert ask_yes_no(ScriptedConsole(["y"]), "? ") is True
 
 
+def test_ask_format_reprompts_on_unsupported_format():
+    console = ScriptedConsole(["xml", "Json"])
+
+    assert ask_format(console, "Format: ") is ExportFormat.JSON
+    assert console.output == [UNSUPPORTED_FORMAT]
+    assert ask_format(ScriptedConsole(["CSV"]), "Format: ") is ExportFormat.CSV
+
+
 def test_ask_menu_redisplays_after_invalid_choice():
     console = ScriptedConsole(["9", "x", "2"])
 
@@ -48,3 +63,38 @@ def test_ask_menu_redisplays_after_invalid_choice():
     assert console.output.count(INVALID_CHOICE) == 2
     assert console.output.count("  1) Run Schedule") == 3
     assert console.prompts == [MENU_PROMPT] * 3
+
+
+def test_ask_output_path_reprompts_on_unwritable_name(tmp_path):
+    bad = tmp_path / "missing" / "out"
+    good = tmp_path / "out"
+    console = ScriptedConsole([str(bad), "", str(good)])
+
+    target = ask_output_path(console, ExportFormat.CSV)
+
+    assert target.path == good.resolve().with_suffix(".csv")
+    assert target.overwrite is False
+    assert console.output == [UNWRITABLE_FILENAME, UNWRITABLE_FILENAME]
+    assert console.prompts == [
+        OUTPUT_FILE_PROMPT,
+        f"{VALID_FILENAME_PROMPT} ",
+        f"{VALID_FILENAME_PROMPT} ",
+    ]
+
+
+def test_ask_output_path_confirms_overwrite(tmp_path):
+    existing = tmp_path / "out.csv"
+    existing.write_text("x")
+    other = tmp_path / "other"
+    console = ScriptedConsole([str(existing), "no", str(other)])
+
+    target = ask_output_path(console, ExportFormat.CSV)
+
+    assert target.path == other.resolve().with_suffix(".csv")
+    assert target.overwrite is False
+    assert "Overwrite? (yes/no): " in console.prompts[1]
+
+    console = ScriptedConsole([str(existing), "yes"])
+    target = ask_output_path(console, ExportFormat.CSV)
+    assert target.path == existing.resolve()
+    assert target.overwrite is True

@@ -1,11 +1,14 @@
-"""Shell entry point: banner, main menu, dispatch.
+"""Shell entry point: welcome page, main menu, dispatch.
 
 To wire in your feature, add your command function under ``zimpasta/commands/`` and
-replace your line in ``MENU``. The welcome-page feature replaces ``banner``.
+replace your line in ``MENU``.
 """
 
 from zimpasta.commands import Command, not_implemented
+from zimpasta.commands.results import manage_results
+from zimpasta.commands.run import run_schedule
 from zimpasta.console import Console, StdConsole
+from zimpasta.generate import quiet_library_logging
 from zimpasta.prompts import ask_menu
 from zimpasta.session import Session
 from zimpasta.welcome_page import welcome
@@ -15,7 +18,8 @@ MENU: tuple[tuple[str, Command], ...] = (
     ("Add", not_implemented("Add")),
     ("Modify", not_implemented("Modify")),
     ("Delete", not_implemented("Delete")),
-    ("Run Schedule", not_implemented("Run Schedule")),
+    ("Run Schedule", run_schedule),
+    ("Generated schedules", manage_results),
     ("Display schedules", not_implemented("Display schedules")),
 )
 """Main-menu label and command for each feature, in display order. Quit is appended."""
@@ -45,6 +49,7 @@ def run(console: Console, session: Session) -> None:
 
 
 def main() -> None:
+    quiet_library_logging()
     run(StdConsole(), Session())
 
 
