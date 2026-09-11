@@ -76,3 +76,8 @@ examples/
   `feat:`, `fix:`, `test:`, `docs:`, `chore:`.
 - Open pull requests against `develop` and fill in `.github/PULL_REQUEST_TEMPLATE.md`.
 - Keep `uv.lock` committed and run `uv sync` after pulling.
+
+## Feature notes
+
+- [docs/run-scheduler.md](docs/run-scheduler.md): schedule generation, in-session results,
+  and JSON/CSV export.
