@@ -1,7 +1,4 @@
-"""Welcome page shown at startup, before the main menu.
-
-Author: Mohamed Mussa
-"""
+"""Welcome page shown at startup, before the main menu."""
 
 from zimpasta.console import Console
 
