@@ -1,8 +1,7 @@
-"File: Welomce_page"
+"""Welcome page shown at startup, before the main menu.
 
-"Author: Mohamed Mussa"
-
-"""Welcome page shown at startup, before the main menu."""
+Author: Mohamed Mussa
+"""
 
 from zimpasta.console import Console
 
