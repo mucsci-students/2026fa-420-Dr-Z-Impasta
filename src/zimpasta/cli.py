@@ -10,7 +10,6 @@ from zimpasta.prompts import ask_menu
 from zimpasta.session import Session
 from zimpasta.welcome_page import welcome
 
-
 MENU: tuple[tuple[str, Command], ...] = (
     ("Load config file", not_implemented("Load config file")),
     ("Add", not_implemented("Add")),
