@@ -25,8 +25,6 @@ QUIT_LABEL = "Quit"
 GOODBYE = "Goodbye."
 
 
-
-
 def run(console: Console, session: Session) -> None:
     """Show the menu until the user quits. Ctrl-C or Ctrl-D inside a command returns here."""
     welcome(console)

@@ -1,4 +1,5 @@
 "File: Welomce_page"
+
 "Author: Mohamed Mussa"
 
 """Welcome page shown at startup, before the main menu."""
