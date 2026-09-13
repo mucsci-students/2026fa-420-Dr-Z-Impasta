@@ -5,19 +5,23 @@ session. Message strings fixed by the acceptance scenarios are module constants;
 them rather than retyping the text.
 """
 
+import json
 from collections.abc import Sequence
+from pathlib import Path
 
 from zimpasta.console import Console
+
+CONFIG_FILE = Path(__file__).resolve().parent.parent.parent / "examples" / "sample_config.json"
 
 INVALID_CHOICE = "Invalid choice."
 NON_NUMERIC = "Please enter numerical characters only."
 INVALID_YES_NO = "Invalid option. Please choose yes or no."
+INVALID_ROOM_CHOICE = "Invalid choice. Please enter a valid room name."
 
 MENU_PROMPT = "Choose an option: "
 
 _YES = {"yes", "y"}
 _NO = {"no", "n"}
-
 
 def ask_int(
     console: Console,
@@ -73,3 +77,22 @@ def ask_menu(console: Console, title: str, options: Sequence[str]) -> int:
         if raw.isdecimal() and 1 <= int(raw) <= len(options):
             return int(raw)
         console.say(INVALID_CHOICE)
+
+def ask_room(console: Console, prompt: str) -> bool:
+    """Prompts the user about a room and returns a bool value if that room exist 
+    in the config file.
+
+    Any entry that is not a value for the "name" keys in the "rooms" json object 
+    will print 'Invalid choice. Please enter a valid room name.' and reprompt the user
+    """
+    with open(CONFIG_FILE) as file:
+        config = json.load(file)
+
+    while True:
+        raw = console.ask(prompt).strip()
+        if any(room["name"] == raw for room in config["config"]["rooms"]):
+            return True
+        else:
+            console.say(INVALID_ROOM_CHOICE + "\n")
+
+    return False
