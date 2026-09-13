@@ -23,6 +23,7 @@ MENU_PROMPT = "Choose an option: "
 _YES = {"yes", "y"}
 _NO = {"no", "n"}
 
+
 def ask_int(
     console: Console,
     prompt: str,
@@ -78,11 +79,12 @@ def ask_menu(console: Console, title: str, options: Sequence[str]) -> int:
             return int(raw)
         console.say(INVALID_CHOICE)
 
+
 def ask_room(console: Console, prompt: str) -> bool:
-    """Prompts the user about a room and returns a bool value if that room exist 
+    """Prompts the user about a room and returns a bool value if that room exist
     in the config file.
 
-    Any entry that is not a value for the "name" keys in the "rooms" json object 
+    Any entry that is not a value for the "name" keys in the "rooms" json object
     will print 'Invalid choice. Please enter a valid room name.' and reprompt the user
     """
     with open(CONFIG_FILE) as file:
