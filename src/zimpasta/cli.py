@@ -8,6 +8,7 @@ from zimpasta.commands import Command, not_implemented
 from zimpasta.console import Console, StdConsole
 from zimpasta.prompts import ask_menu
 from zimpasta.session import Session
+from zimpasta.welcome_page import welcome
 
 MENU: tuple[tuple[str, Command], ...] = (
     ("Load config file", not_implemented("Load config file")),
@@ -23,13 +24,9 @@ QUIT_LABEL = "Quit"
 GOODBYE = "Goodbye."
 
 
-def banner(console: Console) -> None:
-    console.say("Dr. ZImpasta schedule generator")
-
-
 def run(console: Console, session: Session) -> None:
     """Show the menu until the user quits. Ctrl-C or Ctrl-D inside a command returns here."""
-    banner(console)
+    welcome(console)
     labels = [label for label, _ in MENU] + [QUIT_LABEL]
     while True:
         try:
