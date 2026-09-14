@@ -46,7 +46,7 @@ def test_run_with_valid_input_generates_and_exports(
     assert fake_factory.last_config.optimizer_flags == list(OptimizerFlags)
     assert console.prompts == [
         CONFIG_PROMPT.format(default="none"),
-        LIMIT_PROMPT.format(default=2),
+        LIMIT_PROMPT.format(default=session.config.limit),
         OPTIMIZE_PROMPT,
         FORMAT_PROMPT,
         OUTPUT_FILE_PROMPT,
@@ -83,7 +83,7 @@ def test_non_numeric_limit_reprompts(tmp_path, config, fake_generator, fake_fact
     run_schedule(console, Session(config=config), generator=fake_generator)
 
     assert NON_NUMERIC in console.output
-    assert console.prompts.count(LIMIT_PROMPT.format(default=2)) == 2
+    assert console.prompts.count(LIMIT_PROMPT.format(default=config.limit)) == 2
     assert fake_factory.last_config.limit == 1
 
 
