@@ -1,24 +1,15 @@
-"""Command entry points, one module per feature.
+"""Command modules, one per feature.
 
-A command is a plain function ``(console, session) -> None``. It reads and updates the
-``Session``, talks to the user only through the ``Console``, and returns when the user
-is done. It must not let invalid input raise; use the helpers in ``zimpasta.prompts``.
-Nothing in a command should know how it was invoked, so the menu in ``zimpasta.cli``
-stays replaceable.
+Each module exposes a ``SPECS`` tuple of ``zimpasta.command.CommandSpec``. A spec pairs
+the command's grammar with two functions:
+
+* ``handler(console, session, invocation)`` does the work for a complete command and
+  never prompts for arguments (it may still ask a yes/no confirmation);
+* ``builder(console, session, invocation)`` prompts for whatever required values are
+  missing and returns the completed invocation, or ``None`` if the user cancels.
+
+The evaluator in ``zimpasta.command`` runs both paths, so ``add`` alone and
+``add course "CS 101" ...`` end up in the same handler. Talk to the user only through the
+``Console``, keep session state on the ``Session``, and use ``zimpasta.prompts`` so invalid
+input re-prompts instead of raising.
 """
-
-from collections.abc import Callable
-
-from zimpasta.console import Console
-from zimpasta.session import Session
-
-Command = Callable[[Console, Session], None]
-
-
-def not_implemented(name: str) -> Command:
-    """Placeholder command for a feature that has not landed yet."""
-
-    def command(console: Console, session: Session) -> None:
-        console.say(f"{name} is not implemented yet.")
-
-    return command
