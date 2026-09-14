@@ -4,6 +4,7 @@ from zimpasta.prompts import (
     INVALID_YES_NO,
     MENU_PROMPT,
     NON_NUMERIC,
+    ask_choice,
     ask_int,
     ask_menu,
     ask_yes_no,
@@ -48,3 +49,12 @@ def test_ask_menu_redisplays_after_invalid_choice():
     assert console.output.count(INVALID_CHOICE) == 2
     assert console.output.count("  1) Run Schedule") == 3
     assert console.prompts == [MENU_PROMPT] * 3
+
+
+def test_ask_choice_accepts_name_or_number_and_reprompts():
+    console = ScriptedConsole(["truck", "0", "Room"])
+    assert ask_choice(console, "Kind: ", ("course", "room")) == "room"
+    assert console.output.count(INVALID_CHOICE) == 2
+    assert "Choose one of: course, room" in console.output
+
+    assert ask_choice(ScriptedConsole(["2"]), "Kind: ", ("course", "room")) == "room"
