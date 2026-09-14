@@ -31,9 +31,7 @@ def _names(config, category: str) -> list[str]:
 def _remove(config, category: str, name: str) -> None:
     """Remove the item named ``name`` from ``category`` in-place."""
     if category == "Room":
-        config.config.rooms = [
-            room for room in config.config.rooms if room.name != name
-        ]
+        config.config.rooms = [room for room in config.config.rooms if room.name != name]
     elif category == "Lab":
         config.config.labs = [lab for lab in config.config.labs if lab.name != name]
     elif category == "Course":
@@ -64,9 +62,7 @@ def delete(console: Console, session: Session) -> None:
         console.say(NOTHING_TO_DELETE)
         return
 
-    item_choice = ask_menu(
-        console, f"Delete which {category.lower()}?", [*names, CANCEL]
-    )
+    item_choice = ask_menu(console, f"Delete which {category.lower()}?", [*names, CANCEL])
     if item_choice == len(names) + 1:
         console.say(CANCELLED)
         return
