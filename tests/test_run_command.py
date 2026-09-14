@@ -5,7 +5,7 @@ import pytest
 from scheduler import OptimizerFlags
 
 from tests.helpers import FakeSchedulerFactory, ScriptedConsole
-from zimpasta.command import CommandError, Registry, evaluate
+from zimpasta.command import CommandError, Registry, evaluate, tokenize
 from zimpasta.commands.run import (
     BAD_LIMIT,
     CANCELLED,
@@ -37,6 +37,11 @@ def running_line(console):
     return next(line for line in console.output if line.startswith("Running: "))
 
 
+def running_tokens(console):
+    """The echoed command, tokenized, so path quoting differences between OSes do not matter."""
+    return tokenize(running_line(console).removeprefix("Running: "))
+
+
 def test_bare_run_prompts_for_everything_then_exports(
     tmp_path, config_file, fake_generator, fake_factory
 ):
@@ -51,10 +56,20 @@ def test_bare_run_prompts_for_everything_then_exports(
     assert f"Wrote 2 schedule(s) to {written.resolve()}" in console.output
     assert "Generated 2 schedule(s)." in console.output
     assert "  schedule 1 of 2 found" in console.output
-    assert running_line(console) == (
-        f"Running: run schedule --config {config_file} --limit 2 --optimize yes "
-        f"--format csv --output {written.resolve()}"
-    )
+    assert running_tokens(console) == [
+        "run",
+        "schedule",
+        "--config",
+        str(config_file),
+        "--limit",
+        "2",
+        "--optimize",
+        "yes",
+        "--format",
+        "csv",
+        "--output",
+        str(written.resolve()),
+    ]
     assert session.config is not None
     assert session.config_path == config_file.resolve()
     assert len(session.results) == 2
@@ -104,7 +119,7 @@ def test_partial_command_asks_for_config_when_none_is_loaded(tmp_path, config_fi
     run(console, Session(), "run --limit 1 --format csv", fake_generator)
 
     assert console.prompts[0] == CONFIG_PROMPT.format(default="none")
-    assert f"--config {config_file}" in running_line(console)
+    assert running_tokens(console)[2:4] == ["--config", str(config_file)]
     assert (tmp_path / "out.csv").exists()
 
 
