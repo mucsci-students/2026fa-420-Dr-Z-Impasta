@@ -5,6 +5,7 @@ replace your line in ``MENU``. The welcome-page feature replaces ``banner``.
 """
 
 from zimpasta.commands import Command, not_implemented
+from zimpasta.commands.delete import delete
 from zimpasta.console import Console, StdConsole
 from zimpasta.prompts import ask_menu
 from zimpasta.session import Session
@@ -13,7 +14,7 @@ MENU: tuple[tuple[str, Command], ...] = (
     ("Load config file", not_implemented("Load config file")),
     ("Add", not_implemented("Add")),
     ("Modify", not_implemented("Modify")),
-    ("Delete", not_implemented("Delete")),
+    ("Delete", delete),
     ("Run Schedule", not_implemented("Run Schedule")),
     ("Display schedules", not_implemented("Display schedules")),
 )
