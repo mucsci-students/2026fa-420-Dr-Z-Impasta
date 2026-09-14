@@ -73,3 +73,19 @@ def ask_menu(console: Console, title: str, options: Sequence[str]) -> int:
         if raw.isdecimal() and 1 <= int(raw) <= len(options):
             return int(raw)
         console.say(INVALID_CHOICE)
+
+
+def ask_choice(console: Console, prompt: str, choices: Sequence[str]) -> str:
+    """Ask for one of ``choices`` by name (any case) or by its 1-based number.
+
+    Anything else prints ``Invalid choice.`` and the list of choices, then asks again.
+    """
+    lookup = {choice.lower(): choice for choice in choices}
+    while True:
+        raw = console.ask(prompt).strip()
+        if raw.lower() in lookup:
+            return lookup[raw.lower()]
+        if raw.isdecimal() and 1 <= int(raw) <= len(choices):
+            return choices[int(raw) - 1]
+        console.say(INVALID_CHOICE)
+        console.say("Choose one of: " + ", ".join(choices))
