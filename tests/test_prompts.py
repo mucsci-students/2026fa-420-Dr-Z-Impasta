@@ -9,6 +9,7 @@ from zimpasta.prompts import (
     UNSUPPORTED_FORMAT,
     UNWRITABLE_FILENAME,
     VALID_FILENAME_PROMPT,
+    ask_choice,
     ask_format,
     ask_int,
     ask_menu,
@@ -98,3 +99,12 @@ def test_ask_output_path_confirms_overwrite(tmp_path):
     target = ask_output_path(console, ExportFormat.CSV)
     assert target.path == existing.resolve()
     assert target.overwrite is True
+
+
+def test_ask_choice_accepts_name_or_number_and_reprompts():
+    console = ScriptedConsole(["truck", "0", "Room"])
+    assert ask_choice(console, "Kind: ", ("course", "room")) == "room"
+    assert console.output.count(INVALID_CHOICE) == 2
+    assert "Choose one of: course, room" in console.output
+
+    assert ask_choice(ScriptedConsole(["2"]), "Kind: ", ("course", "room")) == "room"
