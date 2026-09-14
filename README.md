@@ -42,7 +42,8 @@ Running: run schedule --config examples/sample_config.json --limit 5 --optimize 
 ```
 
 `help` lists every command with its usage, `help <verb>` shows one, and `quit` leaves.
-Identifiers with spaces are quoted shell-style (`"CS 101"`).
+Identifiers with spaces are quoted shell-style (`"CS 101"`). Backslashes are ordinary
+characters, so Windows paths need no quoting or escaping.
 `examples/sample_config.json` is a small valid configuration for trying things out.
 
 ## Commands
