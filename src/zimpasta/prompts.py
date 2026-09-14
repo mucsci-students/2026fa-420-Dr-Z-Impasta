@@ -98,6 +98,8 @@ def ask_room(console: Console, prompt: str) -> bool:
             console.say(INVALID_ROOM_CHOICE + "\n")
 
     return False
+
+
 def ask_choice(console: Console, prompt: str, choices: Sequence[str]) -> str:
     """Ask for one of ``choices`` by name (any case) or by its 1-based number.
 
