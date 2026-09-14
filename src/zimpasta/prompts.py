@@ -98,3 +98,17 @@ def ask_room(console: Console, prompt: str) -> bool:
             console.say(INVALID_ROOM_CHOICE + "\n")
 
     return False
+def ask_choice(console: Console, prompt: str, choices: Sequence[str]) -> str:
+    """Ask for one of ``choices`` by name (any case) or by its 1-based number.
+
+    Anything else prints ``Invalid choice.`` and the list of choices, then asks again.
+    """
+    lookup = {choice.lower(): choice for choice in choices}
+    while True:
+        raw = console.ask(prompt).strip()
+        if raw.lower() in lookup:
+            return lookup[raw.lower()]
+        if raw.isdecimal() and 1 <= int(raw) <= len(choices):
+            return choices[int(raw) - 1]
+        console.say(INVALID_CHOICE)
+        console.say("Choose one of: " + ", ".join(choices))
