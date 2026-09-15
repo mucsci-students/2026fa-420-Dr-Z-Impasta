@@ -278,9 +278,19 @@ class Registry:
 
 
 def tokenize(line: str) -> list[str]:
-    """Split a command line the way a shell would, so ``"CS 101"`` stays one token."""
+    """Split a command line the way a shell would, so ``"CS 101"`` stays one token.
+
+    Single and double quotes group words. Backslashes are ordinary characters, not
+    escapes, so Windows paths such as ``C:\\Users\\me\\config.json`` need no quoting and
+    the lines produced by :meth:`Invocation.to_line` parse back to the same tokens on
+    every platform.
+    """
+    lexer = shlex.shlex(line, posix=True)
+    lexer.whitespace_split = True
+    lexer.commenters = ""
+    lexer.escape = ""
     try:
-        return shlex.split(line)
+        return list(lexer)
     except ValueError as exc:
         raise CommandError(f"Cannot parse that command: {exc}.") from None
 

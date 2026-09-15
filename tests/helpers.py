@@ -1,6 +1,36 @@
 """Test doubles shared across the suite."""
 
-from collections.abc import Iterable
+import json
+from collections.abc import Iterable, Iterator
+from pathlib import Path
+
+from scheduler import CombinedConfig
+
+from zimpasta.generate import Schedule
+
+SAMPLE_CONFIG = Path(__file__).resolve().parents[1] / "examples" / "sample_config.json"
+
+
+def load_sample_config_data() -> dict:
+    """A fresh copy of ``examples/sample_config.json`` as plain JSON data."""
+    return json.loads(SAMPLE_CONFIG.read_text(encoding="utf-8"))
+
+
+def build_config_data(*, limit: int = 2, optimizer_flags: list[str] | None = None) -> dict:
+    """The sample configuration with a chosen limit and optional optimizer flags."""
+    data = load_sample_config_data()
+    data["limit"] = limit
+    if optimizer_flags is not None:
+        data["optimizer_flags"] = optimizer_flags
+    return data
+
+
+def build_infeasible_config_data() -> dict:
+    """The sample configuration with no faculty available on Monday, where every class meets."""
+    data = build_config_data()
+    for faculty in data["config"]["faculty"]:
+        faculty["times"] = {"TUE": ["08:00-18:00"]}
+    return data
 
 
 class ScriptExhausted(AssertionError):
@@ -34,3 +64,65 @@ class ScriptedConsole:
     @property
     def text(self) -> str:
         return "\n".join(self.output)
+
+
+class FakeScheduler:
+    """Stands in for ``scheduler.Scheduler`` and yields canned schedules."""
+
+    def __init__(
+        self,
+        config: CombinedConfig,
+        *,
+        solver_timeout_ms: int | None = None,
+        schedules: Iterable[Schedule] = (),
+        reason: str | None = None,
+        error: BaseException | None = None,
+    ) -> None:
+        self.config = config
+        self.solver_timeout_ms = solver_timeout_ms
+        self._schedules = list(schedules)
+        self._reason = reason
+        self._error = error
+        self._enumeration_completion_reason: str | None = None
+
+    def get_models(self) -> Iterator[Schedule]:
+        self._enumeration_completion_reason = None
+        if self._error is not None:
+            raise self._error
+        for index, schedule in enumerate(self._schedules):
+            if index >= self.config.limit:
+                return
+            yield schedule
+        if len(self._schedules) < self.config.limit:
+            self._enumeration_completion_reason = self._reason
+
+
+class FakeSchedulerFactory:
+    """Callable with the ``Scheduler`` signature that records every construction."""
+
+    def __init__(
+        self,
+        schedules: Iterable[Schedule] = (),
+        *,
+        reason: str | None = "solution_space_exhausted",
+        error: BaseException | None = None,
+    ) -> None:
+        self.schedules = list(schedules)
+        self.reason = reason
+        self.error = error
+        self.instances: list[FakeScheduler] = []
+
+    def __call__(self, config: CombinedConfig, *, solver_timeout_ms: int | None = None):
+        instance = FakeScheduler(
+            config,
+            solver_timeout_ms=solver_timeout_ms,
+            schedules=self.schedules,
+            reason=self.reason,
+            error=self.error,
+        )
+        self.instances.append(instance)
+        return instance
+
+    @property
+    def last_config(self) -> CombinedConfig:
+        return self.instances[-1].config
