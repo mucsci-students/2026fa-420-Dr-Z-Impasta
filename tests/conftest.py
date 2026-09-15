@@ -2,12 +2,14 @@
 
 import json
 import shutil
+from functools import partial
 from pathlib import Path
 
 import pytest
-from scheduler import CombinedConfig
+from scheduler import CombinedConfig, Scheduler
 
-SAMPLE_CONFIG = Path(__file__).resolve().parents[1] / "examples" / "sample_config.json"
+from tests.helpers import SAMPLE_CONFIG, FakeSchedulerFactory, build_config_data
+from zimpasta.generate import generate_schedules
 
 
 @pytest.fixture
@@ -28,3 +30,21 @@ def config_file(tmp_path: Path) -> Path:
     path = tmp_path / "config.json"
     shutil.copy(SAMPLE_CONFIG, path)
     return path
+
+
+@pytest.fixture(scope="session")
+def real_schedules() -> list:
+    """Two real schedules from one fast solve, reused as canned output everywhere else."""
+    config = CombinedConfig.model_validate(build_config_data(limit=2))
+    return list(Scheduler(config, solver_timeout_ms=10_000).get_models())
+
+
+@pytest.fixture
+def fake_factory(real_schedules: list) -> FakeSchedulerFactory:
+    return FakeSchedulerFactory(real_schedules)
+
+
+@pytest.fixture
+def fake_generator(fake_factory: FakeSchedulerFactory):
+    """``generate_schedules`` wired to the fake solver, for command-level tests."""
+    return partial(generate_schedules, scheduler_factory=fake_factory)
