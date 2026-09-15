@@ -26,16 +26,18 @@ def _rows(schedules: list) -> list[list[str]]:
             for meeting in assignment["times"]:
                 start = meeting["start"]
 
-                rows.append([
-                    str(index),
-                    assignment["course"],
-                    assignment["faculty"],
-                    assignment.get("room", ""),
-                    assignment.get("lab", ""),
-                    DAYS.get(meeting["day"], str(meeting["day"])),
-                    _clock(start),
-                    _clock(start + meeting["duration"]),
-                ])
+                rows.append(
+                    [
+                        str(index),
+                        assignment["course"],
+                        assignment["faculty"],
+                        assignment.get("room", ""),
+                        assignment.get("lab", ""),
+                        DAYS.get(meeting["day"], str(meeting["day"])),
+                        _clock(start),
+                        _clock(start + meeting["duration"]),
+                    ]
+                )
 
     return rows
 
@@ -99,7 +101,7 @@ def display_schedules(
 
     console.say("")
     console.say(f"Displaying {path.name}:")
-    
+
     for line in buffer.getvalue().splitlines():
         console.say(line)
 

@@ -28,7 +28,7 @@ class Session:
 
     config_path: Path | None = None
     """Where ``config`` was loaded from, when it came from a file."""
-    
+
     schedule_path: Path | None = None
 
     """Path to the most recently exported schedule."""
