@@ -46,6 +46,7 @@ class ExportResult:
     overwrote: bool
 
 
+
 def resolve_output_path(name: str, fmt: ExportFormat) -> Path:
     """Absolute path for a user-typed name, adding the format's extension when missing."""
     path = Path(name.strip()).expanduser()

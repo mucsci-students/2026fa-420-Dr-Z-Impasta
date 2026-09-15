@@ -22,14 +22,17 @@ from zimpasta.command import (
     UnknownCommand,
     evaluate,
 )
+
 from zimpasta.commands.help import format_help, help_spec
 from zimpasta.commands.results import SPECS as SCHEDULES_SPECS
+from zimpasta.commands.display_schedules import SPECS as DISPLAY_SPECS
 from zimpasta.commands.run import SPECS as RUN_SPECS
 from zimpasta.console import Console, StdConsole
 from zimpasta.generate import quiet_library_logging
 from zimpasta.prompts import INVALID_CHOICE
 from zimpasta.session import Session
 from zimpasta.welcome_page import welcome
+
 
 KINDS = ("course", "room", "lab", "faculty")
 
@@ -61,7 +64,7 @@ PLACEHOLDERS: tuple[CommandSpec, ...] = (
     ),
     *RUN_SPECS,
     *SCHEDULES_SPECS,
-    CommandSpec("display", description="Display schedules"),
+    *DISPLAY_SPECS,
 )
 
 PROMPT = "> "
