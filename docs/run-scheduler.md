@@ -20,7 +20,7 @@ was left out, echoes the command it constructed, and runs it:
 ```
 > run
 Config file to use [none]: examples/sample_config.json
-Maximum number of schedules [3]: 5
+Maximum number of schedules [100]: 5
 Optimize? (yes/no): yes
 Output format (csv/Json): csv
 Output file name: out
@@ -146,5 +146,6 @@ uv run pytest
 ```
 
 Command tests drive `evaluate()` with `ScriptedConsole`: bare `run` for every prompt path and
-complete command lines for the direct path. The suite runs one real solve on the sample config
-and reuses its schedules as canned output for a fake scheduler everywhere else.
+complete command lines for the direct path. The suite runs one real solve on the small fixture in `tests/fixtures/` and reuses its
+schedules as canned output for a fake scheduler everywhere else; the shipped example is solved
+once at limit 1 in `tests/test_examples.py`.

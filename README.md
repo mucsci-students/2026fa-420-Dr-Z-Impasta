@@ -44,7 +44,9 @@ Running: run schedule --config examples/sample_config.json --limit 5 --optimize 
 `help` lists every command with its usage, `help <verb>` shows one, and `quit` leaves.
 Identifiers with spaces are quoted shell-style (`"CS 101"`). Backslashes are ordinary
 characters, so Windows paths need no quoting or escaping.
-`examples/sample_config.json` is a small valid configuration for trying things out.
+`examples/sample_config.json` is a realistic department configuration (17 course sections,
+9 faculty with preferences, and optimizer flags) for trying things out. Each generated
+schedule takes a second or two, so give `run` a small limit.
 
 ## Commands
 
@@ -86,7 +88,8 @@ src/zimpasta/
   welcome_page.py   the welcome banner
   commands/         one module per feature exposing SPECS; help.py is the help command
 tests/
-  conftest.py       fixtures: config_data, config, config_file (all from the sample)
+  conftest.py       fixtures: config_data, config, config_file (from tests/fixtures/)
+  fixtures/         minimal_config.json: two courses, solved in milliseconds
   helpers.py        ScriptedConsole for driving a command from a list of answers
 examples/
   sample_config.json
@@ -107,7 +110,8 @@ examples/
 4. Test with `ScriptedConsole` from `tests/helpers.py`: call `evaluate(console, session,
    "your command line", Registry(SPECS))` for the direct path and a bare verb for the
    builder path, then assert on `console.output` and the `Session`. The `config` and
-   `config_file` fixtures give you a valid configuration to start from.
+   `config_file` fixtures give you a small valid configuration to start from. Keep tests on
+   that fixture rather than the large example so the suite stays fast.
 5. Use the library, do not copy it: `CombinedConfig` and its nested models, their
    validation, `Scheduler`, and `scheduler.writers` are the source of truth.
    `CombinedConfig.edit_mode()` applies a group of changes atomically and rolls back on a
