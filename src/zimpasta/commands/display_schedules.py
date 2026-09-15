@@ -1,4 +1,4 @@
-"""Display a schedule from a JSON file."""
+"""Display schedules from CSV or JSON files."""
 
 import csv
 import io
@@ -42,16 +42,97 @@ def _rows(schedules: list) -> list[list[str]]:
     return rows
 
 
+def _read_csv(path: Path) -> list[list[str]]:
+    rows = []
+
+    with open(path, newline="") as handle:
+        reader = csv.reader(handle)
+
+        for line in reader:
+            if not line:
+                continue
+
+            course = line[0]
+            faculty = line[1]
+            room = line[2]
+            lab = line[3]
+            times = line[4]
+
+            # Remove the ^ at the end of the time information.
+            times = times.rstrip("^")
+
+            for time in times.split(","):
+                time = time.strip()
+
+                day, clock = time.split(" ", 1)
+                start, end = clock.split("-")
+
+                rows.append(
+                    [
+                        course,
+                        faculty,
+                        room,
+                        lab,
+                        day,
+                        start,
+                        end,
+                    ]
+                )
+
+    return rows
+
+
+def _display_csv(console: Console, path: Path) -> None:
+    rows = _read_csv(path)
+
+    if not rows:
+        console.say("No schedules to display.")
+        return
+
+    console.say("")
+    console.say(f"Displaying {path.name}:")
+    console.say("")
+
+    console.say("course,faculty,room,lab,day,start,end")
+
+    for row in rows:
+        console.say(",".join(row))
+
+
+def _display_json(console: Console, path: Path) -> None:
+    with open(path) as handle:
+        schedules = json.load(handle)
+
+    rows = _rows(schedules)
+
+    if not rows:
+        console.say("No schedules to display.")
+        return
+
+    buffer = io.StringIO()
+    writer = csv.writer(buffer)
+
+    writer.writerow(HEADER)
+    writer.writerows(rows)
+
+    console.say("")
+    console.say(f"Displaying {path.name}:")
+    console.say("")
+
+    for line in buffer.getvalue().splitlines():
+        console.say(line)
+
+
 def display_schedules(
     console: Console,
     session: Session,
     invocation: Invocation,
 ) -> None:
 
-    files = sorted(Path(".").glob("*.json"))
+    files = sorted(list(Path(".").glob("*.json")) + list(Path(".").glob("*.csv")))
 
     if not files:
-        console.say("No JSON schedule files found.")
+        console.say("No CSV or JSON schedule files found.")
         return
 
     console.say("")
@@ -76,34 +157,15 @@ def display_schedules(
         console.say("Please choose one of the listed options.")
 
     try:
-        with open(path) as handle:
-            schedules = json.load(handle)
+        if path.suffix.lower() == ".csv":
+            _display_csv(console, path)
+        else:
+            _display_json(console, path)
 
     except FileNotFoundError:
         console.say(f"No schedule file found at {path}.")
-        return
-
     except json.JSONDecodeError:
         console.say(f"Could not read {path}: the file is not valid JSON.")
-        return
-
-    rows = _rows(schedules)
-
-    if not rows:
-        console.say("No schedules to display.")
-        return
-
-    buffer = io.StringIO()
-    writer = csv.writer(buffer)
-
-    writer.writerow(HEADER)
-    writer.writerows(rows)
-
-    console.say("")
-    console.say(f"Displaying {path.name}:")
-
-    for line in buffer.getvalue().splitlines():
-        console.say(line)
 
 
 SPECS: tuple[CommandSpec, ...] = (
