@@ -5,6 +5,7 @@ Message strings that the acceptance scenarios fix are module constants so tests 
 teammates reference one definition.
 """
 
+import json
 from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
@@ -12,9 +13,12 @@ from pathlib import Path
 from zimpasta.console import Console
 from zimpasta.export import ExportFormat, resolve_output_path, unwritable_reason
 
+CONFIG_FILE = Path(__file__).resolve().parent.parent.parent / "examples" / "sample_config.json"
+
 INVALID_CHOICE = "Invalid choice."
 NON_NUMERIC = "Please enter numerical characters only."
 INVALID_YES_NO = "Invalid option. Please choose yes or no."
+INVALID_ROOM_CHOICE = "Invalid choice. Please enter a valid room name."
 UNSUPPORTED_FORMAT = "Unsupported format. Choose csv or Json"
 UNWRITABLE_FILENAME = "Cannot make a scheduler to that file name"
 VALID_FILENAME_PROMPT = "Type a valid filename."
@@ -89,6 +93,26 @@ def ask_menu(console: Console, title: str, options: Sequence[str]) -> int:
         if raw.isdecimal() and 1 <= int(raw) <= len(options):
             return int(raw)
         console.say(INVALID_CHOICE)
+
+
+def ask_room(console: Console, prompt: str) -> bool:
+    """Prompts the user about a room and returns a bool value if that room exist
+    in the config file.
+
+    Any entry that is not a value for the "name" keys in the "rooms" json object
+    will print 'Invalid choice. Please enter a valid room name.' and reprompt the user
+    """
+    with open(CONFIG_FILE) as file:
+        config = json.load(file)
+
+    while True:
+        raw = console.ask(prompt).strip()
+        if any(room["name"] == raw for room in config["config"]["rooms"]):
+            return True
+        else:
+            console.say(INVALID_ROOM_CHOICE + "\n")
+
+    return False
 
 
 @dataclass(frozen=True)
