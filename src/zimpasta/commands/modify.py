@@ -1,0 +1,288 @@
+import json
+from pathlib import Path
+
+from pydantic import TypeAdapter
+from scheduler import CombinedConfig, TimeRange, TimeRangeString, TimeString
+import re
+
+from zimpasta.command import CommandError, CommandSpec, Invocation, Positional
+from zimpasta.console import Console
+from zimpasta.session import Session
+
+UI_TO_CONFIG = {
+    "course": "courses",
+    "room": "rooms",
+    "lab": "labs",
+    "faculty": "faculty",
+    "time_slot": "time_slot_config",
+    "class": "classes",
+    "optimizer_flag": "optimizer_flags",
+}
+
+
+def modify_handler(console: Console, session: Session, inv: Invocation) -> None:
+    """ Processes a fully types modify-command and assesses if certain inputs are valid """
+
+    kind = inv.positionals["kind"]
+    field_id = inv.positionals["id"]
+    field = inv.positionals["field"]
+    key = inv.positionals["key"]
+    value = inv.positionals["value"]
+
+    id_keys_choices = id_key_choices(kind)
+
+    if field_id != id_keys_choices[0]:
+        raise CommandError(f"Unknown {kind} ID: {field_id}. Options are {id_keys_choices[0]}")
+        return
+
+    if key not in id_keys_choices[1]:
+        raise CommandError(f"Unknown field: {key}. Options are {id_keys_choices[1]}")
+        return
+
+    """ use different methods for json objects nested inside config vs those that aren't """
+    if kind in ("time_slot", "optimizer_flag"):
+        update_config(kind, field_id, field, key, value, session.config, session.config_path)
+    elif kind in ("class"):
+        update_config_time_slot_config(
+            kind, field_id, field, key, value, session.config, session.config_path
+        )
+    else:
+        update_config_config(kind, field_id, field, key, value, session.config, session.config_path)
+
+
+def modify_builder(console: Console, session: Session, inv: Invocation) -> Invocation:
+    """ Builds a complete modify-command """
+    console.say("\nPlease specify a ")
+
+    missing_values = inv.missing_with_choices()
+
+    for val in missing_values:
+        console.say("- " + val)
+    console.say("\n")
+
+    if not missing_values:
+        return inv
+
+    return None
+
+
+MODIFY_SPECS = (
+    CommandSpec(
+        "modify",
+        None,
+        positionals=(
+            Positional(
+                "kind",
+                choices=(
+                    "course",
+                    "room",
+                    "lab",
+                    "faculty",
+                    "time_slot",
+                    "class",
+                    "optimizer_flag",
+                ),
+            ),
+            Positional("id"),
+            Positional("field"),
+            Positional("key"),
+            Positional("value"),
+        ),
+        description="Change one field of an item",
+        handler=modify_handler,
+        builder=modify_builder,
+    ),
+)
+
+
+def id_key_choices(kind: str) -> tuple[tuple[str, ...], tuple[str, ...]]:
+    """ Shows the valid input options for different kinds & fields """
+
+    match kind:
+        case "course":
+            return (
+                "course_id",
+                ("course_id", "credits", "capacity", "room", "lab", "conflicts", "faculty"),
+            )
+        case "room":
+            return ("name", ("name", "capacity"))
+        case "lab":
+            return ("name", ("name", "capacity"))
+        case "faculty":
+            return (
+                "name",
+                (
+                    "name",
+                    "maximum_credits",
+                    "minimum_credits",
+                    "unique_course_limit",
+                    "maximum_days",
+                    "times",
+                    "course_preferences",
+                    "room_preferences",
+                    "lab_preferences",
+                ),
+            )
+        case "time_slot":
+            return ("times", ("start", "spacing", "end"))
+        case "class":
+            return ("", ("credits", "day", "duration", "lab", "disabled"))
+        case "optimizer_flag":
+            return (
+                (
+                    "faculty_course",
+                    "faculty_room",
+                    "faculty_lab",
+                    "same_room",
+                    "same_lab",
+                    "pack_rooms",
+                ),
+                (" "),
+            )
+
+    return ("", ())
+
+
+def update_config(
+    json_obj: str,
+    record_name: str,
+    record_val: str,
+    key: str,
+    value: str,
+    config: CombinedConfig | None,
+    config_path: Path | None,
+) -> dict:
+    """ Updates the config file for non-nested json objects """
+
+    if config is not None:
+        records = getattr(config, UI_TO_CONFIG[json_obj])
+        for record in records:
+            if json_obj == "optimizer_flag" and record == record_name:
+                record = record_name
+
+            elif json_obj == "time_slot":
+                day = record_val.split(":", 2)[0]
+                start_time = record_val.split(":", 2)[2]
+                rec = record[1][day]
+
+                for r in rec:
+                    if r.start == start_time.strip():
+                        data_type = type(getattr(r, key))
+                        setattr(r, key, data_type(value))
+
+            """ write back to the config file """
+            with open(config_path, "w") as file:
+                json.dump(config.model_dump(mode="json"), file, indent=4)
+
+            return record
+
+    return []
+
+
+def update_config_time_slot_config(
+    json_obj: str,
+    record_name: str,
+    record_val: str,
+    key: str,
+    value: str,
+    config: CombinedConfig | None,
+    config_path: Path | None,
+) -> dict:
+    """ Updates the config file for json objects nested in time_slot_config """
+
+    if config is not None:
+        records = getattr(config.time_slot_config, UI_TO_CONFIG[json_obj])
+        for record in records:
+            if json_obj == "class":
+                split = record_name.split(",")
+                credit_num = split[0].split(":")[1]
+                num_of_days = len(split[1])
+
+                record_credit_num = record.credits
+                record_meetings = record.meetings
+
+                if int(credit_num) == record_credit_num:
+                    if num_of_days - 1 == len(record_meetings):
+                        if int(credit_num) == 4:
+                            lab_day = split[2].split(":")[1]
+                            for rec in record_meetings:
+                                if rec.day == lab_day and rec.lab == True:
+                                    rec = change_class_attr(rec, key, value)
+                                    break
+                        else:
+                            record = change_class_attr(record, key, value)
+
+                with open(config_path, "w") as file:
+                    json.dump(config.model_dump(mode="json"), file, indent=4)
+
+                return record
+    return []
+
+
+def change_class_attr(record: dict, key: str, value: str) -> dict:
+    """ Changes an record inside a dict and returns the new record """
+
+    for rec in record:
+        if rec.day == key:
+            split = value.split(":")
+            split_key = split[0]
+            split_value = split[1]
+
+            data_type = type(getattr(rec, split_key))
+            setattr(rec.split_key, datatype(split_value))
+            return rec
+    return []
+
+
+def update_config_config(
+    json_obj: str,
+    record_name: str,
+    record_val: str,
+    key: str,
+    value: str,
+    config: CombinedConfig | None,
+    config_path: Path | None,
+) -> dict:
+    """ Updates the config file for json objects nested in config """
+
+    if config is not None:
+        records = getattr(config.config, UI_TO_CONFIG[json_obj])
+
+        for record in records:
+            if f"{record_name}={record_val}" in str(
+                record
+            ) or f"{record_name}='{record_val}'" in str(record):
+                """ this if block handles nested jsons & TimeRange type values """
+                if json_obj == "faculty" and (
+                    key == "times"
+                    or key == "course_preferences"
+                    or key == "room_preferences"
+                    or key == "lab_preferences"
+                ):
+                    inner_key = value.split(":", 1)[0]
+                    value = value.split(":", 1)[1]
+                    nested_obj = getattr(record, key)
+
+                    former_val = nested_obj[inner_key]
+
+                    if key == "times":
+                        value = [
+                            TimeRange.from_string(
+                                TypeAdapter(TimeRangeString).validate_python(value.strip())
+                            )
+                        ]
+                    else:
+                        data_type = type(former_val)
+                        value = data_type(value)
+
+                    nested_obj[inner_key] = value
+                else:
+                    data_type = type(getattr(record, key))
+                    setattr(record, key, data_type(value))
+
+                """ write back to the config file """
+                with open(config_path, "w") as file:
+                    json.dump(config.model_dump(mode="json"), file, indent=4)
+
+                return record
+    return []
