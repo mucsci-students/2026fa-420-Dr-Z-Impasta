@@ -2,8 +2,7 @@ import json
 from pathlib import Path
 
 from pydantic import TypeAdapter
-from scheduler import CombinedConfig, TimeRange, TimeRangeString, TimeString
-import re
+from scheduler import CombinedConfig, TimeRange, TimeRangeString
 
 from zimpasta.command import CommandError, CommandSpec, Invocation, Positional
 from zimpasta.console import Console
@@ -21,7 +20,7 @@ UI_TO_CONFIG = {
 
 
 def modify_handler(console: Console, session: Session, inv: Invocation) -> None:
-    """ Processes a fully types modify-command and assesses if certain inputs are valid """
+    """Processes a fully types modify-command and assesses if certain inputs are valid"""
 
     kind = inv.positionals["kind"]
     field_id = inv.positionals["id"]
@@ -51,7 +50,7 @@ def modify_handler(console: Console, session: Session, inv: Invocation) -> None:
 
 
 def modify_builder(console: Console, session: Session, inv: Invocation) -> Invocation:
-    """ Builds a complete modify-command """
+    """Builds a complete modify-command"""
     console.say("\nPlease specify a ")
 
     missing_values = inv.missing_with_choices()
@@ -96,7 +95,7 @@ MODIFY_SPECS = (
 
 
 def id_key_choices(kind: str) -> tuple[tuple[str, ...], tuple[str, ...]]:
-    """ Shows the valid input options for different kinds & fields """
+    """Shows the valid input options for different kinds & fields"""
 
     match kind:
         case "course":
@@ -152,7 +151,7 @@ def update_config(
     config: CombinedConfig | None,
     config_path: Path | None,
 ) -> dict:
-    """ Updates the config file for non-nested json objects """
+    """Updates the config file for non-nested json objects"""
 
     if config is not None:
         records = getattr(config, UI_TO_CONFIG[json_obj])
@@ -188,7 +187,7 @@ def update_config_time_slot_config(
     config: CombinedConfig | None,
     config_path: Path | None,
 ) -> dict:
-    """ Updates the config file for json objects nested in time_slot_config """
+    """Updates the config file for json objects nested in time_slot_config"""
 
     if config is not None:
         records = getattr(config.time_slot_config, UI_TO_CONFIG[json_obj])
@@ -206,7 +205,7 @@ def update_config_time_slot_config(
                         if int(credit_num) == 4:
                             lab_day = split[2].split(":")[1]
                             for rec in record_meetings:
-                                if rec.day == lab_day and rec.lab == True:
+                                if rec.day == lab_day and rec.lab:
                                     rec = change_class_attr(rec, key, value)
                                     break
                         else:
@@ -220,7 +219,7 @@ def update_config_time_slot_config(
 
 
 def change_class_attr(record: dict, key: str, value: str) -> dict:
-    """ Changes an record inside a dict and returns the new record """
+    """Changes an record inside a dict and returns the new record"""
 
     for rec in record:
         if rec.day == key:
@@ -229,7 +228,7 @@ def change_class_attr(record: dict, key: str, value: str) -> dict:
             split_value = split[1]
 
             data_type = type(getattr(rec, split_key))
-            setattr(rec.split_key, datatype(split_value))
+            setattr(rec.split_key, data_type(split_value))
             return rec
     return []
 
@@ -243,7 +242,7 @@ def update_config_config(
     config: CombinedConfig | None,
     config_path: Path | None,
 ) -> dict:
-    """ Updates the config file for json objects nested in config """
+    """Updates the config file for json objects nested in config"""
 
     if config is not None:
         records = getattr(config.config, UI_TO_CONFIG[json_obj])
