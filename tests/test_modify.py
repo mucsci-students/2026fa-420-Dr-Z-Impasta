@@ -1,4 +1,3 @@
-
 from zimpasta.commands.modify import (
     id_key_choices,
     update_config,
