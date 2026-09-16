@@ -27,11 +27,11 @@ def test_invalid_choice_redisplays_the_menu():
 
 
 def test_placeholder_commands_report_not_implemented():
-    console = ScriptedConsole(["1", QUIT])
+    console = ScriptedConsole(["2", QUIT])
 
     run(console, Session())
 
-    assert f"{MENU[0][0]} is not implemented yet." in console.output
+    assert f"{MENU[1][0]} is not implemented yet." in console.output
 
 
 def test_interrupt_inside_a_command_returns_to_the_menu(monkeypatch):
