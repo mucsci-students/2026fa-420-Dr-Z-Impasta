@@ -17,7 +17,6 @@ from zimpasta.command import (
     CommandError,
     CommandSpec,
     Invocation,
-    Option,
     Positional,
     QuitShell,
     Registry,
@@ -26,14 +25,15 @@ from zimpasta.command import (
 )
 from zimpasta.commands.delete import SPECS as DELETE_SPECS
 from zimpasta.commands.help import format_help, help_spec
+from zimpasta.commands.results import SPECS as SCHEDULES_SPECS
+from zimpasta.commands.run import SPECS as RUN_SPECS
 from zimpasta.console import Console, StdConsole
+from zimpasta.generate import quiet_library_logging
 from zimpasta.prompts import INVALID_CHOICE
 from zimpasta.session import Session
 from zimpasta.welcome_page import welcome
 
 KINDS = ("course", "room", "lab", "faculty")
-FORMATS = ("csv", "json")
-YES_NO = ("yes", "no")
 
 PLACEHOLDERS: tuple[CommandSpec, ...] = (
     CommandSpec(
@@ -57,38 +57,8 @@ PLACEHOLDERS: tuple[CommandSpec, ...] = (
         description="Change one field of an item",
     ),
     *DELETE_SPECS,
-    CommandSpec(
-        "run",
-        "schedule",
-        options=(
-            Option("config", help="configuration file; defaults to the loaded one"),
-            Option("limit", required=True),
-            Option("optimize", required=True, choices=YES_NO),
-            Option("format", required=True, choices=FORMATS),
-            Option("output", required=True),
-            Option("overwrite", flag=True),
-        ),
-        description="Generate schedules and export them",
-    ),
-    CommandSpec("schedules", "summary", description="Summarize the generated schedules"),
-    CommandSpec(
-        "schedules",
-        "show",
-        positionals=(Positional("number"),),
-        description="Show one generated schedule",
-    ),
-    CommandSpec(
-        "schedules",
-        "export",
-        positionals=(Positional("which", help="a schedule number, or all"),),
-        options=(
-            Option("format", required=True, choices=FORMATS),
-            Option("output", required=True),
-            Option("overwrite", flag=True),
-        ),
-        description="Export one schedule or all of them",
-    ),
-    CommandSpec("schedules", "clear", description="Discard the generated schedules"),
+    *RUN_SPECS,
+    *SCHEDULES_SPECS,
     CommandSpec("display", description="Display schedules"),
 )
 
@@ -147,6 +117,7 @@ def run(console: Console, session: Session, registry: Registry | None = None) ->
 
 
 def main() -> None:
+    quiet_library_logging()
     run(StdConsole(), Session())
 
 

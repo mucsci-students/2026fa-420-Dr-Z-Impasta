@@ -2,17 +2,16 @@
 
 import json
 import shutil
+from functools import partial
 from pathlib import Path
 
 import pytest
-from scheduler import CombinedConfig
+from scheduler import CombinedConfig, Scheduler
 
-EXAMPLES = Path(__file__).resolve().parents[1] / "examples"
+from tests.helpers import SAMPLE_CONFIG, FakeSchedulerFactory, build_config_data
+from zimpasta.generate import generate_schedules
 
-SAMPLE_CONFIG = EXAMPLES / "sample_config.json"
-"""A minimal two-course configuration; the fixture most tests pin their assertions to."""
-
-EXAMPLE_CONFIG = EXAMPLES / "example.json"
+EXAMPLE_CONFIG = SAMPLE_CONFIG.parent / "example.json"
 """A realistic department configuration: many courses, several sharing a course id."""
 
 
@@ -46,3 +45,21 @@ def example_data() -> dict:
 def example(example_data: dict) -> CombinedConfig:
     """The realistic configuration, validated by the library."""
     return CombinedConfig.model_validate(example_data)
+
+
+@pytest.fixture(scope="session")
+def real_schedules() -> list:
+    """Two real schedules from one fast solve, reused as canned output everywhere else."""
+    config = CombinedConfig.model_validate(build_config_data(limit=2))
+    return list(Scheduler(config, solver_timeout_ms=10_000).get_models())
+
+
+@pytest.fixture
+def fake_factory(real_schedules: list) -> FakeSchedulerFactory:
+    return FakeSchedulerFactory(real_schedules)
+
+
+@pytest.fixture
+def fake_generator(fake_factory: FakeSchedulerFactory):
+    """``generate_schedules`` wired to the fake solver, for command-level tests."""
+    return partial(generate_schedules, scheduler_factory=fake_factory)
