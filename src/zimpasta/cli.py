@@ -11,7 +11,6 @@ placeholders carry the agreed grammar so ``help`` is accurate before a feature l
 """
 
 from collections.abc import Iterable
-from zimpasta.commands.modify import MODIFY_SPECS
 
 from zimpasta.command import (
     CommandError,
@@ -24,6 +23,7 @@ from zimpasta.command import (
     evaluate,
 )
 from zimpasta.commands.help import format_help, help_spec
+from zimpasta.commands.modify import MODIFY_SPECS
 from zimpasta.commands.results import SPECS as SCHEDULES_SPECS
 from zimpasta.commands.run import SPECS as RUN_SPECS
 from zimpasta.console import Console, StdConsole

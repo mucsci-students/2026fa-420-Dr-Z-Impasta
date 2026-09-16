@@ -1,10 +1,10 @@
+
 from zimpasta.commands.modify import (
     id_key_choices,
     update_config,
     update_config_config,
     update_config_time_slot_config,
 )
-from pydantic import TypeAdapter
 
 
 def test(config) -> None:
