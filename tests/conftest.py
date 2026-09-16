@@ -8,27 +8,27 @@ from pathlib import Path
 import pytest
 from scheduler import CombinedConfig, Scheduler
 
-from tests.helpers import SAMPLE_CONFIG, FakeSchedulerFactory, build_config_data
+from tests.helpers import FIXTURE_CONFIG, FakeSchedulerFactory, build_config_data
 from zimpasta.generate import generate_schedules
 
 
 @pytest.fixture
 def config_data() -> dict:
-    """A fresh copy of the sample configuration as plain JSON data; edit it freely."""
-    return json.loads(SAMPLE_CONFIG.read_text(encoding="utf-8"))
+    """A fresh copy of the small test fixture as plain JSON data; edit it freely."""
+    return json.loads(FIXTURE_CONFIG.read_text(encoding="utf-8"))
 
 
 @pytest.fixture
 def config(config_data: dict) -> CombinedConfig:
-    """The sample configuration, validated by the library."""
+    """The test fixture, validated by the library."""
     return CombinedConfig.model_validate(config_data)
 
 
 @pytest.fixture
 def config_file(tmp_path: Path) -> Path:
-    """A copy of the sample configuration file inside the test's temporary directory."""
+    """A copy of the test fixture file inside the test's temporary directory."""
     path = tmp_path / "config.json"
-    shutil.copy(SAMPLE_CONFIG, path)
+    shutil.copy(FIXTURE_CONFIG, path)
     return path
 
 
