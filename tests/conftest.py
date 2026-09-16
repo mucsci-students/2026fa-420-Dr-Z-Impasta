@@ -7,7 +7,13 @@ from pathlib import Path
 import pytest
 from scheduler import CombinedConfig
 
-SAMPLE_CONFIG = Path(__file__).resolve().parents[1] / "examples" / "sample_config.json"
+EXAMPLES = Path(__file__).resolve().parents[1] / "examples"
+
+SAMPLE_CONFIG = EXAMPLES / "sample_config.json"
+"""A minimal two-course configuration; the fixture most tests pin their assertions to."""
+
+EXAMPLE_CONFIG = EXAMPLES / "example.json"
+"""A realistic department configuration: many courses, several sharing a course id."""
 
 
 @pytest.fixture
@@ -28,3 +34,15 @@ def config_file(tmp_path: Path) -> Path:
     path = tmp_path / "config.json"
     shutil.copy(SAMPLE_CONFIG, path)
     return path
+
+
+@pytest.fixture
+def example_data() -> dict:
+    """A fresh copy of the realistic configuration as plain JSON data; edit it freely."""
+    return json.loads(EXAMPLE_CONFIG.read_text(encoding="utf-8"))
+
+
+@pytest.fixture
+def example(example_data: dict) -> CombinedConfig:
+    """The realistic configuration, validated by the library."""
+    return CombinedConfig.model_validate(example_data)
