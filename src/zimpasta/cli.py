@@ -1,51 +1,125 @@
-"""Shell entry point: banner, main menu, dispatch.
+"""Shell entry point: welcome page, command prompt, dispatch.
 
-To wire in your feature, add your command function under ``zimpasta/commands/`` and
-replace your line in ``MENU``. The welcome-page feature replaces ``banner``.
+The shell is a REPL. A complete command line such as
+``run schedule --limit 5 --optimize yes --format csv --output out`` runs immediately. A
+bare verb, or a command missing required parts, engages that command's builder, which
+asks for the missing pieces and then runs the same command through the evaluator.
+
+To wire in your feature, put your ``CommandSpec``s in ``zimpasta/commands/<feature>.py``
+as ``SPECS`` and swap them in for your placeholder in ``PLACEHOLDERS`` below. The
+placeholders carry the agreed grammar so ``help`` is accurate before a feature lands.
 """
 
-from zimpasta.commands import Command, not_implemented
-from zimpasta.commands.load_config import load_config
+from collections.abc import Iterable
+
+from zimpasta.command import (
+    CommandError,
+    CommandSpec,
+    Invocation,
+    Positional,
+    QuitShell,
+    Registry,
+    UnknownCommand,
+    evaluate,
+)
+from zimpasta.commands.help import format_help, help_spec
+from zimpasta.commands.results import SPECS as SCHEDULES_SPECS
+from zimpasta.commands.run import SPECS as RUN_SPECS
 from zimpasta.console import Console, StdConsole
-from zimpasta.prompts import ask_menu
+from zimpasta.generate import quiet_library_logging
+from zimpasta.prompts import INVALID_CHOICE
 from zimpasta.session import Session
 from zimpasta.welcome_page import welcome
 
-MENU: tuple[tuple[str, Command], ...] = (
-    ("Load config file", load_config),
-    ("Add", not_implemented("Add")),
-    ("Modify", not_implemented("Modify")),
-    ("Delete", not_implemented("Delete")),
-    ("Run Schedule", not_implemented("Run Schedule")),
-    ("Display schedules", not_implemented("Display schedules")),
-)
-"""Main-menu label and command for each feature, in display order. Quit is appended."""
+KINDS = ("course", "room", "lab", "faculty")
 
-QUIT_LABEL = "Quit"
+PLACEHOLDERS: tuple[CommandSpec, ...] = (
+    CommandSpec(
+        "load",
+        positionals=(Positional("path", help="configuration JSON file"),),
+        description="Load a configuration file",
+    ),
+    CommandSpec(
+        "add",
+        positionals=(Positional("kind", choices=KINDS), Positional("id")),
+        description="Add a course, room, lab, or faculty member",
+    ),
+    CommandSpec(
+        "modify",
+        positionals=(
+            Positional("kind", choices=KINDS),
+            Positional("id"),
+            Positional("field"),
+            Positional("value", required=False),
+        ),
+        description="Change one field of an item",
+    ),
+    CommandSpec(
+        "delete",
+        positionals=(Positional("kind", choices=KINDS), Positional("id")),
+        description="Remove an item",
+    ),
+    *RUN_SPECS,
+    *SCHEDULES_SPECS,
+    CommandSpec("display", description="Display schedules"),
+)
+
+PROMPT = "> "
 GOODBYE = "Goodbye."
 
 
-def run(console: Console, session: Session) -> None:
-    """Show the menu until the user quits. Ctrl-C or Ctrl-D inside a command returns here."""
+def _quit(console: Console, session: Session, invocation: Invocation) -> None:
+    raise QuitShell
+
+
+QUIT = CommandSpec("quit", description="Leave the shell", handler=_quit)
+EXIT = CommandSpec("exit", description="Same as quit", handler=_quit)
+
+
+def build_registry(specs: Iterable[CommandSpec] = PLACEHOLDERS) -> Registry:
+    """Feature specs plus the shell's own ``help``, ``quit``, and ``exit``."""
+    registry = Registry(specs)
+    registry.register(help_spec(registry), QUIT, EXIT)
+    return registry
+
+
+def show_commands(console: Console, registry: Registry) -> None:
+    console.say("")
+    console.say("Commands:")
+    for line in format_help(registry):
+        console.say(line)
+    console.say("")
+
+
+def run(console: Console, session: Session, registry: Registry | None = None) -> None:
+    """Read and evaluate commands until quit. Ctrl-C or Ctrl-D inside a command returns here."""
+    registry = registry if registry is not None else build_registry()
     welcome(console)
-    labels = [label for label, _ in MENU] + [QUIT_LABEL]
+    show_commands(console, registry)
     while True:
         try:
-            choice = ask_menu(console, "Main menu", labels)
+            line = console.ask(PROMPT)
         except (EOFError, KeyboardInterrupt):
             console.say("")
             return
-        if choice == len(labels):
+        if not line.strip():
+            continue
+        try:
+            evaluate(console, session, line, registry)
+        except QuitShell:
             console.say(GOODBYE)
             return
-        _, command = MENU[choice - 1]
-        try:
-            command(console, session)
+        except UnknownCommand:
+            console.say(INVALID_CHOICE)
+            show_commands(console, registry)
+        except CommandError as exc:
+            console.say(str(exc))
         except (EOFError, KeyboardInterrupt):
             console.say("")
 
 
 def main() -> None:
+    quiet_library_logging()
     run(StdConsole(), Session())
 
 
