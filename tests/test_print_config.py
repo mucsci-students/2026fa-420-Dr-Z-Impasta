@@ -1,18 +1,24 @@
-"""Test printing scheduler configurations in human-readable form.
+"""Tests for the ``print`` command.
 
-Author: Foster VanFleet
-Date: September 16th, 2026
+Author: Foster VanFleet. Ported to the command evaluator.
 """
+
 from tests.helpers import ScriptedConsole
-from zimpasta.commands.print_config import print_config
+from zimpasta.command import Registry, evaluate
+from zimpasta.commands.print_config import NO_CONFIG, SPECS
 from zimpasta.session import Session
+
+REGISTRY = Registry(SPECS)
+
+
+def printed(config) -> ScriptedConsole:
+    console = ScriptedConsole()
+    evaluate(console, Session(config=config), "print", REGISTRY)
+    return console
 
 
 def test_print_config_shows_configuration_information(config):
-    console = ScriptedConsole()
-    session = Session(config=config)
-
-    print_config(console, session)
+    console = printed(config)
 
     assert "Rooms" in console.text
     assert "Room 101" in console.text
@@ -32,10 +38,7 @@ def test_print_config_shows_configuration_information(config):
 
 
 def test_print_config_is_human_readable(config):
-    console = ScriptedConsole()
-    session = Session(config=config)
-
-    print_config(console, session)
+    console = printed(config)
 
     assert "{" not in console.text
     assert "}" not in console.text
@@ -46,16 +49,14 @@ def test_print_config_is_human_readable(config):
 
 def test_print_config_without_configuration():
     console = ScriptedConsole()
-    session = Session()
 
-    print_config(console, session)
+    evaluate(console, Session(), "print", REGISTRY)
 
-    assert console.output == ["No configuration is loaded."]
+    assert console.output == [NO_CONFIG]
+
+
 def test_print_config_shows_time_slot_configuration(config):
-    console = ScriptedConsole()
-    session = Session(config=config)
-
-    print_config(console, session)
+    console = printed(config)
 
     assert "Time Slots" in console.text
     assert "MON: 08:00-17:00 (60 minute spacing)" in console.text
@@ -68,12 +69,10 @@ def test_print_config_shows_time_slot_configuration(config):
 
     assert "Maximum time gap: 30 minutes" in console.text
     assert "Minimum time overlap: 45 minutes" in console.text
-def test_print_config_shows_scheduler_options(config):
-    console = ScriptedConsole()
-    session = Session(config=config)
 
-    print_config(console, session)
+
+def test_print_config_shows_scheduler_options(config):
+    console = printed(config)
 
     assert "Schedule Limit: 3" in console.text
     assert "Optimizer Flags: None" in console.text
-

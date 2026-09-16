@@ -1,17 +1,21 @@
-"""Print the current scheduler configuration in human-readable form.
+"""The ``print`` command: show the loaded configuration in human-readable form.
 
-Author: Foster VanFleet
-Date: September 16th, 2026
+Usage: ``print``. Takes no arguments.
+
+Author: Foster VanFleet. Converted to the command model.
 """
 
+from zimpasta.command import CommandSpec, Invocation
 from zimpasta.console import Console
 from zimpasta.session import Session
 
+NO_CONFIG = "No configuration is loaded."
 
-def print_config(console: Console, session: Session) -> None:
-    """Print the current configuration in a human-readable format."""
-    if not session.has_config:
-        console.say("No configuration is loaded.")
+
+def print_config(console: Console, session: Session, invocation: Invocation) -> None:
+    """Handler: print the loaded configuration section by section."""
+    if session.config is None:
+        console.say(NO_CONFIG)
         return
 
     config = session.config
@@ -65,16 +69,12 @@ def print_config(console: Console, session: Session) -> None:
     console.say("-------")
     for faculty in scheduler_config.faculty:
         console.say(f"{faculty.name}")
-        console.say(
-            f"  Credits: {faculty.minimum_credits}-{faculty.maximum_credits}"
-        )
+        console.say(f"  Credits: {faculty.minimum_credits}-{faculty.maximum_credits}")
         console.say(f"  Unique course limit: {faculty.unique_course_limit}")
 
         console.say("  Availability:")
         for day, times in faculty.times.items():
-            formatted_times = ", ".join(
-                f"{time.start}-{time.end}" for time in times
-            )
+            formatted_times = ", ".join(f"{time.start}-{time.end}" for time in times)
             console.say(f"    {day}: {formatted_times}")
 
     console.say("")
@@ -96,18 +96,11 @@ def print_config(console: Console, session: Session) -> None:
 
         for meeting in class_pattern.meetings:
             lab = ", lab" if meeting.lab else ""
-            console.say(
-                f"    {meeting.day}, {meeting.duration} minutes{lab}"
-            )
+            console.say(f"    {meeting.day}, {meeting.duration} minutes{lab}")
 
     console.say("")
-    console.say(
-        f"Maximum time gap: {config.time_slot_config.max_time_gap} minutes"
-    )
-    console.say(
-        f"Minimum time overlap: "
-        f"{config.time_slot_config.min_time_overlap} minutes"
-    )
+    console.say(f"Maximum time gap: {config.time_slot_config.max_time_gap} minutes")
+    console.say(f"Minimum time overlap: {config.time_slot_config.min_time_overlap} minutes")
 
     console.say("")
     console.say(f"Schedule Limit: {config.limit}")
@@ -118,3 +111,12 @@ def print_config(console: Console, session: Session) -> None:
         flags = "None"
 
     console.say(f"Optimizer Flags: {flags}")
+
+
+SPECS = (
+    CommandSpec(
+        "print",
+        description="Print the loaded configuration",
+        handler=print_config,
+    ),
+)
