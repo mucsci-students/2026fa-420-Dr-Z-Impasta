@@ -157,7 +157,7 @@ def update_config(
         records = getattr(config, UI_TO_CONFIG[json_obj])
         for record in records:
             if json_obj == "optimizer_flag" and record == record_name:
-                record = record_name
+                records[records.index(record)] = value
 
             elif json_obj == "time_slot":
                 day = record_val.split(":", 2)[0]
@@ -218,7 +218,7 @@ def update_config_time_slot_config(
     return []
 
 
-def change_class_attr(record: dict, key: str, value: str) -> dict:
+def change_class_attr(record, key: str, value: str) -> dict:
     """Changes an record inside a dict and returns the new record"""
 
     for rec in record:
@@ -228,9 +228,9 @@ def change_class_attr(record: dict, key: str, value: str) -> dict:
             split_value = split[1]
 
             data_type = type(getattr(rec, split_key))
-            setattr(rec.split_key, data_type(split_value))
+            setattr(rec, split_key, data_type(split_value))
             return rec
-    return []
+    return None
 
 
 def update_config_config(
