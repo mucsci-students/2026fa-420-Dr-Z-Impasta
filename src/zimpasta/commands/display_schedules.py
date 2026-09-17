@@ -5,13 +5,16 @@ import io
 import json
 from pathlib import Path
 
+from rich.console import Console as RichConsole
+from rich.table import Table
+
 from zimpasta.command import CommandSpec, Invocation
 from zimpasta.console import Console
 from zimpasta.session import Session
 
 DAYS = {1: "MON", 2: "TUE", 3: "WED", 4: "THU", 5: "FRI"}
 
-HEADER = ["schedule", "course", "faculty", "room", "lab", "day", "start", "end"]
+HEADER = ["Schedule", "Course", "Faculty", "Room", "Lab", "Day", "Start", "End"]
 
 
 def _clock(minutes: int) -> str:
@@ -44,12 +47,21 @@ def _rows(schedules: list) -> list[list[str]]:
 
 def _read_csv(path: Path) -> list[list[str]]:
     rows = []
+    schedule_number = 1
+    has_schedule = False
 
     with open(path, newline="") as handle:
         reader = csv.reader(handle)
 
         for line in reader:
-            if not line:
+            # Blank lines separate schedules.
+            if not line or not any(cell.strip() for cell in line):
+                if has_schedule:
+                    schedule_number += 1
+                    has_schedule = False
+                continue
+
+            if len(line) < 5:
                 continue
 
             course = line[0]
@@ -64,23 +76,60 @@ def _read_csv(path: Path) -> list[list[str]]:
             for time in times.split(","):
                 time = time.strip()
 
+                if not time:
+                    continue
+
                 day, clock = time.split(" ", 1)
-                start, end = clock.split("-")
+                start, end = clock.split("-", 1)
 
                 rows.append(
                     [
+                        str(schedule_number),
                         course,
                         faculty,
                         room,
                         lab,
                         day,
                         start,
-                        end,
+                        end.rstrip("^"),
                     ]
                 )
 
+            has_schedule = True
+
     return rows
 
+def _print_table(console: Console, path: Path, rows: list[list[str]]) -> None:
+    buffer = io.StringIO()
+
+    rich_console = RichConsole(
+        file=buffer,
+        force_terminal=False,
+        color_system=None,
+    )
+
+    rich_console.print(f"Displaying {path.name}")
+
+    schedules = {}
+
+    for row in rows:
+        schedule_number = row[0]
+        schedules.setdefault(schedule_number, []).append(row[1:])
+
+    for schedule_number, schedule_rows in schedules.items():
+        table = Table(title=f"Schedule {schedule_number}")
+
+        for heading in HEADER[1:]:
+            table.add_column(heading)
+
+        for row in schedule_rows:
+            table.add_row(*row)
+
+        rich_console.print(table)
+        rich_console.print()
+
+    for line in buffer.getvalue().splitlines():
+        console.say(line)
 
 def _display_csv(console: Console, path: Path) -> None:
     rows = _read_csv(path)
@@ -89,14 +138,7 @@ def _display_csv(console: Console, path: Path) -> None:
         console.say("No schedules to display.")
         return
 
-    console.say("")
-    console.say(f"Displaying {path.name}:")
-    console.say("")
-
-    console.say("course,faculty,room,lab,day,start,end")
-
-    for row in rows:
-        console.say(",".join(row))
+    _print_table(console, path, rows)
 
 
 def _display_json(console: Console, path: Path) -> None:
@@ -109,18 +151,7 @@ def _display_json(console: Console, path: Path) -> None:
         console.say("No schedules to display.")
         return
 
-    buffer = io.StringIO()
-    writer = csv.writer(buffer)
-
-    writer.writerow(HEADER)
-    writer.writerows(rows)
-
-    console.say("")
-    console.say(f"Displaying {path.name}:")
-    console.say("")
-
-    for line in buffer.getvalue().splitlines():
-        console.say(line)
+    _print_table(console, path, rows)
 
 
 def display_schedules(
@@ -128,8 +159,10 @@ def display_schedules(
     session: Session,
     invocation: Invocation,
 ) -> None:
-
-    files = sorted(list(Path(".").glob("*.json")) + list(Path(".").glob("*.csv")))
+    files = sorted(
+        list(Path(".").glob("*.json"))
+        + list(Path(".").glob("*.csv"))
+    )
 
     if not files:
         console.say("No CSV or JSON schedule files found.")
@@ -166,6 +199,8 @@ def display_schedules(
         console.say(f"No schedule file found at {path}.")
     except json.JSONDecodeError:
         console.say(f"Could not read {path}: the file is not valid JSON.")
+    except (ValueError, IndexError):
+        console.say(f"Could not read {path}: the schedule format is invalid.")
 
 
 SPECS: tuple[CommandSpec, ...] = (
@@ -175,3 +210,4 @@ SPECS: tuple[CommandSpec, ...] = (
         handler=display_schedules,
     ),
 )
+
