@@ -1,8 +1,8 @@
-"""Configuration-loading seam.
+"""Configuration loading shared by the ``load`` command and ``run schedule --config``.
 
-STUB for the "Load / specify / parse config file" feature. The run-scheduler command
-depends on this one function only. Replace the body, keep the signature and the
-documented exceptions, and nothing in the run-scheduler feature needs to change.
+One function, so every path that reads a configuration file behaves the same way. It
+wraps the library's loader and lets the library's exceptions propagate; callers turn
+them into user-facing messages.
 """
 
 import os
