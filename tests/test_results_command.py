@@ -151,4 +151,4 @@ def test_shell_registry_has_the_run_and_schedules_commands_implemented():
     assert implemented["run schedule"] is True
     for noun in ("summary", "show", "export", "clear"):
         assert implemented[f"schedules {noun}"] is True
-    assert implemented["display"] is False
+    assert implemented["display"] is True
