@@ -1,20 +1,40 @@
-"""Modify/update a room, lab, course, faculty member, time slot configuration, class, or optimizer flag from the loaded configuration.
+"""Modify/update a room, lab, course, faculty member, time slot configuration, class,
+or optimizer flag from the loaded configuration.
 
-`modify course course_id "CMSC 140" room "Roddy 140"` runs straight away; a bare `modify`, or a modify command that is missing fields, will tell the user to insert the missing fields into the command. Either way the handler confirms before touching the configuration.
+`modify course course_id "CMSC 140" room "Roddy 140"` runs straight away;
+a bare `modify`, or a modify command that is missing fields, will tell the user to insert
+the missing fields into the command.
+
+Either way the handler confirms before touching the configuration.
 
 Any modify command is made up of 6 fields:
     1. the "modify" keyword
+
     2. a kind (the object you want to modify from (ex. course, room, lab, etc.))
-    3. a field_id (the name of the key that uniquely identifies the record you want to access within the kind (ex. course_id for course, name for faculty, etc.))
+
+    3. a field_id (the name of the key that uniquely identifies the record you want to access
+    within the kind (ex. course_id for course, name for faculty, etc.))
+
     4. a field (the value of the field_id (ex. "Roddy 136", "Linux"))
-    5. a key (the name of the key that you want to modify (ex. credits, capacity, maximum_credits, etc.)
+
+    5. a key (the name of the key that you want to modify
+    (ex. credits, capacity, maximum_credits, etc.)
+
     6. a value (the new value you want the key to hold)
 
 Some abnormal cases include:
-    1. when the field_id or the key is "times", the field or the value will be a string of the following format: "DAY: TIME" where DAY can be "MON", "TUE", "WED", "THU", or "FRI" and TIME is formatted as HH:MM-HH:MM (ex. 08:00-9:50)
-    2. when updating an optimizer flag, the key and value (the last two inputs) should be the word 'null'
+    1. when the field_id or the key is "times", the field
+    or the value will be a string of the following format:
+    "DAY: TIME" where DAY can be "MON", "TUE", "WED", "THU",
+    or "FRI" and TIME is formatted as HH:MM-HH:MM (ex. 08:00-9:50)
+
+    2. when updating an optimizer flag, the key and value (the last two inputs)
+    should be the word 'null'
     3. when updating a class, the field (the fourth input) should be the word 'null'
-    4. when updating a class, the field_id is a string of the following format: "credits: 3, CLASS_PATTERN" or "credits: 4, CLASS_PATTERN, lab: DAY" where CLASS_PATTERN is the meeting days (MWF, MW, TR, etc.) and DAY is the day of the week when the lab is held (MON, WED, TUE, THU, or FRI)
+    4. when updating a class, the field_id is a string of the following format:
+    "credits: 3, CLASS_PATTERN" or "credits: 4, CLASS_PATTERN, lab: DAY"
+    where CLASS_PATTERN is the meeting days (MWF, MW, TR, etc.)
+    and DAY is the day of the week when the lab is held (MON, WED, TUE, THU, or FRI)
 
 an example command:
     modify faculty name Wertz "minimum_credits" 3 changes Prof. Wertz's minimum credits from 0 to 3
