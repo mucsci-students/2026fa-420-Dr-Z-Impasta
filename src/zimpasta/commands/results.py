@@ -58,7 +58,8 @@ def export(console: Console, session: Session, invocation: Invocation) -> None:
         resolve_output_path(str(invocation.get("output")), fmt),
         overwrite=bool(invocation.get("overwrite", False)),
     )
-    export_with_prompts(console, schedules, fmt, target)
+    result = export_with_prompts(console, schedules, fmt, target)
+    session.schedule_path = result.path
 
 
 def build_export(console: Console, session: Session, invocation: Invocation) -> Invocation | None:
