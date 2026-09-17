@@ -146,5 +146,6 @@ uv run pytest
 ```
 
 Command tests drive `evaluate()` with `ScriptedConsole`: bare `run` for every prompt path and
-complete command lines for the direct path. The suite runs one real solve on the sample config
-and reuses its schedules as canned output for a fake scheduler everywhere else.
+complete command lines for the direct path. The suite runs one real solve on the small fixture in `tests/fixtures/` and reuses its
+schedules as canned output for a fake scheduler everywhere else; the shipped example is solved
+once at limit 1 in `tests/test_examples.py`.

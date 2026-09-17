@@ -6,6 +6,7 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "course-constraint-scheduler>=3.0.0",
+    "rich>=15.0.0",
 ]
 
 [project.scripts]
