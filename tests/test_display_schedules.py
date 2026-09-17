@@ -49,9 +49,7 @@ class FakeConsole:
         self.prompts.append(prompt)
 
         if not self._answers:
-            raise AssertionError(
-                "ask() called more times than expected"
-            )
+            raise AssertionError("ask() called more times than expected")
 
         return self._answers.pop(0)
 
@@ -288,10 +286,7 @@ def test_read_csv_parses_times_and_strips_caret(tmp_path):
     """Test CSV parsing and removal of the trailing caret."""
     path = tmp_path / "s.csv"
 
-    path.write_text(
-        'CS101,Smith,R1,L1,'
-        '"MON 08:00-08:50, WED 08:00-08:50^"\n'
-    )
+    path.write_text('CS101,Smith,R1,L1,"MON 08:00-08:50, WED 08:00-08:50^"\n')
 
     assert mod._read_csv(path) == [
         [
@@ -322,18 +317,10 @@ def test_read_csv_blank_lines_separate_schedules(tmp_path):
     path = tmp_path / "s.csv"
 
     path.write_text(
-        "\n"
-        "A,F1,R,L,MON 08:00-09:00\n"
-        "B,F2,R,L,TUE 09:00-10:00\n"
-        "\n"
-        ",,,,\n"
-        "C,F3,R,L,FRI 10:00-11:00\n"
+        "\nA,F1,R,L,MON 08:00-09:00\nB,F2,R,L,TUE 09:00-10:00\n\n,,,,\nC,F3,R,L,FRI 10:00-11:00\n"
     )
 
-    numbers = [
-        row[0]
-        for row in mod._read_csv(path)
-    ]
+    numbers = [row[0] for row in mod._read_csv(path)]
 
     assert numbers == ["1", "1", "2"]
 
@@ -342,10 +329,7 @@ def test_read_csv_skips_short_lines_and_empty_times(tmp_path):
     """Test that invalid short rows and empty times are ignored."""
     path = tmp_path / "s.csv"
 
-    path.write_text(
-        'too,short\n'
-        'A,F,R,L,"MON 08:00-09:00,,"\n'
-    )
+    path.write_text('too,short\nA,F,R,L,"MON 08:00-09:00,,"\n')
 
     rows = mod._read_csv(path)
 
@@ -357,9 +341,7 @@ def test_read_csv_malformed_time_raises(tmp_path):
     """Test that malformed time data raises ValueError."""
     path = tmp_path / "s.csv"
 
-    path.write_text(
-        "A,F,R,L,MON0800\n"
-    )
+    path.write_text("A,F,R,L,MON0800\n")
 
     with pytest.raises(ValueError):
         mod._read_csv(path)
@@ -376,9 +358,7 @@ def test_no_files(workdir):
 
     run_display(console)
 
-    assert console.lines == [
-        "No CSV or JSON schedule files found."
-    ]
+    assert console.lines == ["No CSV or JSON schedule files found."]
 
     assert console.prompts == []
 
@@ -402,20 +382,13 @@ def test_invalid_choices_reprompt(workdir):
     """Test that invalid choices cause the program to ask again."""
     (workdir / "a.json").write_text("[]")
 
-    console = FakeConsole(
-        answers=["", "zz", "B", "1", " a "]
-    )
+    console = FakeConsole(answers=["", "zz", "B", "1", " a "])
 
     run_display(console)
 
     assert len(console.prompts) == 5
 
-    assert (
-        console.lines.count(
-            "Please choose one of the listed options."
-        )
-        == 4
-    )
+    assert console.lines.count("Please choose one of the listed options.") == 4
 
     assert console.lines[-1] == "No schedules to display."
 
@@ -423,9 +396,7 @@ def test_invalid_choices_reprompt(workdir):
 def test_display_csv(workdir):
     """Test displaying schedules from a CSV file."""
     (workdir / "sched.csv").write_text(
-        "CS101,Smith,R1,L1,MON 08:00-08:50\n"
-        "\n"
-        "CS202,Jones,R2,L2,TUE 10:00-11:15\n"
+        "CS101,Smith,R1,L1,MON 08:00-08:50\n\nCS202,Jones,R2,L2,TUE 10:00-11:15\n"
     )
 
     console = FakeConsole(answers=["A"])
@@ -462,9 +433,7 @@ def test_display_json(workdir):
         ]
     ]
 
-    (workdir / "sched.json").write_text(
-        json.dumps(data)
-    )
+    (workdir / "sched.json").write_text(json.dumps(data))
 
     console = FakeConsole(answers=["A"])
 
@@ -509,27 +478,18 @@ def test_invalid_json_message(workdir):
 
     run_display(console)
 
-    assert (
-        console.lines[-1]
-        == "Could not read bad.json: the file is not valid JSON."
-    )
+    assert console.lines[-1] == "Could not read bad.json: the file is not valid JSON."
 
 
 def test_malformed_csv_message(workdir):
     """Test the error message for malformed CSV."""
-    (workdir / "bad.csv").write_text(
-        "A,F,R,L,MON0800\n"
-    )
+    (workdir / "bad.csv").write_text("A,F,R,L,MON0800\n")
 
     console = FakeConsole(answers=["A"])
 
     run_display(console)
 
-    assert (
-        console.lines[-1]
-        == "Could not read bad.csv: "
-        "the schedule format is invalid."
-    )
+    assert console.lines[-1] == "Could not read bad.csv: the schedule format is invalid."
 
 
 def test_file_deleted_after_listing(workdir, monkeypatch):
@@ -554,15 +514,9 @@ def test_file_deleted_after_listing(workdir, monkeypatch):
 
     run_display(console)
 
-    assert (
-        console.lines[-1]
-        == "No schedule file found at gone.json."
-    )
+    assert console.lines[-1] == "No schedule file found at gone.json."
 
 
 def test_spec_registered():
     """Test that the display command is registered."""
-    assert any(
-        spec.handler is mod.display_schedules
-        for spec in mod.SPECS
-    )
+    assert any(spec.handler is mod.display_schedules for spec in mod.SPECS)

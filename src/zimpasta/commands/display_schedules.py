@@ -24,7 +24,6 @@ from zimpasta.command import CommandSpec, Invocation
 from zimpasta.console import Console
 from zimpasta.session import Session
 
-
 # Mapping of numeric day values used by JSON schedules to their
 # three-letter day abbreviations.
 DAYS = {
@@ -88,10 +87,8 @@ def _rows(schedules: list) -> list[list[str]]:
     # Enumerate schedules starting at 1 so that users see schedule
     # numbers beginning with Schedule 1.
     for index, schedule in enumerate(schedules, start=1):
-
         # Each schedule may contain multiple course assignments.
         for assignment in schedule:
-
             # Each course assignment may have multiple meeting times.
             for meeting in assignment["times"]:
                 start = meeting["start"]
@@ -143,7 +140,6 @@ def _read_csv(path: Path) -> list[list[str]]:
         reader = csv.reader(handle)
 
         for line in reader:
-
             # Blank lines separate schedules. Multiple consecutive blank
             # lines do not create additional empty schedules.
             if not line or not any(cell.strip() for cell in line):
@@ -347,10 +343,7 @@ def display_schedules(
 
     # Find all JSON and CSV files in the current directory and sort
     # them alphabetically by filename.
-    files = sorted(
-        list(Path(".").glob("*.json"))
-        + list(Path(".").glob("*.csv"))
-    )
+    files = sorted(list(Path(".").glob("*.json")) + list(Path(".").glob("*.csv")))
 
     # If no schedule files are available, there is nothing to display.
     if not files:
@@ -398,16 +391,12 @@ def display_schedules(
 
     # Handle invalid JSON syntax.
     except json.JSONDecodeError:
-        console.say(
-            f"Could not read {path}: the file is not valid JSON."
-        )
+        console.say(f"Could not read {path}: the file is not valid JSON.")
 
     # Handle invalid schedule formatting, including malformed CSV
     # meeting times or invalid list indexes.
     except (ValueError, IndexError):
-        console.say(
-            f"Could not read {path}: the schedule format is invalid."
-        )
+        console.say(f"Could not read {path}: the schedule format is invalid.")
 
 
 # Register the display command with the application.
