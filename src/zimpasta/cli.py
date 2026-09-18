@@ -26,12 +26,9 @@ from zimpasta.command import (
 from zimpasta.commands.delete import SPECS as DELETE_SPECS
 from zimpasta.commands.display_schedules import SPECS as DISPLAY_SPECS
 from zimpasta.commands.help import format_help, help_spec
-
-from zimpasta.commands.modify import MODIFY_SPECS
-
 from zimpasta.commands.load_config import SPECS as LOAD_SPECS
+from zimpasta.commands.modify import MODIFY_SPECS
 from zimpasta.commands.print_config import SPECS as PRINT_SPECS
-
 from zimpasta.commands.results import SPECS as SCHEDULES_SPECS
 from zimpasta.commands.run import SPECS as RUN_SPECS
 from zimpasta.commands.save_config import SPECS as SAVE_SPECS
