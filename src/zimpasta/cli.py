@@ -52,10 +52,8 @@ PLACEHOLDERS: tuple[CommandSpec, ...] = (
         positionals=(Positional("kind", choices=KINDS), Positional("id")),
         description="Add a course, room, lab, or faculty member",
     ),
-
     *MODIFY_SPECS,
     *DELETE_SPECS,
-
     *RUN_SPECS,
     *SCHEDULES_SPECS,
     *DISPLAY_SPECS,
