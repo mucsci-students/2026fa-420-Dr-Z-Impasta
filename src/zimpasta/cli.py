@@ -6,8 +6,9 @@ bare verb, or a command missing required parts, engages that command's builder, 
 asks for the missing pieces and then runs the same command through the evaluator.
 
 To wire in your feature, put your ``CommandSpec``s in ``zimpasta/commands/<feature>.py``
-as ``SPECS`` and swap them in for your placeholder in ``PLACEHOLDERS`` below. The
-placeholders carry the agreed grammar so ``help`` is accurate before a feature lands.
+as ``SPECS`` and swap them in for your placeholder in ``PLACEHOLDERS`` below, the way
+``delete`` does. The remaining placeholders carry the agreed grammar so ``help`` is
+accurate before a feature lands.
 """
 
 from collections.abc import Iterable
@@ -22,6 +23,7 @@ from zimpasta.command import (
     UnknownCommand,
     evaluate,
 )
+from zimpasta.commands.delete import SPECS as DELETE_SPECS
 from zimpasta.commands.display_schedules import SPECS as DISPLAY_SPECS
 from zimpasta.commands.help import format_help, help_spec
 from zimpasta.commands.load_config import SPECS as LOAD_SPECS
@@ -56,11 +58,7 @@ PLACEHOLDERS: tuple[CommandSpec, ...] = (
         ),
         description="Change one field of an item",
     ),
-    CommandSpec(
-        "delete",
-        positionals=(Positional("kind", choices=KINDS), Positional("id")),
-        description="Remove an item",
-    ),
+    *DELETE_SPECS,
     *RUN_SPECS,
     *SCHEDULES_SPECS,
     *DISPLAY_SPECS,

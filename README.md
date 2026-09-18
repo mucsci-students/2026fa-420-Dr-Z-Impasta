@@ -56,7 +56,7 @@ a small limit the first time; generation time grows with the size of the configu
 | `print` | Show the loaded configuration in readable form |
 | `add <course\|room\|lab\|faculty> <id> ...` | Add an item (owner defines its fields) |
 | `modify <course\|room\|lab\|faculty> <id> <field> [<value>]` | Change one field of an item |
-| `delete <course\|room\|lab\|faculty> <id>` | Remove an item |
+| `delete <course\|room\|lab\|faculty> <id> [--section N]` | Remove an item |
 | `run schedule [--config PATH] --limit N --optimize yes\|no --format csv\|json --output FILE [--overwrite]` | Generate schedules and export them |
 | `schedules summary` / `show <n>` / `export <n>\|all --format F --output FILE [--overwrite]` / `clear` | Work with the generated set |
 | `display ...` | Display schedules (owner defines the arguments) |
