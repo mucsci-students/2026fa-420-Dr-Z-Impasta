@@ -143,7 +143,8 @@ def run_schedule(
         case GenerationSuccess(result=result):
             session.results.replace(result)
             console.say(_success_text(result))
-            export_with_prompts(console, result.schedules, fmt, target)
+            exported = export_with_prompts(console, result.schedules, fmt, target)
+            session.schedule_path = exported.path
 
 
 def build_run_schedule(

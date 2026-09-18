@@ -51,7 +51,9 @@ a small limit the first time; generation time grows with the size of the configu
 
 | Command | Purpose |
 | --- | --- |
-| `load <path>` | Load a configuration file |
+| `load <path>` | Load a configuration file (bare `load` asks until a file loads) |
+| `save <path>` | Save the loaded configuration as JSON (bare `save` offers the loaded file's path) |
+| `print` | Show the loaded configuration in readable form |
 | `add <course\|room\|lab\|faculty> <id> ...` | Add an item (owner defines its fields) |
 | `modify <course\|room\|lab\|faculty> <id> <field> [<value>]` | Change one field of an item |
 | `delete <course\|room\|lab\|faculty> <id> [--section N]` | Remove an item |

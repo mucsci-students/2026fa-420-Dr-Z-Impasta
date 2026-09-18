@@ -24,9 +24,13 @@ from zimpasta.command import (
     evaluate,
 )
 from zimpasta.commands.delete import SPECS as DELETE_SPECS
+from zimpasta.commands.display_schedules import SPECS as DISPLAY_SPECS
 from zimpasta.commands.help import format_help, help_spec
+from zimpasta.commands.load_config import SPECS as LOAD_SPECS
+from zimpasta.commands.print_config import SPECS as PRINT_SPECS
 from zimpasta.commands.results import SPECS as SCHEDULES_SPECS
 from zimpasta.commands.run import SPECS as RUN_SPECS
+from zimpasta.commands.save_config import SPECS as SAVE_SPECS
 from zimpasta.console import Console, StdConsole
 from zimpasta.generate import quiet_library_logging
 from zimpasta.prompts import INVALID_CHOICE
@@ -36,11 +40,9 @@ from zimpasta.welcome_page import welcome
 KINDS = ("course", "room", "lab", "faculty")
 
 PLACEHOLDERS: tuple[CommandSpec, ...] = (
-    CommandSpec(
-        "load",
-        positionals=(Positional("path", help="configuration JSON file"),),
-        description="Load a configuration file",
-    ),
+    *LOAD_SPECS,
+    *SAVE_SPECS,
+    *PRINT_SPECS,
     CommandSpec(
         "add",
         positionals=(Positional("kind", choices=KINDS), Positional("id")),
@@ -59,7 +61,7 @@ PLACEHOLDERS: tuple[CommandSpec, ...] = (
     *DELETE_SPECS,
     *RUN_SPECS,
     *SCHEDULES_SPECS,
-    CommandSpec("display", description="Display schedules"),
+    *DISPLAY_SPECS,
 )
 
 PROMPT = "> "
