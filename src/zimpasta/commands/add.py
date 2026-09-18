@@ -21,6 +21,7 @@ from zimpasta.session import Session
 
 KINDS = ("course", "room", "lab", "faculty")
 
+
 NO_CONFIG = "No configuration loaded. Run 'load <path>' first."
 
 # The scalar fields each kind needs beyond its id, matching sample_config.json.
