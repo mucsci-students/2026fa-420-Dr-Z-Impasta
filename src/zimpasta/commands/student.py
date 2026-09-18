@@ -3,9 +3,12 @@
 
 def add_student():
     name = input("What is the student's name? ").strip() or "n/a"
-    class_standing = input(
-        "What is the student's class standing (freshman, sophomore, junior, or senior)? "
-    ).strip() or "n/a"
+    class_standing = (
+        input(
+            "What is the student's class standing (freshman, sophomore, junior, or senior)? "
+        ).strip()
+        or "n/a"
+    )
     enrolled_class = input("What class is the student enrolled in? ").strip() or "n/a"
     major = input("What is the student's major? ").strip() or "n/a"
 

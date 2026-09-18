@@ -86,7 +86,9 @@ def _add(console: Console, session: Session, invocation: Invocation) -> None:
 
     kind = str(invocation.get("kind"))
     item_id = str(invocation.get("id"))
-    fields = {field: _required_int(invocation, kind, field) for field in REQUIRED_INT_FIELDS.get(kind, ())}
+    fields = {
+        field: _required_int(invocation, kind, field) for field in REQUIRED_INT_FIELDS.get(kind, ())
+    }
 
     # TODO: unverified against the real scheduler.CombinedConfig -- confirm method
     # names/signatures once available. Guessed straight from sample_config.json's
