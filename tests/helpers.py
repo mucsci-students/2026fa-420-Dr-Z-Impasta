@@ -8,16 +8,20 @@ from scheduler import CombinedConfig
 
 from zimpasta.generate import Schedule
 
-SAMPLE_CONFIG = Path(__file__).resolve().parents[1] / "examples" / "sample_config.json"
+FIXTURE_CONFIG = Path(__file__).resolve().parent / "fixtures" / "minimal_config.json"
+"""Two courses, two faculty: the library solves it in milliseconds, so tests use it."""
+
+EXAMPLE_CONFIG = Path(__file__).resolve().parents[1] / "examples" / "sample_config.json"
+"""The realistic department example shipped for users; solved once, in tests/test_examples.py."""
 
 
 def load_sample_config_data() -> dict:
-    """A fresh copy of ``examples/sample_config.json`` as plain JSON data."""
-    return json.loads(SAMPLE_CONFIG.read_text(encoding="utf-8"))
+    """A fresh copy of the small test fixture as plain JSON data."""
+    return json.loads(FIXTURE_CONFIG.read_text(encoding="utf-8"))
 
 
 def build_config_data(*, limit: int = 2, optimizer_flags: list[str] | None = None) -> dict:
-    """The sample configuration with a chosen limit and optional optimizer flags."""
+    """The test fixture with a chosen limit and optional optimizer flags."""
     data = load_sample_config_data()
     data["limit"] = limit
     if optimizer_flags is not None:
@@ -26,7 +30,7 @@ def build_config_data(*, limit: int = 2, optimizer_flags: list[str] | None = Non
 
 
 def build_infeasible_config_data() -> dict:
-    """The sample configuration with no faculty available on Monday, where every class meets."""
+    """The test fixture with no faculty available on Monday, where every class meets."""
     data = build_config_data()
     for faculty in data["config"]["faculty"]:
         faculty["times"] = {"TUE": ["08:00-18:00"]}

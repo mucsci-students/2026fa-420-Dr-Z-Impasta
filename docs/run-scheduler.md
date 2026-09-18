@@ -20,7 +20,7 @@ was left out, echoes the command it constructed, and runs it:
 ```
 > run
 Config file to use [none]: examples/sample_config.json
-Maximum number of schedules [3]: 5
+Maximum number of schedules [100]: 5
 Optimize? (yes/no): yes
 Output format (csv/Json): csv
 Output file name: out
@@ -42,7 +42,7 @@ Wrote 5 schedule(s) to /abs/path/out.csv
 | --- | --- |
 | `zimpasta/generate.py` | Builds a validated run copy of the config, drives `Scheduler.get_models()`, classifies the outcome. |
 | `zimpasta/results.py` | `ScheduleStore`: the generated set kept in the session (replace, get, clear). |
-| `zimpasta/view.py` | Plain-text summary and per-schedule table. The display feature may replace it. |
+| `zimpasta/view.py` | Plain-text summary and per-schedule table for `schedules summary` and `schedules show`. |
 | `zimpasta/export.py` | JSON and CSV export through `scheduler.writers`, with overwrite protection. |
 | `zimpasta/prompts.py` | `ask_format` and `ask_output_path` alongside the shared prompt helpers. |
 | `zimpasta/commands/run.py` | `run schedule`: handler, builder, and `make_specs()` for test injection. |
@@ -54,20 +54,23 @@ Nothing here duplicates library models or validation. The library is the source 
 
 ## Seams with other features
 
-**Config loading (Foster).** `zimpasta/config_loader.py` holds one stub function,
-`load_config(path) -> CombinedConfig`, wrapping the library's `load_config_from_file`. Replace
-the body and keep the signature and the documented exceptions (`OSError`,
-`json.JSONDecodeError`, `pydantic.ValidationError`). `run schedule` stores a successfully
-loaded config on `Session.config` and `Session.config_path`; on any failure the session is
-untouched. `--config` is optional: without it the loaded configuration is used.
+**Config loading (Foster).** `zimpasta/config_loader.py` holds the one function that reads a
+configuration file, `load_config(path) -> CombinedConfig`, wrapping the library's
+`load_config_from_file`. Both Foster's `load` command and `run schedule --config` go through it,
+and each turns the library's exceptions (`OSError`, `json.JSONDecodeError`,
+`pydantic.ValidationError`) into its own messages. `run schedule` stores a successfully loaded
+config on `Session.config` and `Session.config_path`; on any failure the session is untouched.
+`--config` is optional: without it the configuration already loaded with `load` is used.
 
-**Display (Mohamed).** `Session.results` is a `ScheduleStore` holding one `GenerationResult`:
-`schedules` (a list of `list[CourseInstance]`), `limit`, `optimizer_flags`, `completion_reason`,
-`generated_at`, and `config_path`. `view.summarize()` and `view.format_schedule()` are the
-minimal renderers the commands use; richer display can consume the same objects.
+**Display (Mohamed).** The `display` command does not read the session. It lists the `.csv`
+and `.json` files in the current directory and renders the chosen one, so the hand-off is the
+exported file: export with `run schedule` or `schedules export`, then `display` it.
+`Session.results` still holds the generated set as one `GenerationResult` (`schedules`, `limit`,
+`optimizer_flags`, `completion_reason`, `generated_at`, `config_path`) for `schedules summary`
+and `schedules show`, rendered by `view.summarize()` and `view.format_schedule()`.
 
-**Shell.** Both modules expose `SPECS`; `zimpasta/cli.py` registers them in place of the
-`run schedule` and `schedules` placeholders.
+**Shell.** Both modules expose `SPECS`, which `zimpasta/cli.py` registers alongside the other
+commands.
 
 ## Fixed messages
 
@@ -146,5 +149,6 @@ uv run pytest
 ```
 
 Command tests drive `evaluate()` with `ScriptedConsole`: bare `run` for every prompt path and
-complete command lines for the direct path. The suite runs one real solve on the sample config
-and reuses its schedules as canned output for a fake scheduler everywhere else.
+complete command lines for the direct path. The suite runs one real solve on the small fixture in `tests/fixtures/` and reuses its
+schedules as canned output for a fake scheduler everywhere else; the shipped example is solved
+once at limit 1 in `tests/test_examples.py`.

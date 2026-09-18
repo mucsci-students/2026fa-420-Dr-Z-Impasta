@@ -54,6 +54,22 @@ PLACEHOLDERS: tuple[CommandSpec, ...] = (
     ),
 
     *MODIFY_SPECS,
+    CommandSpec(
+        "delete",
+        positionals=(Positional("kind", choices=KINDS), Positional("id")),
+        description="Remove an item",
+    ),
+
+    CommandSpec(
+        "modify",
+        positionals=(
+            Positional("kind", choices=KINDS),
+            Positional("id"),
+            Positional("field"),
+            Positional("value", required=False),
+        ),
+        description="Change one field of an item",
+    ),
     *DELETE_SPECS,
 
     *RUN_SPECS,

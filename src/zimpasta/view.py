@@ -1,7 +1,8 @@
 """Plain-text rendering of generated schedules.
 
-This is the smallest thing the run-scheduler commands need in order to show results.
-The display feature owns richer rendering and can replace these two functions.
+These two functions render the schedules kept in the session, for ``schedules summary`` and
+``schedules show``. The ``display`` command is separate: it renders exported CSV and JSON
+files from disk (see ``commands/display_schedules.py``).
 """
 
 from scheduler.models import CourseInstance
