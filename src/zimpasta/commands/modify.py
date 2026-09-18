@@ -52,6 +52,8 @@ from zimpasta.command import CommandError, CommandSpec, Invocation, Positional
 from zimpasta.console import Console
 from zimpasta.session import Session
 
+NO_CONFIG = "No configuration loaded. Load one first."
+UPDATE_SUCCESS = "{kind} update has succeeded."
 UI_TO_CONFIG = {
     "course": "courses",
     "room": "rooms",
@@ -84,18 +86,36 @@ def modify_handler(console: Console, session: Session, inv: Invocation) -> None:
 
     """ use different methods for json objects nested inside config vs those that aren't """
     if kind in ("time_slot", "optimizer_flag"):
-        update_config(kind, field_id, field, key, value, session.config, session.config_path)
+        if (
+            update_config(kind, field_id, field, key, value, session.config, session.config_path)
+            != []
+        ):
+            console.say(UPDATE_SUCCESS.format(kind=kind))
 
     elif kind in ("class"):
-        update_config_time_slot_config(
-            kind, field_id, field, key, value, session.config, session.config_path
-        )
+        if (
+            update_config_time_slot_config(
+                kind, field_id, field, key, value, session.config, session.config_path
+            )
+            != []
+        ):
+            console.say(UPDATE_SUCCESS.format(kind=kind))
     else:
-        update_config_config(kind, field_id, field, key, value, session.config, session.config_path)
+        if (
+            update_config_config(
+                kind, field_id, field, key, value, session.config, session.config_path
+            )
+            != []
+        ):
+            console.say(UPDATE_SUCCESS.format(kind=kind))
 
 
 def modify_builder(console: Console, session: Session, inv: Invocation) -> Invocation:
     """Builds a complete modify-command"""
+    if session.config is None:
+        console.say(NO_CONFIG)
+        return None
+
     console.say("\nPlease specify a ")
 
     missing_values = inv.missing_with_choices()
@@ -169,8 +189,8 @@ def id_key_choices(kind: str) -> tuple[tuple[str, ...], tuple[str, ...]]:
             )
         case "time_slot":
             return ("times", ("start", "spacing", "end"))
-        # case "class":
-        #    return ("", ("credits", "day", "duration", "lab", "disabled"))
+        case "class":
+            return ("", ("credits", "day", "duration", "lab", "disabled"))
         case "optimizer_flag":
             return (
                 (
