@@ -108,12 +108,15 @@ def build(console: Console, session: Session, invocation: Invocation) -> Invocat
     if "id" not in positionals:
         item_id = console.ask(f"{kind.capitalize()} id: ").strip()
         if not item_id:
-            # Treat a blank id as "changed my mind" rather than looping forever asking again easier to just bail out and let them retype "add".
+            # Treat a blank id as "changed my mind" rather than looping forever
+            # asking again easier to just bail out and let them retype "add".
             console.say(CANCELLED)
             return None
         positionals["id"] = item_id
 
-    # Ask for whatever numeric fields this particular kind needs (rooms/labs just need capacity, courses need credits + capacity, faculty need three different limits).
+    # Ask for whatever numeric fields this particular kind needs
+    # (rooms/labs just need capacity, courses need credits + capacity, faculty
+    # need three different limits).
     for field in REQUIRED_INT_FIELDS.get(kind, ()):
         if field not in options:
             options[field] = str(ask_int(console, f"{_label(kind, field)}: ", minimum=0))

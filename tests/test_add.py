@@ -15,8 +15,6 @@ message-format constants, mirroring delete.py's DELETED/CANCELLED/
 WOULD_LEAVE_INVALID/NO_CONFIG.
 """
 
-import pytest
-
 from scheduler import CombinedConfig
 
 from tests.helpers import ScriptedConsole
@@ -113,7 +111,8 @@ def test_course_faculty_option_accepts_multiple_comma_separated_names(config: Co
     run(
         console,
         Session(config=config),
-        'add course "CS 103" --credits 3 --capacity 30 --faculty "Dr. Smith, Dr. Jones" --room "Room 101"',
+        'add course "CS 103" --credits 3 --capacity 30 --faculty '
+        '"Dr. Smith, Dr. Jones" --room "Room 101"',
     )
 
     assert ADDED.format(name="CS 103") in console.output
