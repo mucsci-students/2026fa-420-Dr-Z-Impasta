@@ -27,6 +27,7 @@ from zimpasta.commands.delete import SPECS as DELETE_SPECS
 from zimpasta.commands.display_schedules import SPECS as DISPLAY_SPECS
 from zimpasta.commands.help import format_help, help_spec
 from zimpasta.commands.load_config import SPECS as LOAD_SPECS
+from zimpasta.commands.modify import MODIFY_SPECS
 from zimpasta.commands.print_config import SPECS as PRINT_SPECS
 from zimpasta.commands.results import SPECS as SCHEDULES_SPECS
 from zimpasta.commands.run import SPECS as RUN_SPECS
@@ -48,16 +49,7 @@ PLACEHOLDERS: tuple[CommandSpec, ...] = (
         positionals=(Positional("kind", choices=KINDS), Positional("id")),
         description="Add a course, room, lab, or faculty member",
     ),
-    CommandSpec(
-        "modify",
-        positionals=(
-            Positional("kind", choices=KINDS),
-            Positional("id"),
-            Positional("field"),
-            Positional("value", required=False),
-        ),
-        description="Change one field of an item",
-    ),
+    *MODIFY_SPECS,
     *DELETE_SPECS,
     *RUN_SPECS,
     *SCHEDULES_SPECS,
