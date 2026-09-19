@@ -92,6 +92,31 @@ class Invocation:
         ]
         return tuple(names)
 
+    """"""
+
+    def check_for_choices(self, pos: Positional) -> tuple:
+        """Checks if a Positional has a choices attribute and returns the choices tuple, if so
+
+        If not, an empty tuple if returned
+        """
+        if hasattr(pos, "choices"):
+            return pos.choices
+        return ()
+
+    def missing_with_choices(self) -> tuple[str, ...]:
+        """Names of required positionals, their choices, and options that were not given."""
+        names = [
+            (p.name + ": " + str(", ".join(self.check_for_choices(p))))
+            for p in self.spec.positionals
+            if p.required and p.name not in self.positionals
+        ]
+        names += [
+            f"--{o.name}" for o in self.spec.options if o.required and o.name not in self.options
+        ]
+        return tuple(names)
+
+    """"""
+
     @property
     def complete(self) -> bool:
         return not self.missing()
@@ -278,9 +303,19 @@ class Registry:
 
 
 def tokenize(line: str) -> list[str]:
-    """Split a command line the way a shell would, so ``"CS 101"`` stays one token."""
+    """Split a command line the way a shell would, so ``"CS 101"`` stays one token.
+
+    Single and double quotes group words. Backslashes are ordinary characters, not
+    escapes, so Windows paths such as ``C:\\Users\\me\\config.json`` need no quoting and
+    the lines produced by :meth:`Invocation.to_line` parse back to the same tokens on
+    every platform.
+    """
+    lexer = shlex.shlex(line, posix=True)
+    lexer.whitespace_split = True
+    lexer.commenters = ""
+    lexer.escape = ""
     try:
-        return shlex.split(line)
+        return list(lexer)
     except ValueError as exc:
         raise CommandError(f"Cannot parse that command: {exc}.") from None
 

@@ -6,8 +6,9 @@ bare verb, or a command missing required parts, engages that command's builder, 
 asks for the missing pieces and then runs the same command through the evaluator.
 
 To wire in your feature, put your ``CommandSpec``s in ``zimpasta/commands/<feature>.py``
-as ``SPECS`` and swap them in for your placeholder in ``PLACEHOLDERS`` below. The
-placeholders carry the agreed grammar so ``help`` is accurate before a feature lands.
+as ``SPECS`` and swap them in for your placeholder in ``PLACEHOLDERS`` below, the way
+``delete`` does. The remaining placeholders carry the agreed grammar so ``help`` is
+accurate before a feature lands.
 """
 
 from collections.abc import Iterable
@@ -16,82 +17,43 @@ from zimpasta.command import (
     CommandError,
     CommandSpec,
     Invocation,
-    Option,
     Positional,
     QuitShell,
     Registry,
     UnknownCommand,
     evaluate,
 )
+from zimpasta.commands.delete import SPECS as DELETE_SPECS
+from zimpasta.commands.display_schedules import SPECS as DISPLAY_SPECS
 from zimpasta.commands.help import format_help, help_spec
+from zimpasta.commands.load_config import SPECS as LOAD_SPECS
+from zimpasta.commands.modify import MODIFY_SPECS
+from zimpasta.commands.print_config import SPECS as PRINT_SPECS
+from zimpasta.commands.results import SPECS as SCHEDULES_SPECS
+from zimpasta.commands.run import SPECS as RUN_SPECS
+from zimpasta.commands.save_config import SPECS as SAVE_SPECS
 from zimpasta.console import Console, StdConsole
+from zimpasta.generate import quiet_library_logging
 from zimpasta.prompts import INVALID_CHOICE
 from zimpasta.session import Session
 from zimpasta.welcome_page import welcome
 
 KINDS = ("course", "room", "lab", "faculty")
-FORMATS = ("csv", "json")
-YES_NO = ("yes", "no")
 
 PLACEHOLDERS: tuple[CommandSpec, ...] = (
-    CommandSpec(
-        "load",
-        positionals=(Positional("path", help="configuration JSON file"),),
-        description="Load a configuration file",
-    ),
+    *LOAD_SPECS,
+    *SAVE_SPECS,
+    *PRINT_SPECS,
     CommandSpec(
         "add",
         positionals=(Positional("kind", choices=KINDS), Positional("id")),
         description="Add a course, room, lab, or faculty member",
     ),
-    CommandSpec(
-        "modify",
-        positionals=(
-            Positional("kind", choices=KINDS),
-            Positional("id"),
-            Positional("field"),
-            Positional("value", required=False),
-        ),
-        description="Change one field of an item",
-    ),
-    CommandSpec(
-        "delete",
-        positionals=(Positional("kind", choices=KINDS), Positional("id")),
-        description="Remove an item",
-    ),
-    CommandSpec(
-        "run",
-        "schedule",
-        options=(
-            Option("config", help="configuration file; defaults to the loaded one"),
-            Option("limit", required=True),
-            Option("optimize", required=True, choices=YES_NO),
-            Option("format", required=True, choices=FORMATS),
-            Option("output", required=True),
-            Option("overwrite", flag=True),
-        ),
-        description="Generate schedules and export them",
-    ),
-    CommandSpec("schedules", "summary", description="Summarize the generated schedules"),
-    CommandSpec(
-        "schedules",
-        "show",
-        positionals=(Positional("number"),),
-        description="Show one generated schedule",
-    ),
-    CommandSpec(
-        "schedules",
-        "export",
-        positionals=(Positional("which", help="a schedule number, or all"),),
-        options=(
-            Option("format", required=True, choices=FORMATS),
-            Option("output", required=True),
-            Option("overwrite", flag=True),
-        ),
-        description="Export one schedule or all of them",
-    ),
-    CommandSpec("schedules", "clear", description="Discard the generated schedules"),
-    CommandSpec("display", description="Display schedules"),
+    *MODIFY_SPECS,
+    *DELETE_SPECS,
+    *RUN_SPECS,
+    *SCHEDULES_SPECS,
+    *DISPLAY_SPECS,
 )
 
 PROMPT = "> "
@@ -149,6 +111,7 @@ def run(console: Console, session: Session, registry: Registry | None = None) ->
 
 
 def main() -> None:
+    quiet_library_logging()
     run(StdConsole(), Session())
 
 
