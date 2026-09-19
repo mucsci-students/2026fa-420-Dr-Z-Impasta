@@ -3,20 +3,23 @@
 One ``Session`` is created when the shell starts and handed to every command. Features
 communicate through it instead of through globals or loose return values:
 
-* the config-loading feature fills ``config`` and ``config_path``;
+* ``load`` fills ``config`` and ``config_path``; ``save`` updates ``config_path``;
 * add, modify, and delete edit ``config`` (see ``CombinedConfig.edit_mode()`` in the
   library for atomic, validated edits);
-* run-the-scheduler reads ``config`` and stores its results here;
-* display reads whatever is here.
+* run-the-scheduler reads ``config`` and stores its results in ``results``;
+* ``schedules summary`` and ``schedules show`` read ``results``; ``display`` renders exported
+  files from disk and does not use the session.
 
 Add a field for state your feature keeps between commands. Keep the library's
 ``CombinedConfig`` as the single source of truth; do not mirror its contents.
 """
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 from scheduler import CombinedConfig
+
+from zimpasta.results import ScheduleStore
 
 
 @dataclass
@@ -26,6 +29,13 @@ class Session:
 
     config_path: Path | None = None
     """Where ``config`` was loaded from, when it came from a file."""
+
+    schedule_path: Path | None = None
+
+    """Path to the most recently exported schedule."""
+
+    results: ScheduleStore = field(default_factory=ScheduleStore)
+    """Schedules produced by the most recent successful generation."""
 
     @property
     def has_config(self) -> bool:

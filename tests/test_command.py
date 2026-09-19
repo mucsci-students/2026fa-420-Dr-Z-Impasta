@@ -52,6 +52,25 @@ def test_tokenize_keeps_quoted_ids_together():
     assert tokenize("  ") == []
 
 
+def test_tokenize_keeps_backslashes_literal():
+    line = r'run --config C:\Users\me\config.json --output "D:\out dir\out"'
+
+    assert tokenize(line) == [
+        "run",
+        "--config",
+        r"C:\Users\me\config.json",
+        "--output",
+        r"D:\out dir\out",
+    ]
+
+
+def test_tokenize_round_trips_to_line():
+    spec = modify_spec()
+    for value in (r"C:\x y\z", "it's", 'say "hi"', "plain"):
+        invocation = spec.parse(["course", value, "name"])
+        assert tokenize(invocation.to_line()) == ["modify", "course", value, "name"]
+
+
 def test_tokenize_reports_unbalanced_quotes():
     with pytest.raises(CommandError):
         tokenize('modify course "CS 101')

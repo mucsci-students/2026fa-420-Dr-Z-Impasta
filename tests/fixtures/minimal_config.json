@@ -1,0 +1,164 @@
+{
+  "config": {
+    "rooms": [
+      {
+        "name": "Room 101",
+        "capacity": 40
+      }
+    ],
+    "labs": [
+      {
+        "name": "Lab 101",
+        "capacity": 24
+      }
+    ],
+    "courses": [
+      {
+        "course_id": "CS 101",
+        "credits": 3,
+        "capacity": 24,
+        "room": [
+          "Room 101"
+        ],
+        "lab": [],
+        "conflicts": [],
+        "faculty": [
+          "Dr. Smith"
+        ]
+      },
+      {
+        "course_id": "CS 102",
+        "credits": 3,
+        "capacity": 24,
+        "room": [
+          "Room 101"
+        ],
+        "lab": [
+          "Lab 101"
+        ],
+        "conflicts": [
+          "CS 101"
+        ],
+        "faculty": [
+          "Dr. Smith",
+          "Dr. Jones"
+        ]
+      }
+    ],
+    "faculty": [
+      {
+        "name": "Dr. Smith",
+        "maximum_credits": 12,
+        "minimum_credits": 3,
+        "unique_course_limit": 3,
+        "times": {
+          "MON": [
+            "08:00-18:00"
+          ],
+          "TUE": [
+            "08:00-18:00"
+          ],
+          "WED": [
+            "08:00-18:00"
+          ],
+          "THU": [
+            "08:00-18:00"
+          ],
+          "FRI": [
+            "08:00-18:00"
+          ]
+        }
+      },
+      {
+        "name": "Dr. Jones",
+        "maximum_credits": 12,
+        "minimum_credits": 0,
+        "unique_course_limit": 3,
+        "times": {
+          "MON": [
+            "08:00-18:00"
+          ],
+          "TUE": [
+            "08:00-18:00"
+          ],
+          "WED": [
+            "08:00-18:00"
+          ],
+          "THU": [
+            "08:00-18:00"
+          ],
+          "FRI": [
+            "08:00-18:00"
+          ]
+        }
+      }
+    ]
+  },
+  "time_slot_config": {
+    "times": {
+      "MON": [
+        {
+          "start": "08:00",
+          "spacing": 60,
+          "end": "17:00"
+        }
+      ],
+      "TUE": [
+        {
+          "start": "08:00",
+          "spacing": 60,
+          "end": "17:00"
+        }
+      ],
+      "WED": [
+        {
+          "start": "08:00",
+          "spacing": 60,
+          "end": "17:00"
+        }
+      ],
+      "THU": [
+        {
+          "start": "08:00",
+          "spacing": 60,
+          "end": "17:00"
+        }
+      ],
+      "FRI": [
+        {
+          "start": "08:00",
+          "spacing": 60,
+          "end": "17:00"
+        }
+      ]
+    },
+    "classes": [
+      {
+        "credits": 3,
+        "meetings": [
+          {
+            "day": "MON",
+            "duration": 150,
+            "lab": false
+          }
+        ]
+      },
+      {
+        "credits": 3,
+        "meetings": [
+          {
+            "day": "MON",
+            "duration": 75,
+            "lab": false
+          },
+          {
+            "day": "WED",
+            "duration": 75,
+            "lab": true
+          }
+        ]
+      }
+    ]
+  },
+  "limit": 3
+}
