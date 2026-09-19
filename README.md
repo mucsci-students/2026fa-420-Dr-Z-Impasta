@@ -62,7 +62,7 @@ was started from, so export there.
 | `save <path>` | Save the loaded configuration as JSON (bare `save` offers the loaded file's path) |
 | `print` | Show the loaded configuration in readable form |
 | `add <course\|room\|lab\|faculty> <id>` | Not implemented yet; the placeholder keeps the agreed grammar |
-| `modify <course\|room\|lab\|faculty> <id> <field> [<value>]` | Not implemented yet; the placeholder keeps the agreed grammar |
+| `modify <course\|room\|lab\|faculty> <id> <id_value> <key> <value>` | Modifies an item in the config file, that is uniquely identifiable by the id & id_value, with the key & value inputs |
 | `delete <course\|room\|lab\|faculty> <id> [--section N]` | Remove an item after a yes/no confirmation and strip references to it. `--section` picks between entries that share a name, such as two sections of one course. Bare `delete` offers menus |
 | `run schedule [--config PATH] --limit N --optimize yes\|no --format csv\|json --output FILE [--overwrite]` | Generate schedules and export them (bare `run` asks for each value) |
 | `schedules summary` / `show <n>` / `export <n>\|all --format F --output FILE [--overwrite]` / `clear` | Work with the schedules generated in this session |
