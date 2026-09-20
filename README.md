@@ -61,7 +61,7 @@ was started from, so export there.
 | `load <path>` | Load and validate a configuration file (bare `load` asks until a file loads) |
 | `save <path>` | Save the loaded configuration as JSON (bare `save` offers the loaded file's path) |
 | `print` | Show the loaded configuration in readable form |
-| `add <course\|room\|lab\|faculty> <id>` | Not implemented yet; the placeholder keeps the agreed grammar |
+| `add <course\|room\|lab\|faculty> <id>` | Adds an item to the config file |
 | `modify <course\|room\|lab\|faculty> <id> <id_value> <key> <value>` | Modifies an item in the config file, that is uniquely identifiable by the id & id_value, with the key & value inputs |
 | `delete <course\|room\|lab\|faculty> <id> [--section N]` | Remove an item after a yes/no confirmation and strip references to it. `--section` picks between entries that share a name, such as two sections of one course. Bare `delete` offers menus |
 | `run schedule [--config PATH] --limit N --optimize yes\|no --format csv\|json --output FILE [--overwrite]` | Generate schedules and export them (bare `run` asks for each value) |
