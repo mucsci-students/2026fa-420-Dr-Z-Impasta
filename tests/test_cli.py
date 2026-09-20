@@ -28,14 +28,6 @@ def test_unknown_command_prints_invalid_choice_and_the_commands_again():
     assert console.output.count("Commands:") == 2
 
 
-def test_placeholder_reports_not_implemented():
-    console = ScriptedConsole(["add course CS101", "quit"])
-
-    run(console, Session())
-
-    assert NOT_IMPLEMENTED.format(name="add") in console.output
-
-
 def test_command_error_is_printed_and_the_shell_continues():
     console = ScriptedConsole(['modify course "CS 101', "quit"])
 
