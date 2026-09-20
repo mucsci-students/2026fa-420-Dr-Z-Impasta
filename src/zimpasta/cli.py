@@ -17,12 +17,12 @@ from zimpasta.command import (
     CommandError,
     CommandSpec,
     Invocation,
-    Positional,
     QuitShell,
     Registry,
     UnknownCommand,
     evaluate,
 )
+from zimpasta.commands.add import SPECS as ADD_SPECS
 from zimpasta.commands.delete import SPECS as DELETE_SPECS
 from zimpasta.commands.display_schedules import SPECS as DISPLAY_SPECS
 from zimpasta.commands.help import format_help, help_spec
@@ -38,17 +38,11 @@ from zimpasta.prompts import INVALID_CHOICE
 from zimpasta.session import Session
 from zimpasta.welcome_page import welcome
 
-KINDS = ("course", "room", "lab", "faculty")
-
 PLACEHOLDERS: tuple[CommandSpec, ...] = (
     *LOAD_SPECS,
     *SAVE_SPECS,
     *PRINT_SPECS,
-    CommandSpec(
-        "add",
-        positionals=(Positional("kind", choices=KINDS), Positional("id")),
-        description="Add a course, room, lab, or faculty member",
-    ),
+    *ADD_SPECS,
     *MODIFY_SPECS,
     *DELETE_SPECS,
     *RUN_SPECS,

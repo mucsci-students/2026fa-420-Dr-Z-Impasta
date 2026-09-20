@@ -1,6 +1,6 @@
 from tests.helpers import ScriptedConsole
 from zimpasta.cli import GOODBYE, PLACEHOLDERS, PROMPT, build_registry, run
-from zimpasta.command import NOT_IMPLEMENTED, CommandSpec, Positional
+from zimpasta.command import CommandSpec, Positional
 from zimpasta.prompts import INVALID_CHOICE
 from zimpasta.session import Session
 
@@ -26,14 +26,6 @@ def test_unknown_command_prints_invalid_choice_and_the_commands_again():
 
     assert console.output.count(INVALID_CHOICE) == 1
     assert console.output.count("Commands:") == 2
-
-
-def test_placeholder_reports_not_implemented():
-    console = ScriptedConsole(["add course CS101", "quit"])
-
-    run(console, Session())
-
-    assert NOT_IMPLEMENTED.format(name="add") in console.output
 
 
 def test_command_error_is_printed_and_the_shell_continues():
