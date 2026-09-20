@@ -1,6 +1,6 @@
 from tests.helpers import ScriptedConsole
 from zimpasta.cli import GOODBYE, PLACEHOLDERS, PROMPT, build_registry, run
-from zimpasta.command import NOT_IMPLEMENTED, CommandSpec, Positional
+from zimpasta.command import CommandSpec, Positional
 from zimpasta.prompts import INVALID_CHOICE
 from zimpasta.session import Session
 
