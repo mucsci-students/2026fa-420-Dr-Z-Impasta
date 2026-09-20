@@ -54,6 +54,7 @@ from zimpasta.session import Session
 
 NO_CONFIG = "No configuration loaded. Load one first."
 UPDATE_SUCCESS = "{kind} update has succeeded."
+UPDATE_FAILED = "{kind} update has not succeeded."
 UI_TO_CONFIG = {
     "course": "courses",
     "room": "rooms",
@@ -91,6 +92,8 @@ def modify_handler(console: Console, session: Session, inv: Invocation) -> None:
             != []
         ):
             console.say(UPDATE_SUCCESS.format(kind=kind))
+        else:
+            console.say(UPDATE_FAILED.format(kind=kind))
 
     elif kind in ("class"):
         if (
@@ -100,6 +103,8 @@ def modify_handler(console: Console, session: Session, inv: Invocation) -> None:
             != []
         ):
             console.say(UPDATE_SUCCESS.format(kind=kind))
+        else:
+            console.say(UPDATE_FAILED.format(kind=kind))
     else:
         if (
             update_config_config(
@@ -108,6 +113,8 @@ def modify_handler(console: Console, session: Session, inv: Invocation) -> None:
             != []
         ):
             console.say(UPDATE_SUCCESS.format(kind=kind))
+        else:
+            console.say(UPDATE_FAILED.format(kind=kind))
 
 
 def modify_builder(console: Console, session: Session, inv: Invocation) -> Invocation:

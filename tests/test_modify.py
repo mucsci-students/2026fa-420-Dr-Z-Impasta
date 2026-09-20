@@ -2,6 +2,7 @@ from tests.helpers import ScriptedConsole
 from zimpasta.command import Registry, evaluate
 from zimpasta.commands.modify import (
     MODIFY_SPECS,
+    UPDATE_FAILED,
     UPDATE_SUCCESS,
     id_key_choices,
     update_config,
@@ -83,3 +84,10 @@ def test_console(config, config_file):
         'modify faculty name "Dr. Smith" maximum_credits 6',
     )
     assert UPDATE_SUCCESS.format(kind="faculty") in console.output
+
+    run(
+        console,
+        Session(config=config, config_path=config_file),
+        "modify faculty name Aaron maximum_credits 5",
+    )
+    assert UPDATE_FAILED.format(kind="faculty") in console.output
