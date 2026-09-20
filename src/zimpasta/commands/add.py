@@ -74,7 +74,7 @@ REQUIRED_LIST_FIELDS: dict[str, tuple[str, ...]] = {
     "course": ("faculty", "room"),
 }
 
-_EMPTY_TIMES = {"MON": [], "TUE": [], "WED": [], "THU": [], "FRI": []}
+EMPTY_TIMES = {"MON": [], "TUE": [], "WED": [], "THU": [], "FRI": []}
 
 
 def _label(kind: str, field: str) -> str:
@@ -255,7 +255,7 @@ def add(console: Console, session: Session, invocation: Invocation) -> None:
                         maximum_credits=fields["maximum-credits"],
                         minimum_credits=fields["minimum-credits"],
                         unique_course_limit=fields["unique-course-limit"],
-                        times=dict(_EMPTY_TIMES),
+                        times=dict(EMPTY_TIMES),
                         course_preferences={},
                         room_preferences={},
                         lab_preferences={},

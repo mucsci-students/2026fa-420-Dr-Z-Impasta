@@ -12,6 +12,7 @@ accurate before a feature lands.
 """
 
 from collections.abc import Iterable
+from zimpasta.commands.add import SPECS as ADD_SPECS
 
 from zimpasta.command import (
     CommandError,
@@ -38,17 +39,11 @@ from zimpasta.prompts import INVALID_CHOICE
 from zimpasta.session import Session
 from zimpasta.welcome_page import welcome
 
-KINDS = ("course", "room", "lab", "faculty")
-
 PLACEHOLDERS: tuple[CommandSpec, ...] = (
     *LOAD_SPECS,
     *SAVE_SPECS,
     *PRINT_SPECS,
-    CommandSpec(
-        "add",
-        positionals=(Positional("kind", choices=KINDS), Positional("id")),
-        description="Add a course, room, lab, or faculty member",
-    ),
+    *ADD_SPECS,
     *MODIFY_SPECS,
     *DELETE_SPECS,
     *RUN_SPECS,
