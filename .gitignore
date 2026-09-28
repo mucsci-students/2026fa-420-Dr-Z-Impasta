@@ -216,3 +216,11 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Frontend (Sprint 2 GUI)
+#   Dependencies are installed by `npm ci` from frontend/package-lock.json, and
+#   `npm run build` writes the GUI into src/zimpasta/web; neither is committed.
+frontend/node_modules/
+src/zimpasta/web/
+*.tsbuildinfo
+.vite/
