@@ -457,7 +457,7 @@ class ConfigWorkspace:
                 return impact
             evaluation = self._evaluate(refs.apply_delete(document, area, index))
             if not self._acceptable(evaluation.status):
-                impact = dataclasses.replace(impact, problems=evaluation.issues)
+                impact = dataclasses.replace(impact, problems=self._blocking(evaluation.issues))
             return impact
 
     def remove(self, area: str, index: int) -> tuple[Change, refs.DeleteImpact]:
@@ -510,13 +510,22 @@ class ConfigWorkspace:
     def _commit(self, candidate: dict, describe) -> Change:
         evaluation = self._evaluate(candidate)
         if not self._acceptable(evaluation.status):
-            raise EditRejected(_rejection_message(evaluation.issues), issues=evaluation.issues)
+            issues = self._blocking(evaluation.issues)
+            raise EditRejected(_rejection_message(issues), issues=issues)
         action, area, summary = describe(evaluation.document)
         self._revision += 1
         self._apply(evaluation)
         change = Change(self._revision, action, area, summary)
         self._changes.append(change)
         return change
+
+    def _blocking(self, issues: tuple[Issue, ...]) -> tuple[Issue, ...]:
+        """The problems that caused a rejection, without an incomplete configuration's
+        standing "add at least one ..." notes, which are not the edit's fault."""
+        if self._status is not ConfigStatus.INCOMPLETE:
+            return issues
+        causes = tuple(problem for problem in issues if not problem.is_missing_required_item)
+        return causes or issues
 
     def _acceptable(self, status: ConfigStatus | None) -> bool:
         if status is ConfigStatus.VALID:

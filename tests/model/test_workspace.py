@@ -130,8 +130,10 @@ def test_incomplete_configuration_still_enforces_item_rules():
     with pytest.raises(EditRejected) as caught:
         ws.add("rooms", {"name": "Tiny", "capacity": 0})
 
-    assert caught.value.issues[0].area == "rooms"
-    assert caught.value.issues[0].field == "capacity"
+    assert [(problem.area, problem.field) for problem in caught.value.issues] == [
+        ("rooms", "capacity")
+    ]
+    assert caught.value.message == "The change was not applied: Input should be greater than 0"
     assert ws.revision == revision
     assert ws.counts()["rooms"] == 0
 
