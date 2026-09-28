@@ -95,12 +95,13 @@ src/zimpasta/
   prompts.py        validated prompts (ask_int, ask_yes_no, ask_choice, ask_menu, ask_format,
                     ask_output_path) and the fixed acceptance-scenario messages
   welcome_page.py   the welcome banner
-  config_loader.py  load_config(path): the one place a configuration file is read
-  config_finder.py  ConfigFinder: look up courses, faculty, rooms, and labs by id or name
-  generate.py       schedule generation through the library's Scheduler
-  results.py        ScheduleStore: the generated schedules kept in the session
   view.py           text summary and table for the in-session schedules
-  export.py         JSON and CSV export with overwrite protection
+  model/            the Model, shared by the shell and the GUI:
+    config_loader.py  load_config(path): the one place a configuration file is read
+    config_finder.py  ConfigFinder: look up courses, faculty, rooms, and labs by id or name
+    generate.py       schedule generation through the library's Scheduler
+    results.py        ScheduleStore: the generated schedules kept in the session
+    export.py         JSON and CSV export with overwrite protection
   commands/         one module per command, each exposing SPECS
     load_config.py, save_config.py, print_config.py    load, save, print
     delete.py                                          delete

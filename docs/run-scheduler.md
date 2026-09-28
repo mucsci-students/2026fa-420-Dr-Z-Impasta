@@ -40,10 +40,10 @@ Wrote 5 schedule(s) to /abs/path/out.csv
 
 | Module | Responsibility |
 | --- | --- |
-| `zimpasta/generate.py` | Builds a validated run copy of the config, drives `Scheduler.get_models()`, classifies the outcome. |
-| `zimpasta/results.py` | `ScheduleStore`: the generated set kept in the session (replace, get, clear). |
+| `zimpasta/model/generate.py` | Builds a validated run copy of the config, drives `Scheduler.get_models()`, classifies the outcome. |
+| `zimpasta/model/results.py` | `ScheduleStore`: the generated set kept in the session (replace, get, clear). |
 | `zimpasta/view.py` | Plain-text summary and per-schedule table for `schedules summary` and `schedules show`. |
-| `zimpasta/export.py` | JSON and CSV export through `scheduler.writers`, with overwrite protection. |
+| `zimpasta/model/export.py` | JSON and CSV export through `scheduler.writers`, with overwrite protection. |
 | `zimpasta/prompts.py` | `ask_format` and `ask_output_path` alongside the shared prompt helpers. |
 | `zimpasta/commands/run.py` | `run schedule`: handler, builder, and `make_specs()` for test injection. |
 | `zimpasta/commands/results.py` | The four `schedules` commands. |
@@ -54,7 +54,7 @@ Nothing here duplicates library models or validation. The library is the source 
 
 ## Seams with other features
 
-**Config loading (Foster).** `zimpasta/config_loader.py` holds the one function that reads a
+**Config loading (Foster).** `zimpasta/model/config_loader.py` holds the one function that reads a
 configuration file, `load_config(path) -> CombinedConfig`, wrapping the library's
 `load_config_from_file`. Both Foster's `load` command and `run schedule --config` go through it,
 and each turns the library's exceptions (`OSError`, `json.JSONDecodeError`,

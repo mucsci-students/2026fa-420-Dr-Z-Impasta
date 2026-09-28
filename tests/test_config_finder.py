@@ -7,7 +7,7 @@ Date: September 16th, 2026
 import pytest
 from scheduler import CourseConfig, FacultyConfig, LabConfig, RoomConfig
 
-from zimpasta.config_finder import ConfigFinder
+from zimpasta.model.config_finder import ConfigFinder
 
 
 def test_find_course(config) -> None:
