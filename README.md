@@ -322,6 +322,8 @@ new server-side workflow as an `AppController` method with pytest tests.
 
 - [docs/gui.md](docs/gui.md): how the GUI is organized and how to build a mode on it.
 - [docs/web-api.md](docs/web-api.md): the JSON API between the GUI and the Model.
+- [docs/cloudflare-pages.md](docs/cloudflare-pages.md): publishing the GUI's static build to
+  Cloudflare Pages (interface only; the API still runs locally).
 - [docs/run-scheduler.md](docs/run-scheduler.md): schedule generation, in-session results,
   and JSON/CSV export in the shell.
 - The other commands are documented in their module docstrings: `commands/delete.py`
