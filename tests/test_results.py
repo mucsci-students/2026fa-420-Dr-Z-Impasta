@@ -2,8 +2,8 @@ from datetime import datetime
 
 import pytest
 
-from zimpasta.generate import REASON_TIMEOUT, GenerationResult
-from zimpasta.results import ScheduleStore
+from zimpasta.model.generate import REASON_TIMEOUT, GenerationResult
+from zimpasta.model.results import ScheduleStore
 from zimpasta.view import format_schedule, summarize
 
 

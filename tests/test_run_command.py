@@ -17,7 +17,7 @@ from zimpasta.commands.run import (
     OPTIMIZE_PROMPT,
     make_specs,
 )
-from zimpasta.generate import REASON_EXHAUSTED, REASON_TIMEOUT, generate_schedules
+from zimpasta.model.generate import REASON_EXHAUSTED, REASON_TIMEOUT, generate_schedules
 from zimpasta.prompts import (
     INVALID_YES_NO,
     NON_NUMERIC,

@@ -7,7 +7,7 @@ from tests.helpers import ScriptedConsole
 from zimpasta.cli import build_registry
 from zimpasta.command import CommandError, Registry, evaluate
 from zimpasta.commands.results import BAD_WHICH, CLEARED, NO_RESULTS, SPECS, WHICH_PROMPT
-from zimpasta.generate import GenerationResult
+from zimpasta.model.generate import GenerationResult
 from zimpasta.prompts import OUTPUT_FILE_PROMPT
 from zimpasta.session import Session
 

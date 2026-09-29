@@ -6,7 +6,7 @@ from pathlib import Path
 
 from scheduler import CombinedConfig
 
-from zimpasta.generate import Schedule
+from zimpasta.model.generate import Schedule
 
 FIXTURE_CONFIG = Path(__file__).resolve().parent / "fixtures" / "minimal_config.json"
 """Two courses, two faculty: the library solves it in milliseconds, so tests use it."""

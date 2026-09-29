@@ -1,6 +1,6 @@
 """In-session storage for the most recent set of generated schedules."""
 
-from zimpasta.generate import GenerationResult, Schedule
+from zimpasta.model.generate import GenerationResult, Schedule
 
 
 class ScheduleStore:

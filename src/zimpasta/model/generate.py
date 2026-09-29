@@ -6,7 +6,7 @@ one of four outcomes so the command layer can report each case distinctly.
 """
 
 import logging
-from collections.abc import Callable, Iterator
+from collections.abc import Callable, Iterator, Sequence
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
@@ -87,7 +87,20 @@ class GenerationFailed:
     exception: BaseException | None = None
 
 
-GenerationOutcome = GenerationSuccess | NoFeasibleSchedule | InvalidConfiguration | GenerationFailed
+@dataclass(frozen=True)
+class GenerationCancelled:
+    """``should_stop`` asked the run to stop; ``found`` schedules had been generated."""
+
+    found: int
+
+
+GenerationOutcome = (
+    GenerationSuccess
+    | NoFeasibleSchedule
+    | InvalidConfiguration
+    | GenerationFailed
+    | GenerationCancelled
+)
 
 
 def describe_reason(reason: str | None) -> str:
@@ -114,9 +127,16 @@ def resolve_optimizer_flags(
 
 
 def prepare_run_config(
-    config: CombinedConfig, *, limit: int | None = None, optimize: bool | None = None
+    config: CombinedConfig,
+    *,
+    limit: int | None = None,
+    optimize: bool | None = None,
+    optimizer_flags: Sequence[OptimizerFlags | str] | None = None,
 ) -> CombinedConfig:
     """Return a freshly validated copy of ``config`` with the run's limit and flags applied.
+
+    ``optimizer_flags``, when given, is used exactly as the run's flags and takes
+    precedence over ``optimize`` (see :func:`resolve_optimizer_flags`).
 
     The original object is never mutated, so a failed run leaves the session's
     configuration intact. Validation runs against the complete configuration.
@@ -127,7 +147,10 @@ def prepare_run_config(
     data = config.model_dump(mode="python")
     if limit is not None:
         data["limit"] = limit
-    data["optimizer_flags"] = list(resolve_optimizer_flags(config, optimize))
+    if optimizer_flags is not None:
+        data["optimizer_flags"] = list(optimizer_flags)
+    else:
+        data["optimizer_flags"] = list(resolve_optimizer_flags(config, optimize))
     return CombinedConfig.model_validate(data)
 
 
@@ -145,8 +168,10 @@ def generate_schedules(
     *,
     limit: int | None = None,
     optimize: bool | None = None,
+    optimizer_flags: Sequence[OptimizerFlags | str] | None = None,
     solver_timeout_ms: int | None = DEFAULT_SOLVER_TIMEOUT_MS,
     on_progress: ProgressCallback | None = None,
+    should_stop: Callable[[], bool] | None = None,
     scheduler_factory: SchedulerFactory = Scheduler,
     config_path: Path | None = None,
 ) -> GenerationOutcome:
@@ -156,15 +181,20 @@ def generate_schedules(
         config: the session's configuration. ``None`` is reported as invalid.
         limit: overrides the configuration's ``limit`` for this run only.
         optimize: see :func:`resolve_optimizer_flags`.
+        optimizer_flags: the exact flags for this run; overrides ``optimize``.
         solver_timeout_ms: per-check Z3 timeout; ``None`` disables it.
         on_progress: called after each schedule so a slow solve can show progress.
+        should_stop: checked after each schedule; returning true ends the run as
+            :class:`GenerationCancelled`. The solver can't be interrupted mid-schedule.
         scheduler_factory: injection point for tests; must accept the ``Scheduler`` signature.
         config_path: recorded on the result for display purposes.
     """
     if config is None:
         return InvalidConfiguration(("No configuration is loaded.",))
     try:
-        run_config = prepare_run_config(config, limit=limit, optimize=optimize)
+        run_config = prepare_run_config(
+            config, limit=limit, optimize=optimize, optimizer_flags=optimizer_flags
+        )
     except ValidationError as exc:
         return InvalidConfiguration(format_validation_errors(exc))
 
@@ -175,6 +205,8 @@ def generate_schedules(
             schedules.append(schedule)
             if on_progress is not None:
                 on_progress(len(schedules), run_config.limit)
+            if should_stop is not None and should_stop():
+                return GenerationCancelled(len(schedules))
     except Exception as exc:
         # z3.Z3Exception and friends share no useful base class; anything raised while
         # constructing or driving the solver is an unexpected runtime failure.

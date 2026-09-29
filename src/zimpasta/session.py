@@ -19,7 +19,7 @@ from pathlib import Path
 
 from scheduler import CombinedConfig
 
-from zimpasta.results import ScheduleStore
+from zimpasta.model.results import ScheduleStore
 
 
 @dataclass

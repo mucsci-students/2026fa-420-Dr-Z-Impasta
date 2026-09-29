@@ -1,7 +1,7 @@
 from scheduler import CombinedConfig, OptimizerFlags
 
 from tests.helpers import FakeSchedulerFactory, build_config_data, build_infeasible_config_data
-from zimpasta.generate import (
+from zimpasta.model.generate import (
     REASON_EXHAUSTED,
     REASON_TIMEOUT,
     REASON_UNKNOWN,

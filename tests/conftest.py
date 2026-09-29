@@ -9,7 +9,7 @@ import pytest
 from scheduler import CombinedConfig, Scheduler
 
 from tests.helpers import EXAMPLE_CONFIG, FIXTURE_CONFIG, FakeSchedulerFactory, build_config_data
-from zimpasta.generate import generate_schedules
+from zimpasta.model.generate import generate_schedules
 
 
 @pytest.fixture

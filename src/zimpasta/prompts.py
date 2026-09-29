@@ -10,7 +10,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from zimpasta.console import Console
-from zimpasta.export import ExportFormat, resolve_output_path, unwritable_reason
+from zimpasta.model.export import ExportFormat, resolve_output_path, unwritable_reason
 
 INVALID_CHOICE = "Invalid choice."
 NON_NUMERIC = "Please enter numerical characters only."

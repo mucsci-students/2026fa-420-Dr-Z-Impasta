@@ -33,7 +33,7 @@ from zimpasta.commands.results import SPECS as SCHEDULES_SPECS
 from zimpasta.commands.run import SPECS as RUN_SPECS
 from zimpasta.commands.save_config import SPECS as SAVE_SPECS
 from zimpasta.console import Console, StdConsole
-from zimpasta.generate import quiet_library_logging
+from zimpasta.model.generate import quiet_library_logging
 from zimpasta.prompts import INVALID_CHOICE
 from zimpasta.session import Session
 from zimpasta.welcome_page import welcome
