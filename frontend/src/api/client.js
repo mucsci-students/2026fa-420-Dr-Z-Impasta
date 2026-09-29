@@ -47,6 +47,11 @@ async function readSuccess(response) {
       revision: Number(response.headers.get("X-Config-Revision") ?? NaN),
     };
   }
+  // Anything but JSON means something other than our server answered, like a static host
+  // that returns index.html for every path.
+  if (!(response.headers.get("Content-Type") || "").includes("application/json")) {
+    throw new ApiError({ code: "network_error", message: UNREACHABLE });
+  }
   return response.json();
 }
 
