@@ -8,17 +8,55 @@ shell (Sprint 1) and a graphical interface (Sprint 2) on top of it.
 
 ## Setup
 
-1. Install [uv](https://docs.astral.sh/uv/) (`brew install uv` on macOS).
-2. From the repo root:
+You need [uv](https://docs.astral.sh/uv/) for Python and, for the GUI,
+[Node.js](https://nodejs.org/) 24 LTS (22.22 or newer works) with the npm that comes with
+it (npm 10 or 11). Nothing else needs to be installed globally.
 
 ```bash
-uv sync
+brew install uv node@24        # macOS; or see the uv and Node.js sites
+uv sync                        # Python 3.12, the scheduler library, and dev tools
+cd frontend && npm ci && npm run build && cd ..    # the GUI's dependencies and build
 ```
 
-That creates `.venv` with Python 3.12 (uv downloads it if needed), the library, and the dev
-tools. You never need to activate the venv; prefix commands with `uv run`.
+`uv sync` creates `.venv` (uv downloads Python if needed); prefix Python commands with
+`uv run` instead of activating it. `npm ci` installs exactly what `frontend/package-lock.json`
+pins, and `npm run build` writes the GUI into `src/zimpasta/web/`, where the Python server
+finds it. Run the build again after pulling GUI changes. `frontend/.nvmrc` names the Node
+version for `nvm use`.
 
-## Run
+## The GUI
+
+```bash
+uv run zimpasta --gui                       # opens http://127.0.0.1:8000 in your browser
+uv run zimpasta --gui examples/sample_config.json   # ... with a configuration open
+```
+
+The GUI is a React app (JavaScript, built with Vite) served by the same Python process as
+its API, on your computer only (`127.0.0.1`). `--port N` picks the port (otherwise the first
+free one from 8000), and `--no-browser` skips opening a browser. Stop it with Ctrl+C. The
+configuration and schedules live in that process, so closing the browser tab loses nothing;
+stopping the server ends the session, so save first.
+
+The three modes are the tabs at the top: **01 Configuration Editor**, **02 Schedule
+Generator**, and **03 Schedule Viewer**. The active tab is underlined and its number
+highlighted, and you can switch at any time without losing applied work. The pill at the
+top right always shows the configuration's state: *No configuration loaded*, *Incomplete*,
+*Unsaved changes (n)*, or *Valid · saved*. A dot on the Generator tab means schedules are
+being generated. If the server stops, a banner says so and the page reconnects by itself
+once it is back.
+
+**Files.** Configurations and schedules are opened with your browser's file picker and saved
+with its save dialog. The server never reads or writes files by itself. In Chrome and Edge,
+saving shows the system *Save As* dialog, which asks before replacing an existing file. Other
+browsers download the file instead and never overwrite: a second download of `out.json`
+becomes `out (1).json`. The editor also asks before *New* or *Load* would discard unsaved
+changes, and before leaving a form with changes that haven't been applied.
+
+**Working on the GUI.** `npm run dev` in `frontend/` starts the API (on port 8765) and the
+Vite dev server together; open http://localhost:5173, which reloads as you edit.
+[docs/gui.md](docs/gui.md) explains how the View is organized and how to add to it.
+
+## The shell
 
 ```bash
 uv run zimpasta
@@ -75,7 +113,7 @@ Verbs, nouns, and choice values are case-insensitive.
 
 ## Check before you push
 
-CI runs exactly these on Linux, macOS, and Windows:
+CI runs these on Linux, macOS, and Windows:
 
 ```bash
 uv run ruff format --check .
@@ -83,7 +121,17 @@ uv run ruff check .
 uv run pytest
 ```
 
-`uv run ruff format .` fixes formatting in place.
+and these for the GUI:
+
+```bash
+cd frontend
+npm run lint
+npm run build
+```
+
+`uv run ruff format .` fixes Python formatting in place. `uv run pytest` is the whole test
+suite: the Model, the Controller (including every API route), and the shell. It doesn't need
+the GUI to be built.
 
 ## Architecture (MVC)
 
@@ -95,9 +143,14 @@ second view on the same Model.
 | --- | --- | --- |
 | Model | `src/zimpasta/model/` | The configuration being edited, validated by the library; schedule generation; the schedules available to the viewer. No HTTP, no rendering. |
 | Controller | `src/zimpasta/controller/` | One `AppController` method per user action, coordinating the Model; the `/api` routes that expose them; error responses; local-only security. |
-| View | GUI (see the GUI foundation) | Pages, forms, tables, dialogs, navigation, and messages. Form drafts live here until the user applies them. |
+| View | `frontend/src/` | React pages, forms, tables, dialogs, navigation, and messages. Form drafts live here until the user applies them; everything else goes through the API. |
 
-The API is documented in [docs/web-api.md](docs/web-api.md).
+A user action flows View → `frontend/src/api/client.js` → `/api` route → one
+`AppController` method → the Model, and the result flows back the same way. Components never
+validate scheduler data or run workflows themselves; the library validates in the Model, and
+multi-step workflows (load with unsaved changes, generate then publish results to the viewer,
+delete with cascades) live in the Controller, where pytest covers them. The API is documented
+in [docs/web-api.md](docs/web-api.md); the View in [docs/gui.md](docs/gui.md).
 
 ### Editing rules
 
@@ -187,7 +240,9 @@ src/zimpasta/
     routes.py         the /api routes
     errors.py         one JSON error shape for every failure
     security.py       localhost only; no cross-site requests
+    static.py         serves the built GUI (src/zimpasta/web/, not committed)
     api.py            create_app(): the FastAPI application
+  gui.py            zimpasta --gui: pick a port, start uvicorn, open the browser
   commands/         one module per shell command, each exposing SPECS
     load_config.py, save_config.py, print_config.py    load, save, print
     add.py, modify.py, delete.py                       add, modify, delete
@@ -200,11 +255,27 @@ tests/
   helpers.py        ScriptedConsole and a fake scheduler for tests
   model/            Model tests
   controller/       AppController use cases and HTTP API tests
+frontend/           the View: React + Vite, JavaScript (see docs/gui.md)
+  package.json, package-lock.json, .nvmrc, vite.config.js, eslint.config.js
+  src/
+    main.jsx, router.jsx, App.jsx, modes.js   entry, routes, frame, the three modes
+    api/client.js     every API call
+    state/            app state polling, useAction, toasts
+    components/       Button, Card, Dialog, ConfirmDialog, Field, Banner, ...
+    layout/           header, connection banner, error pages
+    modes/editor|generator|viewer/   one folder per mode
+    styles/           design tokens and component styles from the mockups
 examples/
   sample_config.json   the library's department example
 ```
 
 ## Adding your feature
+
+**GUI features** (the three Sprint 2 modes) start from [docs/gui.md](docs/gui.md): your
+mode's folder in `frontend/src/modes/`, calls through `frontend/src/api/client.js`, and any
+new server-side workflow as an `AppController` method with pytest tests.
+
+**Shell commands** follow these steps:
 
 1. Branch from `develop`: `git switch -c feat/<your-feature> develop`.
 2. Create `src/zimpasta/commands/<feature>.py` with a `SPECS` tuple of `CommandSpec`s.
@@ -230,6 +301,16 @@ examples/
    has `CMSC 140` twice. Look items up with `ConfigFinder`, which returns every match, and
    decide how your command picks one (`delete` uses `--section`).
 
+## Known limitations
+
+- The native *Save As* dialog exists only in Chromium browsers (Chrome, Edge); elsewhere
+  saving downloads the file to the browser's download folder.
+- Cancelling generation takes effect after the schedule being solved finishes, since the
+  solver can't be interrupted mid-schedule.
+- One session per server: two browser tabs share the same configuration and schedules.
+- While a new configuration is incomplete, name and reference checks across items run on the
+  edit that completes it (see *Editing rules*).
+
 ## Conventions
 
 - Commit messages follow [Conventional Commits](https://www.conventionalcommits.org/):
@@ -239,6 +320,7 @@ examples/
 
 ## Feature notes
 
+- [docs/gui.md](docs/gui.md): how the GUI is organized and how to build a mode on it.
 - [docs/web-api.md](docs/web-api.md): the JSON API between the GUI and the Model.
 - [docs/run-scheduler.md](docs/run-scheduler.md): schedule generation, in-session results,
   and JSON/CSV export in the shell.

@@ -1,4 +1,7 @@
-"""Shell entry point: welcome page, command prompt, dispatch.
+"""Entry point: the interactive shell, or the GUI with ``--gui``.
+
+``zimpasta`` starts the shell described below. ``zimpasta --gui [CONFIG]`` starts the
+graphical interface instead (see :mod:`zimpasta.gui`).
 
 The shell is a REPL. A complete command line such as
 ``run schedule --limit 5 --optimize yes --format csv --output out`` runs immediately. A
@@ -11,7 +14,9 @@ as ``SPECS`` and swap them in for your placeholder in ``PLACEHOLDERS`` below, th
 accurate before a feature lands.
 """
 
-from collections.abc import Iterable
+import argparse
+import sys
+from collections.abc import Iterable, Sequence
 
 from zimpasta.command import (
     CommandError,
@@ -104,7 +109,47 @@ def run(console: Console, session: Session, registry: Registry | None = None) ->
             console.say("")
 
 
-def main() -> None:
+def parse_arguments(argv: Sequence[str] | None = None) -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        prog="zimpasta",
+        description="Dr. ZImpasta course scheduler. Without --gui, starts the interactive shell.",
+    )
+    parser.add_argument(
+        "--gui", action="store_true", help="open the graphical interface in your web browser"
+    )
+    parser.add_argument(
+        "config", nargs="?", help="with --gui: a configuration JSON file to open at start"
+    )
+    parser.add_argument(
+        "--port",
+        type=int,
+        help="with --gui: port to serve on (default: 8000, or the next free port)",
+    )
+    parser.add_argument(
+        "--no-browser",
+        action="store_true",
+        help="with --gui: don't open a browser window (for example, when using npm run dev)",
+    )
+    arguments = parser.parse_args(argv)
+    if not arguments.gui and (
+        arguments.config or arguments.port is not None or arguments.no_browser
+    ):
+        parser.error("a config file, --port, and --no-browser only apply with --gui")
+    return arguments
+
+
+def main(argv: Sequence[str] | None = None) -> None:
+    arguments = parse_arguments(argv)
+    if arguments.gui:
+        from zimpasta.gui import serve
+
+        sys.exit(
+            serve(
+                config=arguments.config,
+                port=arguments.port,
+                open_browser=not arguments.no_browser,
+            )
+        )
     quiet_library_logging()
     run(StdConsole(), Session())
 
