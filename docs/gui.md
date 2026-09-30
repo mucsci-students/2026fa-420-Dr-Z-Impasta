@@ -86,7 +86,8 @@ move it to `components/`.
 | `Dialog`, `ConfirmDialog` | Modal dialogs; `ConfirmDialog destructive` for deletes, clears, and discards |
 | `UnsavedChangesPrompt` | Put in a page with a form draft; asks before switching modes or closing the tab |
 | `SegmentedControl` | A small one-of-a-few toggle, like Room & lab / Faculty |
-| `EmptyState`, `Spinner` | Nothing to show yet, or loading |
+| `EmptyState`, `Spinner` | Nothing to show yet (with an optional `mark` icon), or loading |
+| `Farfalle`, `Penne`, `Rotelle`, `Lasagna`, `Ravioli` | Small pasta-shaped line icons from `PastaMarks.jsx`, a nod to the team's name. Decorative only (hidden from screen readers); they take the text color, so set it with a token |
 
 ## Patterns
 
@@ -160,5 +161,9 @@ the user's words. Don't ask anyone to look in the terminal.
 - The model and controller also run in the browser, on Pyodide, so they can't start
   threads or processes or open files. The browser version can't run anything that does.
 - Use the design tokens in `styles/tokens.css`, not raw colors, so the modes look alike.
+- Keep the pasta touches quiet. So far they are the farfalle brand mark, one mark per empty
+  state (penne for the Editor, rotelle for the Generator, lasagna for the Viewer), the
+  spinner's spaghetti twirl, and the rippled underline on the active tab. Draw new ones
+  the same way: 24×24 line art with a 1.6 stroke in `currentColor`.
 - Controls need labels (use `Field`), destructive actions need `variant="danger"` and a
   confirmation, and nothing may rely on color alone.
