@@ -56,6 +56,11 @@ changes, and before leaving a form with changes that haven't been applied.
 Vite dev server together; open http://localhost:5173, which reloads as you edit.
 [docs/gui.md](docs/gui.md) explains how the View is organized and how to add to it.
 
+**The hosted version.** https://dr-zimpasta.pages.dev runs the same GUI with Python in
+your browser: no install, one session per tab, at most 5 schedules per run, and slower
+solving. Each pull request into `develop` gets its own preview there.
+[docs/cloudflare-pages.md](docs/cloudflare-pages.md) explains how it works.
+
 ## The shell
 
 ```bash
@@ -127,11 +132,14 @@ and these for the GUI:
 cd frontend
 npm run lint
 npm run build
+npm run build:browser
+npm run test:browser
 ```
 
 `uv run ruff format .` fixes Python formatting in place. `uv run pytest` is the whole test
 suite: the Model, the Controller (including every API route), and the shell. It doesn't need
-the GUI to be built.
+the GUI to be built. `npm run test:browser` runs the browser version's Python in Node; its
+first run downloads about 15 MB.
 
 ## Architecture (MVC)
 
@@ -243,6 +251,7 @@ src/zimpasta/
     static.py         serves the built GUI (src/zimpasta/web/, not committed)
     api.py            create_app(): the FastAPI application
   gui.py            zimpasta --gui: pick a port, start uvicorn, open the browser
+  browser.py        the browser version: the API in process on Pyodide (docs/cloudflare-pages.md)
   commands/         one module per shell command, each exposing SPECS
     load_config.py, save_config.py, print_config.py    load, save, print
     add.py, modify.py, delete.py                       add, modify, delete
@@ -260,11 +269,13 @@ frontend/           the View: React + Vite, JavaScript (see docs/gui.md)
   src/
     main.jsx, router.jsx, App.jsx, modes.js   entry, routes, frame, the three modes
     api/client.js     every API call
+    api/backend.js    the server, or Python in a Web Worker (api/browser/) for build:browser
     state/            app state polling, useAction, toasts
     components/       Button, Card, Dialog, ConfirmDialog, Field, Banner, ...
     layout/           header, connection banner, error pages
     modes/editor|generator|viewer/   one folder per mode
     styles/           design tokens and component styles from the mockups
+  scripts/          build-browser.mjs and test-browser.mjs: the browser version
 examples/
   sample_config.json   the library's department example
 ```
@@ -310,6 +321,8 @@ new server-side workflow as an `AppController` method with pytest tests.
 - One session per server: two browser tabs share the same configuration and schedules.
 - While a new configuration is incomplete, name and reference checks across items run on the
   edit that completes it (see *Editing rules*).
+- The browser version generates at most 5 schedules per run, solves about 3× slower, answers
+  nothing else while a schedule is being solved, and loses its session when the tab closes.
 
 ## Conventions
 
@@ -322,6 +335,8 @@ new server-side workflow as an `AppController` method with pytest tests.
 
 - [docs/gui.md](docs/gui.md): how the GUI is organized and how to build a mode on it.
 - [docs/web-api.md](docs/web-api.md): the JSON API between the GUI and the Model.
+- [docs/cloudflare-pages.md](docs/cloudflare-pages.md): the browser version on Cloudflare
+  Pages, with Python running in the page, and its pull request previews.
 - [docs/run-scheduler.md](docs/run-scheduler.md): schedule generation, in-session results,
   and JSON/CSV export in the shell.
 - The other commands are documented in their module docstrings: `commands/delete.py`

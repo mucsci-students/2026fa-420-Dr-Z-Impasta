@@ -20,6 +20,26 @@ the Python server. Python changes need `npm run dev` restarted; React changes do
 Before pushing: `npm run lint` and `npm run build` in `frontend/`, and `uv run pytest` at the
 root.
 
+## Two backends, one GUI
+
+The same GUI is built two ways. `npm run build` and `npm run dev` talk to the Python server
+(`zimpasta --gui`). `npm run build:browser` makes the browser version hosted on Cloudflare
+Pages: Python runs in the page, in a Web Worker, and answers the same routes
+(docs/cloudflare-pages.md). `api/backend.js` picks the backend when Vite builds, and
+`api/client.js` is the same for both, so **modes don't need to know which one they run
+on**. Keep using `api.*` for everything and it works in both.
+
+What differs for a mode in the browser version:
+
+- A run generates at most `options.generation.max_schedules` schedules (5). Read it from
+  `api.config.options()` and use it as the `max` of the schedule-count input; it is `null`
+  on the server.
+- While a schedule is being solved, calls wait until it's done (5 to 20 seconds). Show
+  progress from `state.generation.found`.
+
+To try the browser version: `npm run build:browser`, then `npm run preview:browser`, and
+open http://localhost:4173. `npm run test:browser` runs its Python in Node.
+
 ## Where things are
 
 ```
@@ -29,6 +49,7 @@ frontend/src/
   App.jsx             the frame: app state, toasts, header, current page
   modes.js            the three modes, in tab order
   api/client.js       every API call, and ApiError
+  api/backend.js      where calls go: the server, or Python in the browser (api/browser/)
   files.js            pickFile() and saveFile(): the browser's open and save dialogs
   format.js           shared wording: plural(), clockTime(), configStatus(), describeCounts()
   state/
@@ -36,12 +57,14 @@ frontend/src/
     useAction.js      runs an API call for a button, ignoring double clicks
     ToastProvider.jsx, toastContext.js         useToast() for success confirmations
   components/         shared building blocks (below)
-  layout/             header, connection banner, error and not-found pages
+  layout/             header, connection banner, error and not-found pages, and the
+                      browser version's start-up notice (BrowserSession.jsx)
   modes/
     editor/ConfigEditor.jsx          Configuration Editor
     generator/ScheduleGenerator.jsx  Schedule Generator
     viewer/ScheduleViewer.jsx        Schedule Viewer
   styles/             tokens.css (colors, spacing, fonts from the mockups) and component CSS
+frontend/scripts/     build-browser.mjs and test-browser.mjs, for the browser version
 ```
 
 Each mode owns its folder. Split a mode into more files there (`RoomCard.jsx`,
@@ -132,7 +155,10 @@ the user's words. Don't ask anyone to look in the terminal.
 - No workflows in components. If an action needs several server steps or a decision the
   server should make, add a method to `AppController` and a route in `routes.py`, with pytest
   tests, and call that one route.
-- Only `api/client.js` builds URLs. Add a function there when you add a route.
+- Only `api/client.js` builds URLs. Add a function there when you add a route. Don't call
+  `fetch("/api/...")` directly: the browser version has no server to answer it.
+- The model and controller also run in the browser, on Pyodide, so they can't start
+  threads or processes or open files. The browser version can't run anything that does.
 - Use the design tokens in `styles/tokens.css`, not raw colors, so the modes look alike.
 - Controls need labels (use `Field`), destructive actions need `variant="danger"` and a
   confirmation, and nothing may rely on color alone.

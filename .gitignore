@@ -224,3 +224,7 @@ frontend/node_modules/
 src/zimpasta/web/
 *.tsbuildinfo
 .vite/
+
+# The browser version of the GUI (npm run build:browser) and local Wrangler state
+frontend/dist-browser/
+.wrangler/
