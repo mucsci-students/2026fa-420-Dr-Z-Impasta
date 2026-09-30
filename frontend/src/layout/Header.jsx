@@ -1,4 +1,6 @@
 import { NavLink } from "react-router";
+import { Farfalle } from "../components/PastaMarks.jsx";
+import Spinner from "../components/Spinner.jsx";
 import StatusPill from "../components/StatusPill.jsx";
 import { configStatus } from "../format.js";
 import { MODES } from "../modes.js";
@@ -17,6 +19,7 @@ export default function Header() {
         Skip to content
       </a>
       <div className="topbar__brand">
+        <Farfalle size={20} className="topbar__mark" />
         <span className="topbar__name">Dr. ZImpasta</span>
         <span className="topbar__tagline">Course Scheduler</span>
       </div>
@@ -29,7 +32,9 @@ export default function Header() {
             {mode.label}
             {mode.path === "/generator" && generating && (
               <>
-                <span className="modes__busy" aria-hidden="true" />
+                <span className="modes__busy">
+                  <Spinner size="xs" label="" />
+                </span>
                 <span className="visually-hidden">(generating)</span>
               </>
             )}

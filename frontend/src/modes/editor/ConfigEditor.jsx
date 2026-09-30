@@ -10,6 +10,7 @@ import Card from "../../components/Card.jsx";
 import EmptyState from "../../components/EmptyState.jsx";
 import IssueList from "../../components/IssueList.jsx";
 import PageHeader from "../../components/PageHeader.jsx";
+import { Penne } from "../../components/PastaMarks.jsx";
 import Spinner from "../../components/Spinner.jsx";
 import StatusPill from "../../components/StatusPill.jsx";
 import { clockTime, configStatus, describeCounts } from "../../format.js";
@@ -32,7 +33,7 @@ export default function ConfigEditor() {
     return (
       <>
         <PageHeader title="Configuration" subtitle="Start a new configuration or load one from a JSON file." />
-        <EmptyState title="No configuration loaded">
+        <EmptyState title="No configuration loaded" mark={<Penne size={40} />}>
           Create an empty configuration to add rooms, labs, courses, and faculty, or load an
           existing JSON file. Files are validated before anything is replaced. The Schedule
           Generator and Viewer need a valid configuration or loaded schedules.
