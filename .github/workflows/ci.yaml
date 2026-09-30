@@ -36,3 +36,6 @@ jobs:
       - run: npm ci
       - run: npm run lint
       - run: npm run build
+      # The browser version (docs/cloudflare-pages.md): build it, then run its Python in Node.
+      - run: npm run build:browser
+      - run: npm run test:browser

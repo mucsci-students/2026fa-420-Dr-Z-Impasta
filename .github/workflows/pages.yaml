@@ -1,29 +1,30 @@
 name: Cloudflare Pages
 
-# Publishes the GUI's static build to Cloudflare Pages (setup: docs/cloudflare-pages.md).
-# Only the React app is hosted. The Python API runs on each user's own computer, so the
-# hosted page shows the interface with its "Can't reach the server" banner.
+# Publishes the browser version of the GUI (`npm run build:browser`) to Cloudflare Pages:
+# the whole app, with Python running in the visitor's browser. Setup and addresses are in
+# docs/cloudflare-pages.md.
 #
-# A push runs this workflow only if the pushed commit contains this file. Until
-# ci/cloudflare-pages is merged, only that branch deploys; once it is merged, develop does.
-# Remove ci/cloudflare-pages from the list after the merge.
+# - Each pull request into develop gets a preview at <branch>.dr-zimpasta.pages.dev,
+#   updated on every push to it. GitHub shows its link on the pull request.
+# - Each push to develop (a merged pull request) updates dr-zimpasta.pages.dev.
 
 on:
   push:
-    branches:
-      - develop
-      - ci/cloudflare-pages
+    branches: [develop]
+  pull_request:
+    branches: [develop]
 
 permissions:
   contents: read
   deployments: write
 
 concurrency:
-  group: pages-${{ github.ref }}
+  group: pages-${{ github.head_ref || github.ref_name }}
   cancel-in-progress: true
 
 env:
   PROJECT: dr-zimpasta
+  BRANCH: ${{ github.head_ref || github.ref_name }}
 
 jobs:
   deploy:
@@ -35,7 +36,7 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
           if [ -z "$CLOUDFLARE_API_TOKEN" ] || [ -z "$CLOUDFLARE_ACCOUNT_ID" ]; then
-            echo "::error::The CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID repository secrets aren't set. See docs/cloudflare-pages.md."
+            echo "::error::The CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID secrets aren't available (they aren't set, or this pull request comes from a fork). See docs/cloudflare-pages.md."
             exit 1
           fi
       - uses: actions/checkout@v7
@@ -46,14 +47,25 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
       - run: npm ci
         working-directory: frontend
-      - run: npm run build
+      - run: npm run build:browser
         working-directory: frontend
       - uses: cloudflare/wrangler-action@v4
+        id: deploy
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           # --commit-dirty: installing wrangler leaves untracked files in the checkout.
           command: >-
-            pages deploy src/zimpasta/web --project-name=${{ env.PROJECT }}
-            --branch=${{ github.ref_name }} --commit-dirty=true
+            pages deploy frontend/dist-browser --project-name=${{ env.PROJECT }}
+            --branch=${{ env.BRANCH }}
+            --commit-hash=${{ github.event.pull_request.head.sha || github.sha }}
+            --commit-dirty=true
           gitHubToken: ${{ secrets.GITHUB_TOKEN }}
+      - name: Show the address
+        env:
+          ALIAS: ${{ steps.deploy.outputs.pages-deployment-alias-url }}
+          DEPLOYMENT: ${{ steps.deploy.outputs.deployment-url }}
+        run: |
+          echo "### Deployed ${BRANCH}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Branch address: ${ALIAS:-none (production)}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- This deployment: ${DEPLOYMENT}" >> "$GITHUB_STEP_SUMMARY"
