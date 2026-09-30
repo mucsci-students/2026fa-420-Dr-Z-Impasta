@@ -1,54 +1,76 @@
-# Hosting the GUI on Cloudflare Pages
+# The browser version on Cloudflare Pages
 
-`.github/workflows/pages.yaml` builds `frontend/` and uploads the result to a Cloudflare
-Pages project named `dr-zimpasta`. It is a way to share how the interface looks, not a
-hosted version of the app: only the React build is on Pages. The API and the scheduler run
-on your own computer (`uv run zimpasta --gui`) and accept connections from it alone, so on
-Pages every mode shows the "Can't reach the Dr. ZImpasta server" banner, and nothing can be
-loaded, edited, or generated there.
+The hosted Dr. ZImpasta is the whole app running in the visitor's browser, with no server.
+It is the same React GUI, and the same Python model and controller, compiled for the
+browser:
 
-## Which branch deploys
+- A Web Worker loads [Pyodide](https://pyodide.org) (Python compiled to WebAssembly) from
+  its CDN.
+- It installs z3 and the scheduler library, which both publish WebAssembly builds for
+  that Pyodide version.
+- It answers every `/api` request by calling our FastAPI app in process
+  (`src/zimpasta/browser.py`).
 
-The workflow runs on pushes to `develop` and `ci/cloudflare-pages`, but GitHub only runs a
-workflow that exists in the pushed commit. Until `ci/cloudflare-pages` is merged, that
-branch is the only one that deploys; after the merge, `develop` does, with no further
-changes. Then delete the branch and remove it from the list in `pages.yaml`.
+Each browser tab is its own session.
 
-The project's production branch is `develop`, so:
+`uv run zimpasta --gui` is unchanged and still the main way to run the GUI. The browser
+version is a second build of the same code (`npm run build:browser`, see docs/gui.md).
 
-| Pushed to | Published at |
+## What's different in the browser
+
+- **The first visit downloads about 15 MB** (Python, pydantic, FastAPI, z3). A notice
+  explains the wait. Later visits use the browser's cache and start in about 5 seconds.
+- **Solving is about 3× slower** than natively. The sample configuration's first schedule
+  takes about 20 seconds, and each later one 6 to 9 seconds.
+- **A run generates at most 5 schedules.** A larger configured `limit` is lowered for the
+  run, and a larger override is refused (docs/web-api.md). With the sample configuration,
+  a full run takes about 50 seconds.
+- **While a schedule is being solved, other requests wait** until it's done. Cancel takes
+  effect after the current schedule, as it does on the server.
+- **Closing or reloading the tab ends the session.** The tab asks first when there are
+  unsaved changes, a running generation, or generated schedules. Save and export to files
+  as usual.
+
+## Deployments
+
+`.github/workflows/pages.yaml` builds the browser version and uploads it to the Cloudflare
+Pages project `dr-zimpasta`:
+
+| When | Published at |
 | --- | --- |
-| `develop` (after the merge) | `https://dr-zimpasta.pages.dev` |
-| `ci/cloudflare-pages` (the test) | `https://ci-cloudflare-pages.dr-zimpasta.pages.dev` |
+| A pull request into `develop` is opened or updated | `https://<branch>.dr-zimpasta.pages.dev` (a preview; `/` in the branch name becomes `-`) |
+| A push to `develop` (a merged pull request) | `https://dr-zimpasta.pages.dev` |
 
-Each deploy also gets its own permanent URL, shown at the end of the run's log. If
-`dr-zimpasta.pages.dev` is already taken, Cloudflare adds a suffix; `project create` prints
-the real address.
+The pull request shows the preview link as a deployment, and the run's summary lists both
+addresses. Every deployment also keeps its own permanent URL. Pull requests from forks
+don't get the repository's secrets, so their deploy fails at its first step.
 
-## One-time setup
+To check the browser version before pushing:
 
-Someone with a Cloudflare account creates the project and a token:
+```bash
+npm run build:browser
+```
 
-1. Create the project, with `develop` as its production branch:
+```bash
+npm run preview:browser
+```
 
-   ```bash
-   npx wrangler login
-   ```
+Run both in `frontend/`, then open http://localhost:4173. `npm run test:browser` runs its
+Python in Node and uses the API end to end; CI runs it on every push.
 
-   ```bash
-   npx wrangler pages project create dr-zimpasta --production-branch=develop
-   ```
+## Setup (done once)
 
-2. In the Cloudflare dashboard, go to *My Profile → API Tokens → Create Token → Custom
-   token* and grant **Account · Cloudflare Pages · Edit** for that account only.
-3. Note the account ID (`npx wrangler whoami` prints it).
-
-A repository admin then adds both as Actions secrets (*Settings → Secrets and variables →
-Actions → New repository secret*): `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`. Until
-they exist, the workflow fails at its first step and says which secrets are missing. Rerun
-the failed job once they're added.
+1. A Cloudflare account owner created the project:
+   `npx wrangler pages project create dr-zimpasta --production-branch=develop`.
+2. They created an API token with **Account · Cloudflare Pages · Edit**. Either kind of
+   token works: a user token (*My Profile → API Tokens*) or an account token (*Manage
+   Account → Account API Tokens*). An account token without the Pages permission fails
+   with `Authentication error [code: 10000]` on `.../upload-token`.
+3. A repository admin added the `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` Actions
+   secrets. Without them the workflow stops at its first step and says so.
 
 ## Removing it
 
-Delete `.github/workflows/pages.yaml`, then delete the project in the Cloudflare dashboard
-(*Workers & Pages → dr-zimpasta → Settings*) and revoke the token.
+Delete `.github/workflows/pages.yaml` and the `build:browser` and `test:browser` steps in
+`ci.yaml`. Then delete the project in the Cloudflare dashboard (*Workers & Pages →
+dr-zimpasta → Settings*) and revoke the token.
