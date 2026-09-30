@@ -6,7 +6,7 @@ one of four outcomes so the command layer can report each case distinctly.
 """
 
 import logging
-from collections.abc import Callable, Iterator, Sequence
+from collections.abc import Callable, Generator, Iterator, Sequence
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
@@ -102,6 +102,9 @@ GenerationOutcome = (
     | GenerationCancelled
 )
 
+GenerationSteps = Generator[int, None, GenerationOutcome]
+"""Yields the number of schedules found after each one; returns the outcome."""
+
 
 def describe_reason(reason: str | None) -> str:
     """Human wording for a completion reason, for use inside a sentence."""
@@ -163,7 +166,24 @@ def format_validation_errors(exc: ValidationError) -> tuple[str, ...]:
     return tuple(lines)
 
 
-def generate_schedules(
+def generate_schedules(config: CombinedConfig | None, **options: Any) -> GenerationOutcome:
+    """Generate schedules from ``config`` and classify the outcome, in one call.
+
+    Takes the same arguments as :func:`generation_steps`.
+    """
+    return run_steps(generation_steps(config, **options))
+
+
+def run_steps(steps: GenerationSteps) -> GenerationOutcome:
+    """Run ``steps`` to the end without pausing and return the outcome."""
+    while True:
+        try:
+            next(steps)
+        except StopIteration as finished:
+            return finished.value
+
+
+def generation_steps(
     config: CombinedConfig | None,
     *,
     limit: int | None = None,
@@ -174,8 +194,14 @@ def generate_schedules(
     should_stop: Callable[[], bool] | None = None,
     scheduler_factory: SchedulerFactory = Scheduler,
     config_path: Path | None = None,
-) -> GenerationOutcome:
-    """Generate schedules from ``config`` and classify the outcome.
+) -> GenerationSteps:
+    """Generate schedules from ``config`` one at a time, then classify the outcome.
+
+    A generator: each step solves one schedule and yields how many have been found, and
+    the outcome is its return value. The caller decides what happens between steps.
+    :func:`generate_schedules` doesn't pause; the browser version returns to its event loop
+    so it can answer requests while a run continues (see
+    :class:`~zimpasta.model.generation_job.EventLoopRunner`).
 
     Args:
         config: the session's configuration. ``None`` is reported as invalid.
@@ -184,7 +210,7 @@ def generate_schedules(
         optimizer_flags: the exact flags for this run; overrides ``optimize``.
         solver_timeout_ms: per-check Z3 timeout; ``None`` disables it.
         on_progress: called after each schedule so a slow solve can show progress.
-        should_stop: checked after each schedule; returning true ends the run as
+        should_stop: checked after each step; returning true ends the run as
             :class:`GenerationCancelled`. The solver can't be interrupted mid-schedule.
         scheduler_factory: injection point for tests; must accept the ``Scheduler`` signature.
         config_path: recorded on the result for display purposes.
@@ -205,6 +231,7 @@ def generate_schedules(
             schedules.append(schedule)
             if on_progress is not None:
                 on_progress(len(schedules), run_config.limit)
+            yield len(schedules)
             if should_stop is not None and should_stop():
                 return GenerationCancelled(len(schedules))
     except Exception as exc:

@@ -1,9 +1,16 @@
 """Schedule generation as a background job the GUI can watch, and cancel.
 
 A run can take minutes (each schedule is a full solve), so :class:`GenerationJob` runs
-:func:`~zimpasta.model.generate.generate_schedules` on a worker thread and exposes its
+:func:`~zimpasta.model.generate.generation_steps` in the background and exposes its
 progress as a :class:`JobStatus`. Only one run at a time: starting while another runs
 raises :class:`GenerationBusy`, which guards against a double-clicked Generate button.
+
+Runners
+-------
+A runner decides where the run happens. :class:`ThreadRunner` (the default) uses a worker
+thread. :class:`EventLoopRunner` is for the browser version, where Python has no threads:
+it runs on the asyncio event loop and pauses between schedules so status and cancel
+requests are answered while a run continues.
 
 Overrides
 ---------
@@ -12,6 +19,11 @@ checked by the library before the run starts: :func:`plan_run` applies them to a
 of the configuration and validates it, raising :class:`InvalidOverrides` with located
 issues if the library rejects them. The configuration itself is never modified, so the
 configured values stay available and saved files never change.
+
+A job can also have a ``max_limit``: the most schedules one run may generate. A larger
+configured limit is lowered to it for the run (``limit_capped``); asking for more with an
+override is rejected. The browser version uses this because every schedule it solves
+keeps the page's Python busy.
 
 Outcomes
 --------
@@ -24,9 +36,10 @@ Outcomes
 Only ``succeeded`` changes results. Every other outcome leaves earlier results as they were.
 """
 
+import asyncio
 import json
 import threading
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
 from dataclasses import dataclass, replace
 from datetime import datetime
 from enum import StrEnum
@@ -42,13 +55,14 @@ from zimpasta.model.generate import (
     GenerationFailed,
     GenerationOutcome,
     GenerationResult,
+    GenerationSteps,
     GenerationSuccess,
     InvalidConfiguration,
     NoFeasibleSchedule,
     describe_reason,
-    generate_schedules,
+    generation_steps,
 )
-from zimpasta.model.issues import Issue, issues_from_error
+from zimpasta.model.issues import Issue, issue, issues_from_error
 
 
 class JobState(StrEnum):
@@ -87,10 +101,13 @@ class RunSettings:
     optimizer_flags: tuple[str, ...]
     configured_limit: int
     configured_optimizer_flags: tuple[str, ...]
+    max_limit: int | None = None
+    limit_capped: bool = False
+    """The configured limit was above ``max_limit``, so the run uses ``max_limit``."""
 
     @property
     def limit_overridden(self) -> bool:
-        return self.limit != self.configured_limit
+        return self.limit != self.configured_limit and not self.limit_capped
 
     @property
     def optimizer_flags_overridden(self) -> bool:
@@ -104,6 +121,8 @@ class RunSettings:
             "configured_optimizer_flags": list(self.configured_optimizer_flags),
             "limit_overridden": self.limit_overridden,
             "optimizer_flags_overridden": self.optimizer_flags_overridden,
+            "max_limit": self.max_limit,
+            "limit_capped": self.limit_capped,
         }
 
 
@@ -150,13 +169,16 @@ def plan_run(
     *,
     limit: object = None,
     optimizer_flags: object = None,
+    max_limit: int | None = None,
 ) -> RunSettings:
     """Check one run's overrides with the library and return the settings it will use.
 
-    ``None`` means "use the configured value".
+    ``None`` means "use the configured value". With ``max_limit``, a configured limit
+    above it is lowered to it, and an overridden limit above it is rejected.
 
     Raises:
-        InvalidOverrides: the library rejects the overridden limit or flags.
+        InvalidOverrides: the library rejects the overridden limit or flags, or the
+            overridden limit is above ``max_limit``.
     """
     data = json.loads(config.model_dump_json())
     if limit is not None:
@@ -167,36 +189,107 @@ def plan_run(
         run = CombinedConfig.model_validate(data)
     except ValidationError as error:
         raise InvalidOverrides(tuple(issues_from_error(error))) from None
+    run_limit, capped = run.limit, False
+    if max_limit is not None and run.limit > max_limit:
+        if limit is not None:
+            raise InvalidOverrides(
+                (
+                    issue(
+                        f"Runs here generate at most {max_limit} schedules.",
+                        code="limit_above_maximum",
+                        path="limit",
+                        area="settings",
+                        field="limit",
+                    ),
+                )
+            )
+        run_limit, capped = max_limit, True
     return RunSettings(
-        limit=run.limit,
+        limit=run_limit,
         optimizer_flags=tuple(flag.value for flag in run.optimizer_flags),
         configured_limit=config.limit,
         configured_optimizer_flags=tuple(flag.value for flag in config.optimizer_flags),
+        max_limit=max_limit,
+        limit_capped=capped,
     )
+
+
+class ThreadRunner:
+    """Runs each generation on a daemon thread: the local server and the shell."""
+
+    def __init__(self) -> None:
+        self._thread: threading.Thread | None = None
+
+    def start(self, work: Iterator[object]) -> None:
+        self._thread = threading.Thread(
+            target=_run_all, args=(work,), name="zimpasta-generation", daemon=True
+        )
+        self._thread.start()
+
+    def wait(self, timeout: float | None = None) -> None:
+        if self._thread is not None:
+            self._thread.join(timeout)
+
+
+class EventLoopRunner:
+    """Runs each generation as a task on the running asyncio loop: the browser version.
+
+    Pyodide can't start threads. Solving a schedule still blocks the loop, but the task
+    pauses before the first schedule and between schedules, so the request that started
+    the run gets its reply, and status and cancel requests are answered along the way.
+    """
+
+    def __init__(self, pause: float = 0.01) -> None:
+        self._pause = pause
+        self._task: asyncio.Task | None = None
+
+    def start(self, work: Iterator[object]) -> None:
+        self._task = asyncio.get_running_loop().create_task(self._run(work))
+
+    async def _run(self, work: Iterator[object]) -> None:
+        await asyncio.sleep(self._pause)
+        for _ in work:
+            await asyncio.sleep(self._pause)
+
+    def wait(self, timeout: float | None = None) -> None:
+        raise RuntimeError("An event-loop run can't be waited for here; await finished().")
+
+    async def finished(self) -> None:
+        """Wait for the current run to end (for tests)."""
+        if self._task is not None:
+            await self._task
+
+
+def _run_all(work: Iterator[object]) -> None:
+    for _ in work:
+        pass
 
 
 SuccessHandler = Callable[[GenerationResult, JobStatus], None]
 
 
 class GenerationJob:
-    """At most one schedule-generation run at a time, on a worker thread."""
+    """At most one schedule-generation run at a time, in the background."""
 
     def __init__(
         self,
         *,
-        generator: Callable[..., GenerationOutcome] = generate_schedules,
+        generator: Callable[..., GenerationSteps] = generation_steps,
         on_success: SuccessHandler | None = None,
         clock: Callable[[], datetime] = datetime.now,
         solver_timeout_ms: int | None = DEFAULT_SOLVER_TIMEOUT_MS,
+        runner: ThreadRunner | EventLoopRunner | None = None,
+        max_limit: int | None = None,
     ) -> None:
         self._generator = generator
         self._on_success = on_success
         self._clock = clock
         self._solver_timeout_ms = solver_timeout_ms
+        self._runner = runner or ThreadRunner()
+        self.max_limit = max_limit
         self._lock = threading.Lock()
         self._status = JobStatus()
         self._cancel = threading.Event()
-        self._thread: threading.Thread | None = None
 
     def status(self) -> JobStatus:
         with self._lock:
@@ -220,7 +313,15 @@ class GenerationJob:
         with self._lock:
             if self._status.running:
                 raise GenerationBusy()
-        settings = plan_run(config, limit=limit, optimizer_flags=optimizer_flags)
+        settings = plan_run(
+            config, limit=limit, optimizer_flags=optimizer_flags, max_limit=self.max_limit
+        )
+        message = f"Generating up to {settings.limit} schedules..."
+        if settings.limit_capped:
+            message = (
+                f"Generating up to {settings.limit} schedules, the most a run generates here "
+                f"(the configuration asks for {settings.configured_limit})..."
+            )
         with self._lock:
             if self._status.running:
                 raise GenerationBusy()
@@ -231,16 +332,10 @@ class GenerationJob:
                 config_name=config_name,
                 config_revision=config_revision,
                 started_at=self._clock(),
-                message=f"Generating up to {settings.limit} schedules...",
+                message=message,
             )
             status = self._status
-            self._thread = threading.Thread(
-                target=self._run,
-                args=(config, settings, self._cancel),
-                name="zimpasta-generation",
-                daemon=True,
-            )
-            self._thread.start()
+            self._runner.start(self._work(config, settings, self._cancel))
             return status
 
     def cancel(self) -> JobStatus:
@@ -257,9 +352,7 @@ class GenerationJob:
 
     def wait(self, timeout: float | None = None) -> JobStatus:
         """Block until the current run finishes (for tests and the shell)."""
-        thread = self._thread
-        if thread is not None:
-            thread.join(timeout)
+        self._runner.wait(timeout)
         return self.status()
 
     def _progress(self, found: int, limit: int) -> None:
@@ -270,9 +363,12 @@ class GenerationJob:
                     message = f"Generating... {found} of {limit} schedules found."
                 self._status = replace(self._status, found=found, message=message)
 
-    def _run(self, config: CombinedConfig, settings: RunSettings, cancel: threading.Event) -> None:
+    def _work(
+        self, config: CombinedConfig, settings: RunSettings, cancel: threading.Event
+    ) -> Iterator[int]:
+        """The whole run, one schedule per step, ending with the outcome recorded."""
         try:
-            outcome = self._generator(
+            outcome = yield from self._generator(
                 config,
                 limit=settings.limit,
                 optimizer_flags=list(settings.optimizer_flags),

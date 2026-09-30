@@ -3,12 +3,14 @@
 import threading
 from functools import partial
 
+import anyio
 import pytest
 from scheduler import CombinedConfig
 
 from tests.helpers import FakeSchedulerFactory
-from zimpasta.model.generate import REASON_EXHAUSTED, REASON_TIMEOUT, generate_schedules
+from zimpasta.model.generate import REASON_EXHAUSTED, REASON_TIMEOUT, generation_steps
 from zimpasta.model.generation_job import (
+    EventLoopRunner,
     GenerationBusy,
     GenerationJob,
     InvalidOverrides,
@@ -61,7 +63,7 @@ class GatedFactory(FakeSchedulerFactory):
 
 def job_with(factory, recorder=None):
     return GenerationJob(
-        generator=partial(generate_schedules, scheduler_factory=factory),
+        generator=partial(generation_steps, scheduler_factory=factory),
         on_success=recorder,
     )
 
@@ -256,3 +258,101 @@ def test_cancel_when_idle_does_nothing():
 
     assert job.cancel().state is JobState.IDLE
     assert job.wait().state is JobState.IDLE
+
+
+# ------------------------------------------------------------------ the cap
+
+
+def test_a_configured_limit_above_the_cap_is_lowered_for_the_run(config_data):
+    config = configured(config_data, limit=100)
+
+    settings = plan_run(config, max_limit=5)
+
+    assert settings.limit == 5 and settings.limit_capped
+    assert not settings.limit_overridden
+    assert settings.to_dict()["max_limit"] == 5
+    assert config.limit == 100
+
+
+def test_an_override_above_the_cap_is_rejected(config):
+    with pytest.raises(InvalidOverrides) as caught:
+        plan_run(config, limit=6, max_limit=5)
+
+    [problem] = caught.value.issues
+    assert (problem.code, problem.area, problem.field) == (
+        "limit_above_maximum",
+        "settings",
+        "limit",
+    )
+    assert "at most 5 schedules" in problem.message
+
+
+def test_limits_within_the_cap_are_used_as_given(config):
+    assert plan_run(config, max_limit=5).limit == 3
+    settings = plan_run(config, limit=5, max_limit=5)
+    assert settings.limit == 5 and settings.limit_overridden and not settings.limit_capped
+
+
+def test_a_capped_run_says_so(config_data, real_schedules):
+    job = GenerationJob(
+        generator=partial(generation_steps, scheduler_factory=FakeSchedulerFactory(real_schedules)),
+        max_limit=2,
+    )
+
+    started = job.start(configured(config_data, limit=10))
+
+    assert started.message.startswith("Generating up to 2 schedules, the most a run generates")
+    assert "asks for 10" in started.message
+    assert job.wait(TIMEOUT).state is JobState.SUCCEEDED
+
+
+# ------------------------------------------------------- the event-loop runner
+
+
+@pytest.fixture
+def anyio_backend():
+    return "asyncio"
+
+
+def loop_job(factory, recorder=None):
+    runner = EventLoopRunner(pause=0.05)
+    job = GenerationJob(
+        generator=partial(generation_steps, scheduler_factory=factory),
+        on_success=recorder,
+        runner=runner,
+    )
+    return job, runner
+
+
+@pytest.mark.anyio
+async def test_the_event_loop_runner_generates_without_a_thread(config, real_schedules):
+    recorder = Recorder()
+    job, runner = loop_job(FakeSchedulerFactory(real_schedules), recorder)
+
+    started = job.start(config, limit=2)
+    assert started.running and job.status().found == 0  # nothing solved until the loop runs
+    await runner.finished()
+
+    assert job.status().state is JobState.SUCCEEDED
+    assert recorder.calls[0][0].count == 2
+
+
+@pytest.mark.anyio
+async def test_the_event_loop_runner_cancels_between_schedules(config, real_schedules):
+    recorder = Recorder()
+    job, runner = loop_job(FakeSchedulerFactory(real_schedules), recorder)
+    job.start(config, limit=2)
+
+    while job.status().found < 1:
+        await anyio.sleep(0.001)
+    job.cancel()
+    await runner.finished()
+
+    status = job.status()
+    assert status.state is JobState.CANCELLED and status.found == 1
+    assert recorder.calls == []
+
+
+def test_an_event_loop_run_cannot_be_waited_for_synchronously():
+    with pytest.raises(RuntimeError, match="await finished"):
+        EventLoopRunner().wait()
