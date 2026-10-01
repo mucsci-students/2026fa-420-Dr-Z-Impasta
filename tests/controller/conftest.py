@@ -5,7 +5,7 @@ from fastapi.testclient import TestClient
 
 from tests.helpers import FakeSchedulerFactory
 from zimpasta.controller import AppController, create_app
-from zimpasta.model.generate import generate_schedules
+from zimpasta.model.generate import generation_steps
 
 BASE_URL = "http://127.0.0.1:8000"
 
@@ -18,7 +18,7 @@ def fake_factory(real_schedules) -> FakeSchedulerFactory:
 @pytest.fixture
 def controller(fake_factory) -> AppController:
     """A controller whose scheduler is a fast fake that yields the fixture's real schedules."""
-    return AppController(generator=partial(generate_schedules, scheduler_factory=fake_factory))
+    return AppController(generator=partial(generation_steps, scheduler_factory=fake_factory))
 
 
 @pytest.fixture

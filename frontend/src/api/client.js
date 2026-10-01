@@ -5,7 +5,11 @@
  * Successful calls resolve to the parsed JSON (or, for downloads, `{ content, filename }`).
  * Failed calls reject with an ApiError carrying the server's `code`, user-facing `message`,
  * and located `issues`. If the server can't be reached, `code` is "network_error".
+ *
+ * Requests go through send() (backend.js): to the Python server, or in the browser
+ * version to Python running in this tab. Nothing below depends on which.
  */
+import { IN_BROWSER, send } from "./backend.js";
 
 export class ApiError extends Error {
   constructor({ status = 0, code = "error", message, issues = [], ...extra }) {
@@ -18,8 +22,9 @@ export class ApiError extends Error {
   }
 }
 
-const UNREACHABLE =
-  "Can't reach the Dr. ZImpasta server. It may have been stopped; start it again with `uv run zimpasta --gui`.";
+const UNREACHABLE = IN_BROWSER
+  ? "Dr. ZImpasta couldn't start in this browser. Check your internet connection, then reload the page."
+  : "Can't reach the Dr. ZImpasta server. It may have been stopped; start it again with `uv run zimpasta --gui`.";
 
 async function request(method, path, body) {
   const init = { method, headers: { Accept: "application/json" } };
@@ -29,7 +34,7 @@ async function request(method, path, body) {
   }
   let response;
   try {
-    response = await fetch(`/api${path}`, init);
+    response = await send(`/api${path}`, init);
   } catch {
     throw new ApiError({ code: "network_error", message: UNREACHABLE });
   }
@@ -46,6 +51,11 @@ async function readSuccess(response) {
       type: (response.headers.get("Content-Type") || "").split(";")[0],
       revision: Number(response.headers.get("X-Config-Revision") ?? NaN),
     };
+  }
+  // Anything but JSON means something other than our server answered, like a static host
+  // that returns index.html for every path.
+  if (!(response.headers.get("Content-Type") || "").includes("application/json")) {
+    throw new ApiError({ code: "network_error", message: UNREACHABLE });
   }
   return response.json();
 }

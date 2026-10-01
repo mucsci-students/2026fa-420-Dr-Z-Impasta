@@ -16,8 +16,8 @@ from datetime import datetime
 from pathlib import PurePath
 
 from zimpasta.model import catalog
-from zimpasta.model.generate import DEFAULT_SOLVER_TIMEOUT_MS, GenerationResult, generate_schedules
-from zimpasta.model.generation_job import GenerationJob, JobStatus
+from zimpasta.model.generate import DEFAULT_SOLVER_TIMEOUT_MS, GenerationResult, generation_steps
+from zimpasta.model.generation_job import EventLoopRunner, GenerationJob, JobStatus, ThreadRunner
 from zimpasta.model.schedules import ExportedSchedules, ScheduleSet
 from zimpasta.model.workspace import ConfigWorkspace, ExportedConfig
 
@@ -28,10 +28,14 @@ class AppController:
     def __init__(
         self,
         *,
-        generator: Callable = generate_schedules,
+        generator: Callable = generation_steps,
         clock: Callable[[], datetime] = datetime.now,
         solver_timeout_ms: int | None = DEFAULT_SOLVER_TIMEOUT_MS,
+        runner: ThreadRunner | EventLoopRunner | None = None,
+        max_schedules: int | None = None,
     ) -> None:
+        """``runner`` and ``max_schedules`` are for the browser version (``zimpasta.browser``):
+        generation on the event loop, and at most ``max_schedules`` per run."""
         self._clock = clock
         self._lock = threading.RLock()
         self.workspace = ConfigWorkspace(clock=clock)
@@ -41,6 +45,8 @@ class AppController:
             on_success=self._store_results,
             clock=clock,
             solver_timeout_ms=solver_timeout_ms,
+            runner=runner,
+            max_limit=max_schedules,
         )
 
     # -------------------------------------------------------------------- state
@@ -71,7 +77,9 @@ class AppController:
         return catalog.configuration_schema()
 
     def options(self) -> dict:
-        return catalog.options()
+        """Choice lists for forms, and ``generation.max_schedules``: the most schedules
+        one run may generate, or ``None`` for no limit beyond the library's own."""
+        return {**catalog.options(), "generation": {"max_schedules": self.job.max_limit}}
 
     def new_configuration(self, *, discard_changes: bool = False) -> dict:
         self.workspace.new(discard_changes=discard_changes)

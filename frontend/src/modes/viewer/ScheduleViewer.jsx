@@ -10,6 +10,7 @@
 import { Link } from "react-router";
 import EmptyState from "../../components/EmptyState.jsx";
 import PageHeader from "../../components/PageHeader.jsx";
+import { Lasagna } from "../../components/PastaMarks.jsx";
 import Spinner from "../../components/Spinner.jsx";
 import { clockTime, plural } from "../../format.js";
 import { useAppState } from "../../state/appStateContext.js";
@@ -33,6 +34,7 @@ export default function ScheduleViewer() {
         <PageHeader title="Schedules" />
         <EmptyState
           title="No schedules yet"
+          mark={<Lasagna size={40} />}
           actions={
             <Link className="btn btn--primary" to="/generator">
               Go to the Schedule Generator

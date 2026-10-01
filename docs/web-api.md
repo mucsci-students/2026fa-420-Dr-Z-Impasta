@@ -5,6 +5,10 @@ The GUI's views talk to the Python side only through this JSON API, served under
 (`src/zimpasta/controller/app_controller.py`), which coordinates the Model in
 `src/zimpasta/model/`. FastAPI also serves interactive docs of these routes at `/docs`.
 
+The browser version (docs/cloudflare-pages.md) answers the same routes from Python running
+in the page (`src/zimpasta/browser.py`), with one difference: a run generates at most
+`generation.max_schedules` schedules (see *Generation*).
+
 ## Conventions
 
 - Request and response bodies are JSON. Send `Content-Type: application/json` on any
@@ -78,7 +82,7 @@ a room, course, or faculty member; `issues` says which), or `valid`.
 | --- | --- | --- |
 | `GET /api/config` | | `{state, document, sections}`; `sections` are labels such as `CMSC 140.02` |
 | `GET /api/config/schema` | | The library's JSON Schema for a whole configuration |
-| `GET /api/config/options` | | `weekdays`, `modalities`, `delivery_modes`, `optimizer_flags` with descriptions |
+| `GET /api/config/options` | | `weekdays`, `modalities`, `delivery_modes`, `optimizer_flags` with descriptions, and `generation.max_schedules` |
 | `POST /api/config/new` | `{discard_changes?}` | New incomplete configuration, as `GET /api/config` |
 | `POST /api/config/load` | `{filename, content, discard_changes?}` | The loaded configuration |
 | `POST /api/config/validate` | | `{report: {status, valid, issues, checked_at}, state}` |
@@ -120,13 +124,21 @@ updates every reference to it in the same change.
 Omitted or `null` overrides use the configured value. `optimizer_flags` is the complete
 list for the run, so `[]` turns optimization off. Overrides never change the configuration.
 
+**Most schedules per run.** `GET /api/config/options` has `generation.max_schedules`: `null`
+for `zimpasta --gui` (no limit beyond the library's), and 5 in the browser version. When it
+is set, a configured `limit` above it is lowered for the run (`settings.limit_capped` is
+true and the message says so), and a `limit` override above it is refused with `422
+invalid_overrides` and an issue with code `limit_above_maximum` on field `limit`. Use it as
+the `max` of the schedule-count input.
+
 Poll `GET /api/generation` (every half second is plenty) while `running` is true:
 
 ```json
 {"state": "running", "running": true, "found": 3, "message": "Generating... 3 of 5 schedules found.",
  "settings": {"limit": 5, "optimizer_flags": ["faculty_course"], "configured_limit": 100,
               "configured_optimizer_flags": ["faculty_course", "pack_rooms"],
-              "limit_overridden": true, "optimizer_flags_overridden": true},
+              "limit_overridden": true, "optimizer_flags_overridden": true,
+              "max_limit": null, "limit_capped": false},
  "config_name": "sample_config.json", "config_revision": 4, "started_at": "...", "elapsed_seconds": 6.2,
  "finished_at": null, "detail": null, "completion_reason": null, "cancel_requested": false}
 ```
@@ -134,6 +146,10 @@ Poll `GET /api/generation` (every half second is plenty) while `running` is true
 `state` ends as `succeeded` (the schedules are now in `/api/schedules`), `infeasible`,
 `solver_error`, `failed` (`detail` has specifics), or `cancelled`. Only `succeeded`
 replaces the schedules. Cancelling takes effect after the schedule in progress.
+
+In the browser version, Python is busy while it solves a schedule, so requests made then
+(including these polls) are answered when that schedule is done, typically 5 to 20
+seconds. Show progress from `found` rather than expecting steady updates.
 
 ## Schedules
 

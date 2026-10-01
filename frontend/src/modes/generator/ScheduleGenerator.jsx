@@ -12,6 +12,7 @@ import Badge from "../../components/Badge.jsx";
 import Card from "../../components/Card.jsx";
 import EmptyState from "../../components/EmptyState.jsx";
 import PageHeader from "../../components/PageHeader.jsx";
+import { Rotelle } from "../../components/PastaMarks.jsx";
 import Spinner from "../../components/Spinner.jsx";
 import { plural } from "../../format.js";
 import { useAppState } from "../../state/appStateContext.js";
@@ -47,6 +48,7 @@ export default function ScheduleGenerator() {
         <PageHeader title="Generate schedules" subtitle={SUBTITLE} />
         <EmptyState
           title="A valid configuration is needed"
+          mark={<Rotelle size={40} />}
           actions={
             <Link className="btn btn--primary" to="/editor">
               Open the Configuration Editor

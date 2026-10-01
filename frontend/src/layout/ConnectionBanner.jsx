@@ -1,3 +1,4 @@
+import { IN_BROWSER } from "../api/backend.js";
 import Banner from "../components/Banner.jsx";
 import { useAppState } from "../state/appStateContext.js";
 
@@ -5,6 +6,16 @@ import { useAppState } from "../state/appStateContext.js";
 export default function ConnectionBanner() {
   const { connectionError } = useAppState();
   if (!connectionError) return null;
+  if (IN_BROWSER) {
+    // Python runs in this tab, so there's no server to restart: the error says what to do.
+    return (
+      <div className="connection">
+        <Banner tone="danger" title="Dr. ZImpasta isn't running.">
+          {connectionError.message}
+        </Banner>
+      </div>
+    );
+  }
   return (
     <div className="connection">
       <Banner tone="danger" title="Can't reach the Dr. ZImpasta server.">

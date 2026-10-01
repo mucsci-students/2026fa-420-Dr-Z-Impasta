@@ -1,3 +1,4 @@
+import pytest
 from scheduler import CombinedConfig, OptimizerFlags
 
 from tests.helpers import FakeSchedulerFactory, build_config_data, build_infeasible_config_data
@@ -11,6 +12,7 @@ from zimpasta.model.generate import (
     NoFeasibleSchedule,
     describe_reason,
     generate_schedules,
+    generation_steps,
     prepare_run_config,
     resolve_optimizer_flags,
 )
@@ -48,6 +50,19 @@ def test_limit_override_and_progress(config, real_schedules):
     assert outcome.result.limit == 1
     assert factory.last_config.limit == 1
     assert progress == [(1, 1)]
+
+
+def test_steps_yield_one_schedule_at_a_time_and_return_the_outcome(config, real_schedules):
+    steps = generation_steps(
+        config, limit=2, scheduler_factory=FakeSchedulerFactory(real_schedules)
+    )
+
+    assert next(steps) == 1
+    assert next(steps) == 2
+    with pytest.raises(StopIteration) as finished:
+        next(steps)
+    outcome = finished.value.value
+    assert isinstance(outcome, GenerationSuccess) and outcome.result.count == 2
 
 
 def test_run_never_mutates_the_session_config(config, fake_factory):

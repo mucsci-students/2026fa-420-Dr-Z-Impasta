@@ -5,7 +5,7 @@ import { defineConfig, globalIgnores } from "eslint/config";
 import globals from "globals";
 
 export default defineConfig([
-  globalIgnores(["node_modules"]),
+  globalIgnores(["node_modules", "dist-browser"]),
   {
     files: ["src/**/*.{js,jsx}"],
     extends: [js.configs.recommended, reactHooks.configs.flat.recommended, reactRefresh.configs.vite],
@@ -19,7 +19,7 @@ export default defineConfig([
     },
   },
   {
-    files: ["*.config.js"],
+    files: ["*.config.js", "scripts/**/*.mjs"],
     extends: [js.configs.recommended],
     languageOptions: { globals: globals.node },
   },
