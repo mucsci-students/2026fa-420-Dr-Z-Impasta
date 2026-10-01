@@ -1,46 +1,57 @@
 from zimpasta.controller import AppController
-from zimpasta.model.workspace import ConfigWorkspace, ConfigStatus
-from zimpasta.controller.errors import _respond, _status_for, _FILE_READ_CODES
-import json
+from zimpasta.model.export import ExportFormat, resolve_output_path
+from zimpasta.model.workspace import ConfigStatus
+
 
 class ConfigEditorController:
+    REVISION_COUNTER = 0
+    CURR_FILENAME = ""
+    EXP_FORMAT = ExportFormat.parse("json")
+
     def __init__(self, app: AppController) -> None:
         self.app = app
         self.workspace = app.workspace
 
     """ Runs when the submit button is clicked from the Load JSON operation
-        Returns a dict structured as:
-        {
-            "state": 
-                    {
-                        "status"            : ConfigStatus,
-                        "name"              : str | None,
-                        "revision"          : int,
-                        "saved_revision"    : int,
-                        "dirty"             : bool,
-                        "changes"           : list[dict] (each dict is a representation of a Change object or [])
-                        "issues"            : list[dict] (each dict is a representation of an Issue object or [])
-                        "validated_at"      : datetime | None
-                        "counts"            : dict[str, int]
-
-                    }
-            "document": dict | None
-            "sections": list[str]
-        } 
-    """
-    def load_json_submit(self, filename: str, content: str) -> dict:
-        config_doc = self.app.load_configuration(filename, content)
         
-        if(config_doc["state"]["status"] == ConfigStatus.VALID):
-            return {
-                        "code" : config_doc["state"]["status"],
-                        "message" : {
-                            "document": config_doc["document"],
-                            "sections": config_doc["sections"],
-                            },
-                    }
+
+        Returns the status of the file: VALID = "valid", INCOMPLETE = "incomplete", or NONE = "none
+    """
+
+    def load_json_submit(self, filename: str, content: str) -> ConfigStatus:
+        self.CURR_FILENAME = filename
+        config_doc = self.app.load_configuration(self.CURR_FILENAME, content)
+
+        return config_doc["state"]["status"]
+
+    """ Runs when the Save Json button is clicked, saves the current config file to path
+        
+        Returns True if file was saved successfully and False otherwise
+    """
+
+    def save_json(self, path: str) -> bool:
+        self.REVISION_COUNTER += 1
+
+        config_state_snapshot = self.app.mark_configuration_saved(
+            self.REVISION_COUNTER, self.CURR_FILENAME
+        )
+
+        if config_state_snapshot["status"] == ConfigStatus.VALID:
+            export_file = self.app.export_configuration()
+            path_name = resolve_output_path(path, self.EXP_FORMAT)
+            print(export_file.filename)
+            print(path_name)
+
+            if not path_name.is_file():
+                path_name = path_name / export_file.filename
+
+            try:
+                path_name.write_text(export_file.content, encoding="utf-8")
+            except OSError:
+                return False
+            return True
         else:
-            return json.loads(_respond(
-                    _status_for(workspace.InvalidFile()), 
-                    _FILE_READ_CODES[1], 
-                    "The configuration did not successfully load.").body)
+            return False
+
+    def validate_config(self) -> None:
+        return None
