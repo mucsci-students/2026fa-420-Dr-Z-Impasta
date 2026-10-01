@@ -30,8 +30,14 @@ def test_save_json_button() -> None:
     assert CTRL.save_json(r"C:\Users\qunde\2026fa-420-Dr-Z-Impasta\examples") is True
     assert CTRL.save_json(r"C:\Users\qunde\2026fa-420-Dr-Z-Impasta\examples\a.json") is True
 
+
 def test_validate_json_button() -> None:
     assert CTRL.validate_config() is True
+
+
+def test_faculty_delete_button() -> None:
+    assert CTRL.delete_item("faculty", 0) != []
+
 
 def test_faculty_add_button() -> None:
     return None
@@ -42,10 +48,6 @@ def test_faculty_profile_click() -> None:
 
 
 def test_faculty_profile_invalid_data_in_field() -> None:
-    return None
-
-
-def test_faculty_delete_button() -> None:
     return None
 
 
@@ -85,12 +87,20 @@ def test_rooms_profile_click() -> None:
     return None
 
 
+def test_rooms_delete_button() -> None:
+    assert CTRL.delete_item("rooms", 0) != []
+
+
 def test_class_patterns_add_button() -> None:
     return None
 
 
 def test_class_patterns_profile_click() -> None:
     return None
+
+
+def test_class_patters_delete_button() -> None:
+    assert CTRL.delete_item("patterns", 0) == []
 
 
 def test_time_slots_add_button() -> None:

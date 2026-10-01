@@ -12,18 +12,17 @@ class ConfigEditorController:
         self.app = app
         self.workspace = app.workspace
 
-
     def load_json(self, filename: str, content: str) -> ConfigStatus:
         """Runs when the submit button is clicked from the Load JSON operation
-            Returns the status of the loaded file: VALID = "valid", INCOMPLETE = "incomplete", or NONE = "none"""
+        Returns the status of the loaded file: VALID = "valid",
+        INCOMPLETE = "incomplete", or NONE = "none"""
         self.CURR_FILENAME = filename
         config_doc = self.app.load_configuration(self.CURR_FILENAME, content)
         return config_doc["state"]["status"]
 
-
     def save_json(self, path: str) -> bool:
         """Runs when the Save Json button is clicked, saves the current config file to path
-            Returns True if file was saved successfully and False otherwise"""
+        Returns True if file was saved successfully and False otherwise"""
         self.REVISION_COUNTER += 1
 
         config_state_snapshot = self.app.mark_configuration_saved(
@@ -44,12 +43,29 @@ class ConfigEditorController:
 
     def validate_config(self) -> bool:
         """Runs when the Validate button is clicked
-            Returns True if validate was successful and False otherwise"""
+        Returns True if validate was successful and False otherwise"""
         report = self.app.validate_configuration()
-        
-        if(report["report"]["status"] == "valid"):
+
+        if report["report"]["status"] == "valid":
             return True
         return False
 
-    def delete_item(self) -> None:
+    def delete_item(self, area: str, index: int) -> list[tuple[str, str]]:
+        """Runs when an attribute's delete button is clicked
+        Returns either an empty list, if the deletetion would have no blockers
+        or a list of tuples of the blocking field's value & field name
+
+        For example, trying to delete Roddy 136 would return
+        [('CMSC 161.01', 'room'), ('CMSC 362.01', 'room'),...]"""
+        impact = self.app.delete_impact(area, index)
+        if impact["blocking"] == []:
+            self.app.delete_item(area, index)
+            return []
+
+        blockers = []
+        for block in impact["blocking"]:
+            blockers.append({block["label"], block["field"]})
+        return blockers
+
+    def validate_apply_item(self) -> None:
         return None
