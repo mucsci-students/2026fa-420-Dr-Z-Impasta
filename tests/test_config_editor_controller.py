@@ -16,8 +16,8 @@ def test_new_json_button() -> None:
 
 
 def test_load_json_submit_button_valid() -> None:
-    assert CTRL.load_json_submit("sample_config.json", get_content()) == ConfigStatus.VALID
-    assert CTRL.load_json_submit("samble_config.json", get_content()) == ConfigStatus.VALID
+    assert CTRL.load_json("sample_config.json", get_content()) == ConfigStatus.VALID
+    assert CTRL.load_json("samble_config.json", get_content()) == ConfigStatus.VALID
 
 
 def test_load_json_submit_button_invalid_file() -> None:
@@ -27,12 +27,11 @@ def test_load_json_submit_button_invalid_file() -> None:
 
 def test_save_json_button() -> None:
     """assert(CTRL.save_json("hi") == False)"""
-    assert CTRL.save_json(r"C:\Users\qunde\2026fa-420-Dr-Z-Impasta\examples") is False
-
+    assert CTRL.save_json(r"C:\Users\qunde\2026fa-420-Dr-Z-Impasta\examples") is True
+    assert CTRL.save_json(r"C:\Users\qunde\2026fa-420-Dr-Z-Impasta\examples\a.json") is True
 
 def test_validate_json_button() -> None:
-    return None
-
+    assert CTRL.validate_config() is True
 
 def test_faculty_add_button() -> None:
     return None
