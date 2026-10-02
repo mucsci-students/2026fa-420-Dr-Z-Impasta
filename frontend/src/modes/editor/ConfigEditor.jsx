@@ -58,18 +58,25 @@ export default function ConfigEditor() {
             <>
               <Button variant="primary">New</Button>
 
-              <Button onClick={() => fileInputRef.current.click()}>
-		  Load JSON...
-		  </Button>
+		  <Button onClick={() => fileInputRef.current.click()}>Load JSON...</Button>
 		  <input 
 		  ref={fileInputRef}
 		  type="file"
-		  style={{ display: "none"}}
+		  style={{display: "none"}}
 		  onChange={async (event) => {
-			  	const file = event.target.files[0];
-			  	if (!file) return;
-			  	const response = await loadConfiguration(file);
-			  	return response.json();
+			  const file = event.target.files[0];
+			  if(!file) return;
+			  try {
+				  const res = await loadConfiguration(file);
+				  if(!res.ok) {
+					  throw new Error("Invalid configuration file");
+				  }
+				  else {
+					  return res.json();
+				  }
+			  } catch(err) {
+				  return err;
+			  }
 		  }}
 		  />
             </>
@@ -103,18 +110,25 @@ export default function ConfigEditor() {
             <Button variant="ghost">Raw JSON</Button>
             <Button>New</Button>
 
-            <Button onClick={() => fileInputRef.current.click()}>
-		Load JSON...
-		</Button>
-		<input 
+		<Button onClick={() => fileInputRef.current.click()}>Load JSON...</Button>
+		<input
 		ref={fileInputRef}
 		type="file"
-		style={{ display: "none"}}
+		style={{display: "none"}}
 		onChange={async (event) => {
-			 	const file = event.target.files[0];
-			  	if (!file) return;
-			  	const response = await loadConfiguration(file);
-			  	return response.json();
+			const file = event.target.files[0];
+			if (!file) return;
+			try {
+				const res = await loadConfiguration(file);
+				if(!res.ok) {
+					throw new Error("Invalid configuration file");
+				} else {
+					return res.json();
+				}
+			} catch(err) {
+				return err;
+			}
+			
 		}}
 		/>
 
