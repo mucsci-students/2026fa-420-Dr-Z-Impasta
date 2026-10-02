@@ -21,6 +21,7 @@ import CardRow from "./cards/CardRow.jsx";
 import ResourceCard from "./cards/ResourceCard.jsx";
 import CourseCard from "./cards/CourseCard.jsx";
 import FacultyCard from "./cards/FacultyCard.jsx";
+import PatternCard from "./cards/PatternCard.jsx";
 
 import { loadConfiguration } from "../../components/APICommunication";
 
@@ -28,18 +29,18 @@ export default function ConfigEditor() {
   const { state, loading } = useAppState();
   const config = state?.config;
   const [doc, setDoc] = useState(null);
-	const[loadingFile, setLoadingFile] = useState(false);
+  const [loadingFile, setLoadingFile] = useState(false);
   const revision = config?.revision;
   const hasConfig = Boolean(config) && config.status !== "none";
   const fileInputRef = useRef(null)
-  const [selected, setSelected] = useState(null);   // e.g. "rooms-0", or null for none
+  const [/*editing*/, setEditing] = useState(null);   // editing used for dialog (not implemented)
 
   useEffect(() => {
     if (!hasConfig) return;
     api.config.get().then((reply) => {
       setDoc({ document: reply.document, sections: reply.sections });
     });
-  }, [hasConfig,revision]);
+  }, [hasConfig, revision]);
 
   if (loading || loadingFile) {
     return (
@@ -61,33 +62,33 @@ export default function ConfigEditor() {
             <>
               <Button variant="primary">New</Button>
 
-		  <Button onClick={() => { fileInputRef.current.click(); }}>Load JSON...</Button>
-		  <input 
-		  ref={fileInputRef}
-		  type="file"
-		  style={{display: "none"}}
-		  onChange={async (event) => {
-        const file = event.target.files[0];
-        if(!file) return;
-			  setLoadingFile(true);
-			  try {
-				  const res = await loadConfiguration(file);
-				  
-				  if(!res.ok) {
-					  throw new Error("Invalid configuration file");
-				  }
-				  else {
-					  return res.json();
-				  }
-			  } catch(err) {
-				  return err;
-			  } finally {
-				  await new Promise(resolve => setTimeout(resolve, 2000));
-				  config.status = "valid"; 
-				  setLoadingFile(false);
-			  }
-		  }}
-		  />
+              <Button onClick={() => { fileInputRef.current.click(); }}>Load JSON...</Button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                style={{ display: "none" }}
+                onChange={async (event) => {
+                  const file = event.target.files[0];
+                  if (!file) return;
+                  setLoadingFile(true);
+                  try {
+                    const res = await loadConfiguration(file);
+
+                    if (!res.ok) {
+                      throw new Error("Invalid configuration file");
+                    }
+                    else {
+                      return res.json();
+                    }
+                  } catch (err) {
+                    return err;
+                  } finally {
+                    await new Promise(resolve => setTimeout(resolve, 2000));
+                    config.status = "valid";
+                    setLoadingFile(false);
+                  }
+                }}
+              />
             </>
           }
         >
@@ -119,32 +120,32 @@ export default function ConfigEditor() {
             <Button variant="ghost">Raw JSON</Button>
             <Button>New</Button>
 
-		<Button onClick={() => fileInputRef.current.click()}>Load JSON...</Button>
-		<input
-		ref={fileInputRef}
-		type="file"
-		style={{display: "none"}}
-		onChange={async (event) => {
-			setLoadingFile(true);
-			const file = event.target.files[0];
-			if (!file) return;
-			try {
-				const res = await loadConfiguration(file);
-				if(!res.ok) {
-				//	config.status = "none";
-					throw new Error("Invalid configuration file");
-				} else {
-				//	config.status = "valid";
-					return res.json();
-				}
-			} catch(err) {
-				return err;
-			} finally {
-				await new Promise(resolve => setTimeout(resolve, 2000));
-				setLoadingFile(false);
-			  }
-		}}
-		/>
+            <Button onClick={() => fileInputRef.current.click()}>Load JSON...</Button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              style={{ display: "none" }}
+              onChange={async (event) => {
+                const file = event.target.files[0];
+                if (!file) return;
+                setLoadingFile(true);
+                try {
+                  const res = await loadConfiguration(file);
+                  if (!res.ok) {
+                    //	config.status = "none";
+                    throw new Error("Invalid configuration file");
+                  } else {
+                    //	config.status = "valid";
+                    return res.json();
+                  }
+                } catch (err) {
+                  return err;
+                } finally {
+                  await new Promise(resolve => setTimeout(resolve, 2000));
+                  setLoadingFile(false);
+                }
+              }}
+            />
 
             <Button>Save JSON...</Button>
             <Button variant="primary">Validate</Button>
@@ -152,61 +153,85 @@ export default function ConfigEditor() {
         }
       />
       <Banner tone={bannerTone} title={status.label}>
-      {describeCounts(config.counts)}.
-      {config.status === "incomplete" && <IssueList issues={config.issues} />}
+        {describeCounts(config.counts)}.
+        {config.status === "incomplete" && <IssueList issues={config.issues} />}
       </Banner>
       {!doc ? (
         <Spinner label="Loading the configuration" />
       ) : (
         <>
-          <CardRow title="Faculty" meta={items.faculty.length} addLabel="Add faculty">
+          <CardRow
+            title="Faculty"
+            meta={items.faculty.length}
+            addLabel="Add faculty"
+            onAdd={() => setEditing({ area: "faculty", index: null })}
+          >
             {items.faculty.map((f, i) => (
               <FacultyCard
                 key={i}
                 faculty={f}
-                selected={selected === `faculty-${i}`}
-                onSelect={() => setSelected(`faculty-${i}`)}
+                onEdit={() => setEditing({ area: "faculty", index: i })}
               />
             ))}
           </CardRow>
-          <CardRow title="Courses" meta={plural(items.courses.length, "section")} addLabel="Add course">
+          <CardRow
+            title="Courses"
+            meta={plural(items.courses.length, "section")}
+            addLabel="Add course"
+            onAdd={() => setEditing({ area: "courses", index: null })}
+          >
             {items.courses.map((c, i) => (
               <CourseCard
                 key={i}
                 course={c}
                 label={doc.sections[i]}
-                selected={selected === `courses-${i}`}
-                onSelect={() => setSelected(`courses-${i}`)}
+                onEdit={() => setEditing({ area: "courses", index: i })}
               />
             ))}
           </CardRow>
           <div className="editor-pair">
-          <CardRow title="Rooms" meta={items.rooms.length} addLabel="Add room">
-            {items.rooms.map((r, i) => (
-              <ResourceCard
-                key={i}
-                resource={r}
-                usedBy={items.courses.filter((c) => c.room.includes(r.name)).length}
-                selected={selected === `rooms-${i}`}
-                onSelect={() => setSelected(`rooms-${i}`)}
-              />
-            ))}
-          </CardRow>
-          <CardRow title="Labs" meta={items.labs.length} addLabel="Add lab">
-            {items.labs.map((l, i) => (
-              <ResourceCard
-                key={i}
-                resource={l}  
-                usedBy={items.courses.filter((c) => c.lab.includes(l.name)).length}
-                selected={selected === `labs-${i}`}
-                onSelect={() => setSelected(`labs-${i}`)}
-              />
-            ))}
-          </CardRow>
+            <CardRow
+              title="Rooms"
+              meta={items.rooms.length}
+              addLabel="Add room"
+              onAdd={() => setEditing({ area: "rooms", index: null })}
+            >
+              {items.rooms.map((r, i) => (
+                <ResourceCard
+                  key={i}
+                  resource={r}
+                  usedBy={items.courses.filter((c) => c.room.includes(r.name)).length}
+                  onEdit={() => setEditing({ area: "rooms", index: i })}
+                />
+              ))}
+            </CardRow>
+            <CardRow
+              title="Labs"
+              meta={items.labs.length}
+              addLabel="Add lab"
+              onAdd={() => setEditing({ area: "labs", index: null })}
+            >
+              {items.labs.map((l, i) => (
+                <ResourceCard
+                  key={i}
+                  resource={l}
+                  usedBy={items.courses.filter((c) => c.lab.includes(l.name)).length}
+                  onEdit={() => setEditing({ area: "labs", index: i })}
+                />
+              ))}
+            </CardRow>
           </div>
-          <CardRow title="Class Patterns" meta={`${enabled} of ${patterns.length} enabled`} addLabel="Add pattern">
+          <CardRow
+            title="Class Patterns"
+            meta={`${enabled} of ${patterns.length} enabled`}
+            addLabel="Add pattern"
+            onAdd={() => setEditing({ area: "patterns", index: null })}
+          >
             {patterns.map((p, i) => (
-              <div key={i}>{`${p.credits} credits`}</div>
+              <PatternCard
+                key={i}
+                pattern={p}
+                onEdit={() => setEditing({ area: "patterns", index: i })} />
             ))}
           </CardRow>
           {/* Later: TimeSlotsCard and SettingsCard (edit-only, not part of this pass) */}

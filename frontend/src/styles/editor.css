@@ -18,6 +18,16 @@
     border-radius: var(--radius-lg);
     color: var(--accent);
     min-width: 100px;
+    cursor: pointer;
+}
+
+.editor-row {
+  margin-top: var(--space-4);
+}
+
+.editor-row__title {
+  font-size: 18px;
+  font-weight: 600;
 }
 
 .editor-pair {
@@ -33,8 +43,8 @@
   padding: var(--space-4);
   max-width: 285px;         /* May change so that each card has their own fixed width */
   min-width: 190px;
-  max-height:fit-content;  /* May change so that each card has their own fixed height */
   flex: 0 0 auto;            /* keep its width inside the row instead of squashing */
+  cursor: pointer;
 }
 
 .item-card__title {
@@ -55,11 +65,6 @@
 
 .item-card__facts dd {
   margin: 0;                 /* browsers indent <dd> by default */
-}
-
-.item-card__actions {
-  display: flex;
-  gap: var(--space-2);
 }
 
 .item-card__header {
@@ -105,10 +110,83 @@
   color: var(--faint);
 }
 
-.item-card {
+.item-card:hover {
+  border-color: var(--accent);
+}
+
+.pattern-meetings {
+  list-style: none;
+  padding: 0;
+  margin: var(--space-3) 0;
+  display: grid;
+  gap: var(--space-1);
+}
+
+.pattern-meetings li {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.pattern-meetings__day {
+  font-family: var(--font-mono);
+  font-weight: 500;
+  width: 36px;
+}
+
+.item-card__note {
+  color: var(--muted);
+  font-size: 13px;
+  margin: 0;
+}
+
+.item-card--disabled .pattern-meetings {
+  color: var(--faint);    /* gray out the meetings of patterns that are off */
+}
+
+.toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: 12px;
+  color: var(--muted);
   cursor: pointer;
 }
 
-.item-card:hover {
-  border-color: var(--accent);
+.toggle input {
+  appearance: none;
+  position: relative;
+  width: 36px;
+  height: 20px;
+  margin: 0;
+  border-radius: 999px;
+  background: var(--line);
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.toggle input::after {           /* the round thumb */
+  content: "";
+  position: absolute;
+  top: 1.5px;
+  left: 0px;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2), 0 0 1px rgba(0, 0, 0, 0.15);
+  transition: transform 0.2s;
+}
+
+.toggle input:checked {
+  background: var(--accent);
+}
+
+.toggle input:checked::after {
+  transform: translateX(18px);
+}
+
+.toggle input:focus-visible {
+  outline: none;
+  box-shadow: var(--focus);
 }

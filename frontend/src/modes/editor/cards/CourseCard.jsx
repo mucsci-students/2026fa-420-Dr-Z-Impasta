@@ -10,7 +10,7 @@ import { plural } from "../../../format.js";
 const MODALITY_NAMES = { in_person: "In person", online: "Online", hybrid: "Hybrid" };
 
 /** A course section: identity, credits, capacity, resources, faculty, conflicts, and requirements. */
-export default function CourseCard({ course, label, onSelect }) {
+export default function CourseCard({ course, label, onEdit }) {
   const section = label.slice(course.course_id.length);   // "CMSC 140.01" → ".01"
   const rooms = course.room.length > 0 ? course.room.join(", ") : "None";
   const labs = course.lab.length > 0 ? course.lab.join(", ") : "None";
@@ -20,8 +20,8 @@ export default function CourseCard({ course, label, onSelect }) {
   return (
     <article
       className="item-card"
-      onClick={onSelect}
-      onKeyDown={(e) => { if (e.key === "Enter") onSelect() }}
+      onClick={onEdit}
+      onKeyDown={(e) => { if (e.key === "Enter") onEdit?.() }}
       tabIndex={0}
     >
       <div className="item-card__header">
