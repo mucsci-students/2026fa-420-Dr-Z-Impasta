@@ -27,6 +27,7 @@ export default function ConfigEditor() {
   const { state, loading } = useAppState();
   const config = state?.config;
   const [doc, setDoc] = useState(null);
+	const[loadingFile, setLoadingFile] = useState(false);
   const revision = config?.revision;
   const hasConfig = Boolean(config) && config.status !== "none";
   const fileInputRef = useRef(null)
@@ -38,7 +39,7 @@ export default function ConfigEditor() {
     });
   }, [hasConfig,revision]);
 
-  if (loading) {
+  if (loading || loadingFile) {
     return (
       <>
         <PageHeader title="Configuration" />
@@ -58,16 +59,18 @@ export default function ConfigEditor() {
             <>
               <Button variant="primary">New</Button>
 
-		  <Button onClick={() => fileInputRef.current.click()}>Load JSON...</Button>
+		  <Button onClick={() => { fileInputRef.current.click(); }}>Load JSON...</Button>
 		  <input 
 		  ref={fileInputRef}
 		  type="file"
 		  style={{display: "none"}}
 		  onChange={async (event) => {
+			  setLoadingFile(true);
 			  const file = event.target.files[0];
 			  if(!file) return;
 			  try {
 				  const res = await loadConfiguration(file);
+				  
 				  if(!res.ok) {
 					  throw new Error("Invalid configuration file");
 				  }
@@ -76,6 +79,10 @@ export default function ConfigEditor() {
 				  }
 			  } catch(err) {
 				  return err;
+			  } finally {
+				  await new Promise(resolve => setTimeout(resolve, 2000));
+				  config.status = "valid"; 
+				  setLoadingFile(false);
 			  }
 		  }}
 		  />
@@ -116,19 +123,25 @@ export default function ConfigEditor() {
 		type="file"
 		style={{display: "none"}}
 		onChange={async (event) => {
+			setLoadingFile(true);
 			const file = event.target.files[0];
 			if (!file) return;
 			try {
 				const res = await loadConfiguration(file);
 				if(!res.ok) {
+				//	config.status = "none";
 					throw new Error("Invalid configuration file");
+					return res;
 				} else {
+				//	config.status = "valid";
 					return res.json();
 				}
 			} catch(err) {
 				return err;
-			}
-			
+			} finally {
+				await new Promise(resolve => setTimeout(resolve, 2000));
+				setLoadingFile(false);
+			  }
 		}}
 		/>
 
