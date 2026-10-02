@@ -13,7 +13,7 @@ import { Penne } from "../../components/PastaMarks.jsx";
 import Spinner from "../../components/Spinner.jsx";
 import { clockTime, configStatus, describeCounts, plural } from "../../format.js";
 import { useAppState } from "../../state/appStateContext.js";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { api } from "../../api/client.js";
 import Button from "../../components/Button.jsx";
 import Banner from "../../components/Banner.jsx";
@@ -21,12 +21,15 @@ import CardRow from "./cards/CardRow.jsx";
 import ResourceCard from "./cards/ResourceCard.jsx";
 import CourseCard from "./cards/CourseCard.jsx";
 
+import { loadConfiguration } from "../../components/APICommunication";
+
 export default function ConfigEditor() {
   const { state, loading } = useAppState();
   const config = state?.config;
   const [doc, setDoc] = useState(null);
   const revision = config?.revision;
   const hasConfig = Boolean(config) && config.status !== "none";
+  const fileInputRef = useRef(null)
 
   useEffect(() => {
     if (!hasConfig) return;
@@ -54,7 +57,21 @@ export default function ConfigEditor() {
           actions={
             <>
               <Button variant="primary">New</Button>
-              <Button>Load JSON...</Button>
+
+              <Button onClick={() => fileInputRef.current.click()}>
+		  Load JSON...
+		  </Button>
+		  <input 
+		  ref={fileInputRef}
+		  type="file"
+		  style={{ display: "none"}}
+		  onChange={async (event) => {
+			  	const file = event.target.files[0];
+			  	if (!file) return;
+			  	const response = await loadConfiguration(file);
+			  	return response.json();
+		  }}
+		  />
             </>
           }
         >
@@ -85,7 +102,22 @@ export default function ConfigEditor() {
           <>
             <Button variant="ghost">Raw JSON</Button>
             <Button>New</Button>
-            <Button>Load JSON...</Button>
+
+            <Button onClick={() => fileInputRef.current.click()}>
+		Load JSON...
+		</Button>
+		<input 
+		ref={fileInputRef}
+		type="file"
+		style={{ display: "none"}}
+		onChange={async (event) => {
+			 	const file = event.target.files[0];
+			  	if (!file) return;
+			  	const response = await loadConfiguration(file);
+			  	return response.json();
+		}}
+		/>
+
             <Button>Save JSON...</Button>
             <Button variant="primary">Validate</Button>
           </>
