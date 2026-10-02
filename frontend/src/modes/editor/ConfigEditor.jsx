@@ -20,6 +20,7 @@ import Banner from "../../components/Banner.jsx";
 import CardRow from "./cards/CardRow.jsx";
 import ResourceCard from "./cards/ResourceCard.jsx";
 import CourseCard from "./cards/CourseCard.jsx";
+import FacultyCard from "./cards/FacultyCard.jsx";
 
 import { loadConfiguration } from "../../components/APICommunication";
 
@@ -31,6 +32,7 @@ export default function ConfigEditor() {
   const revision = config?.revision;
   const hasConfig = Boolean(config) && config.status !== "none";
   const fileInputRef = useRef(null)
+  const [selected, setSelected] = useState(null);   // e.g. "rooms-0", or null for none
 
   useEffect(() => {
     if (!hasConfig) return;
@@ -65,9 +67,9 @@ export default function ConfigEditor() {
 		  type="file"
 		  style={{display: "none"}}
 		  onChange={async (event) => {
+        const file = event.target.files[0];
+        if(!file) return;
 			  setLoadingFile(true);
-			  const file = event.target.files[0];
-			  if(!file) return;
 			  try {
 				  const res = await loadConfiguration(file);
 				  
@@ -131,7 +133,6 @@ export default function ConfigEditor() {
 				if(!res.ok) {
 				//	config.status = "none";
 					throw new Error("Invalid configuration file");
-					return res;
 				} else {
 				//	config.status = "valid";
 					return res.json();
@@ -160,7 +161,12 @@ export default function ConfigEditor() {
         <>
           <CardRow title="Faculty" meta={items.faculty.length} addLabel="Add faculty">
             {items.faculty.map((f, i) => (
-              <div key={i}>{f.name}</div>
+              <FacultyCard
+                key={i}
+                faculty={f}
+                selected={selected === `faculty-${i}`}
+                onSelect={() => setSelected(`faculty-${i}`)}
+              />
             ))}
           </CardRow>
           <CardRow title="Courses" meta={plural(items.courses.length, "section")} addLabel="Add course">
@@ -169,6 +175,8 @@ export default function ConfigEditor() {
                 key={i}
                 course={c}
                 label={doc.sections[i]}
+                selected={selected === `courses-${i}`}
+                onSelect={() => setSelected(`courses-${i}`)}
               />
             ))}
           </CardRow>
@@ -179,6 +187,8 @@ export default function ConfigEditor() {
                 key={i}
                 resource={r}
                 usedBy={items.courses.filter((c) => c.room.includes(r.name)).length}
+                selected={selected === `rooms-${i}`}
+                onSelect={() => setSelected(`rooms-${i}`)}
               />
             ))}
           </CardRow>
@@ -188,6 +198,8 @@ export default function ConfigEditor() {
                 key={i}
                 resource={l}  
                 usedBy={items.courses.filter((c) => c.lab.includes(l.name)).length}
+                selected={selected === `labs-${i}`}
+                onSelect={() => setSelected(`labs-${i}`)}
               />
             ))}
           </CardRow>

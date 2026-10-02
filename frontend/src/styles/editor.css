@@ -31,7 +31,9 @@
   border: 1px solid var(--line);
   border-radius: var(--radius-lg);
   padding: var(--space-4);
-  min-width: 200px;
+  max-width: 285px;         /* May change so that each card has their own fixed width */
+  min-width: 190px;
+  max-height:fit-content;  /* May change so that each card has their own fixed height */
   flex: 0 0 auto;            /* keep its width inside the row instead of squashing */
 }
 
@@ -75,4 +77,38 @@
 .item-card__credits {
   color: var(--muted);
   font-weight: 400;
+}
+
+.avail {
+  display: flex;
+  gap: var(--space-1);
+  list-style: none;        /* <ul> has bullets and indentation by default */
+  padding: 0;
+  margin: var(--space-3) 0;
+}
+
+.avail__day {
+  display: flex;           /* May change so that each chip has a fixed width */
+  flex-direction: column;  /* day label on top, ranges stacked below */
+  align-items: center;
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+  border-radius: var(--radius-sm);
+  padding: var(--space-1) var(--space-2);
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+
+.avail__day--off {
+  background: transparent;
+  border: 1px dashed var(--line);
+  color: var(--faint);
+}
+
+.item-card {
+  cursor: pointer;
+}
+
+.item-card:hover {
+  border-color: var(--accent);
 }

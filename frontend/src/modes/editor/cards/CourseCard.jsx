@@ -10,15 +10,20 @@ import { plural } from "../../../format.js";
 const MODALITY_NAMES = { in_person: "In person", online: "Online", hybrid: "Hybrid" };
 
 /** A course section: identity, credits, capacity, resources, faculty, conflicts, and requirements. */
-export default function CourseCard({ course, label}) {
+export default function CourseCard({ course, label, onSelect }) {
   const section = label.slice(course.course_id.length);   // "CMSC 140.01" → ".01"
-const rooms = course.room.length > 0 ? course.room.join(", ") : "None";
-const labs = course.lab.length > 0 ? course.lab.join(", ") : "None";
+  const rooms = course.room.length > 0 ? course.room.join(", ") : "None";
+  const labs = course.lab.length > 0 ? course.lab.join(", ") : "None";
   const faculty = course.faculty ? course.faculty.join(", ") : "Any";
   const conflicts = course.conflicts.length > 0 ? plural(course.conflicts.length, "course") : "None";
 
   return (
-    <article className="item-card">
+    <article
+      className="item-card"
+      onClick={onSelect}
+      onKeyDown={(e) => { if (e.key === "Enter") onSelect() }}
+      tabIndex={0}
+    >
       <div className="item-card__header">
         <h3 className="item-card__title">
           {course.course_id} <span className="item-card__section">{section}</span>

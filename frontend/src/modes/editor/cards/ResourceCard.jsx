@@ -6,10 +6,15 @@
 import { plural } from "../../../format.js";
 
 /** A room or lab: its name, capacity, how many sections use it, features, and availability. */
-export default function ResourceCard({ resource, usedBy}) {
-    
+export default function ResourceCard({ resource, usedBy, onSelect }) {
+
   return (
-    <article className="item-card">
+    <article
+      className="item-card"
+      onClick={onSelect}
+      onKeyDown={(e) => { if (e.key === "Enter") onSelect() }}
+      tabIndex={0}
+    >
       <h3 className="item-card__title">{resource.name}</h3>
       <dl className="item-card__facts">
         <dt>Capacity</dt>
