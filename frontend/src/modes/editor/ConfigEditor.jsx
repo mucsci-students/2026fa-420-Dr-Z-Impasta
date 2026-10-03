@@ -26,6 +26,7 @@ import ResourceDialog from "./dialogs/ResourceDialog.jsx";
 import CourseDialog from "./dialogs/CourseDialog.jsx";
 import PatternDialog from "./dialogs/PatternDialog.jsx";
 import FacultyDialog from "./dialogs/FacultyDialog.jsx";
+import DeleteDialog from "./dialogs/DeleteDialog.jsx";
 
 import { loadConfiguration, loadEmptyConfig } from "../../components/APICommunication";
 
@@ -39,6 +40,8 @@ export default function ConfigEditor() {
   const fileInputRef = useRef(null)
   const [editing, setEditing] = useState(null);   // editing used for dialog (not implemented)
   const [options, setOptions] = useState(null);   // library choices for the dialogs; they have fallbacks
+  const [deleting, setDeleting] = useState(null);  // the item being deleted, e.g. { area: "rooms", index: 0 }
+  const [impact, setImpact] = useState(null);      // its delete preview, from api.config.deleteImpact
 
   const Empty_Click = async () => {
 
@@ -68,6 +71,22 @@ export default function ConfigEditor() {
   useEffect(() => {
     api.config.options().then(setOptions).catch(() => { });   // the dialogs' fallbacks cover a failure
   }, []);
+
+  // When a delete starts, fetch its preview (this changes nothing on the server).
+  useEffect(() => {
+    if (!deleting) return undefined;
+    let current = true;   // ignore a reply that arrives after this delete was closed
+    api.config
+      .deleteImpact(deleting.area, deleting.index)
+      .then((reply) => current && setImpact({ ...deleting, reply }))
+      .catch((error) => current && setImpact({ ...deleting, error }));
+    return () => {
+      current = false;
+    };
+  }, [deleting]);
+  // Only show a preview that belongs to the item being deleted now.
+  const shownImpact =
+    impact && deleting && impact.area === deleting.area && impact.index === deleting.index ? impact : null;
 
   if (loading || loadingFile) {
     return (
@@ -270,7 +289,7 @@ export default function ConfigEditor() {
             ))}
           </CardRow>
           {/* Later: TimeSlotsCard and SettingsCard (edit-only, not part of this pass) */}
-          {editing?.area === "faculty" && (
+          {!deleting && editing?.area === "faculty" && (
             <FacultyDialog
               key={`faculty-${editing.index}`}
               index={editing.index}
@@ -280,10 +299,11 @@ export default function ConfigEditor() {
               labs={items.labs.map((l) => l.name)}
               options={options}
               onCancel={() => setEditing(null)}
+              onDelete={() => setDeleting(editing)}
               onSave={(draft) => console.log("save", editing, draft)}   /* For testing, Eman replaces this */
             />
           )}
-          {editing?.area === "courses" && (
+          {!deleting && editing?.area === "courses" && (
             <CourseDialog
               key={`courses-${editing.index}`}
               index={editing.index}
@@ -297,10 +317,11 @@ export default function ConfigEditor() {
               labFeatures={[...new Set(items.labs.flatMap((l) => l.features ?? []))]}
               options={options}
               onCancel={() => setEditing(null)}
+              onDelete={() => setDeleting(editing)}
               onSave={(draft) => console.log("save", editing, draft)}   /* For testing, Eman replaces this */
             />
           )}
-          {(editing?.area === "rooms" || editing?.area === "labs") && (
+          {!deleting && (editing?.area === "rooms" || editing?.area === "labs") && (
             <ResourceDialog
               key={`${editing.area}-${editing.index}`}
               area={editing.area}
@@ -308,17 +329,28 @@ export default function ConfigEditor() {
               resource={editing.index === null ? null : items[editing.area][editing.index]}
               suggestions={[...new Set(items[editing.area].flatMap((r) => r.features ?? []))]}
               onCancel={() => setEditing(null)}
+              onDelete={() => setDeleting(editing)}
               onSave={(draft) => console.log("save", editing, draft)}   /* For testing, Eman replaces this */
             />
           )}
-          {editing?.area === "patterns" && (
+          {!deleting && editing?.area === "patterns" && (
             <PatternDialog
               key={`patterns-${editing.index}`}
               index={editing.index}
               pattern={editing.index === null ? null : patterns[editing.index]}
               options={options}
               onCancel={() => setEditing(null)}
-              onSave={(draft) => console.log("save", editing, draft)}   /* Eman replaces this */
+              onDelete={() => setDeleting(editing)}
+              onSave={(draft) => console.log("save", editing, draft)}   /* For testing, Eman replaces this */
+            />
+          )}
+          {deleting && (
+            <DeleteDialog
+              key={`delete-${deleting.area}-${deleting.index}`}
+              impact={shownImpact?.reply ?? null}
+              loadError={shownImpact?.error}
+              onCancel={() => setDeleting(null)}   /* back to the edit dialog */
+              onConfirm={() => console.log("delete", deleting)}   /* Eman replaces this */
             />
           )}
         </>
