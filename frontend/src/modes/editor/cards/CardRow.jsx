@@ -10,18 +10,25 @@
 // isn't enough. The dialogs need every field. That includes the scores for all three preference
 // lists, per-meeting start_time and delivery, and both timing options in TimingDialog.jsx.
 
-/** One section of the editor: a title row, then a dashed "Add" tile and the item cards. */
-export default function CardRow({ title, meta, addLabel, onAdd, children }) {
+/**
+ * One section of the editor: a title row, then a dashed "Add" tile and the item cards.
+ * Leave out `onAdd` for a section you can't add to (Time Slots); `actions` go on the
+ * right of the title row.
+ */
+export default function CardRow({ title, meta, addLabel, onAdd, actions, children }) {
   return (
     <section className="editor-row">
       <header className="editor-row__header">
         <h2 className="editor-row__title">{title}</h2>
         <span className="editor-row__meta">{meta}</span>
+        {actions && <div className="editor-row__actions">{actions}</div>}
       </header>
       <div className="editor-row__items">
-        <button type="button" className="editor-row__add" onClick={onAdd}>
-        <span aria-hidden="true">+</span> {addLabel}
-        </button>
+        {onAdd && (
+          <button type="button" className="editor-row__add" onClick={onAdd}>
+            <span aria-hidden="true">+</span> {addLabel}
+          </button>
+        )}
         {children}
       </div>
     </section>

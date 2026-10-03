@@ -264,7 +264,8 @@
 /* The fieldsets of the list editors: no box, rows stacked */
 .meetings-editor,
 .pref-editor,
-.avail-editor {
+.avail-editor,
+.blocks-editor {
   border: none;
   padding: 0;
   margin: 0;
@@ -274,7 +275,8 @@
 
 .meetings-editor legend,
 .pref-editor legend,
-.avail-editor legend {
+.avail-editor legend,
+.blocks-editor legend {
   font-weight: 500;
   padding: 0;
   margin-bottom: var(--space-2);
@@ -288,7 +290,8 @@
   align-items: center;
 }
 
-.meetings-editor__head {
+.meetings-editor__head,
+.blocks-editor__head {
   color: var(--muted);
   font-size: 12px;
 }
@@ -299,7 +302,8 @@
 
 .meetings-editor__remove,
 .pref-editor__remove,
-.avail-editor__remove {
+.avail-editor__remove,
+.blocks-editor__remove {
   border: none;
   background: none;
   padding: 0;
@@ -308,7 +312,8 @@
   font: inherit;
 }
 
-.meetings-editor__error {
+.meetings-editor__error,
+.blocks-editor__error {
   grid-column: 1 / -1;    /* a row's error spans the whole row, under its fields */
   margin: 0;
 }
@@ -343,4 +348,36 @@
 .avail-editor__error {
   grid-column: 2;         /* under the day's hours, not its name */
   margin: 0;
+}
+
+.editor-row__actions {
+  margin-left: auto;      /* push the header's buttons to the right */
+}
+
+.day-tile {
+  min-width: 150px;
+}
+
+.day-tile__blocks {
+  list-style: none;
+  padding: 0;
+  margin: var(--space-3) 0 0;
+  display: grid;
+  gap: var(--space-1);
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+.day-tile__blocks li {
+  display: flex;
+  justify-content: space-between;   /* times on the left, spacing on the right */
+  gap: var(--space-3);
+}
+
+.blocks-editor__head,
+.blocks-editor__row {
+  display: grid;
+  grid-template-columns: 1fr 1fr 110px 24px;   /* start, end, spacing, remove */
+  gap: var(--space-2);
+  align-items: center;
 }

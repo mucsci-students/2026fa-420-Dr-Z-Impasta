@@ -22,11 +22,14 @@ import ResourceCard from "./cards/ResourceCard.jsx";
 import CourseCard from "./cards/CourseCard.jsx";
 import FacultyCard from "./cards/FacultyCard.jsx";
 import PatternCard from "./cards/PatternCard.jsx";
+import TimeSlotsCard from "./cards/TimeSlotsCard.jsx";
 import ResourceDialog from "./dialogs/ResourceDialog.jsx";
 import CourseDialog from "./dialogs/CourseDialog.jsx";
 import PatternDialog from "./dialogs/PatternDialog.jsx";
 import FacultyDialog from "./dialogs/FacultyDialog.jsx";
 import DeleteDialog from "./dialogs/DeleteDialog.jsx";
+import DayBlocksDialog from "./dialogs/DayBlocksDialog.jsx";
+import TimeSlotsDialog from "./dialogs/TimeSlotsDialog.jsx";
 
 import { loadConfiguration, loadEmptyConfig } from "../../components/APICommunication";
 
@@ -38,7 +41,7 @@ export default function ConfigEditor() {
   const revision = config?.revision;
   const hasConfig = Boolean(config) && config.status !== "none";
   const fileInputRef = useRef(null)
-  const [editing, setEditing] = useState(null);   // editing used for dialog (not implemented)
+  const [editing, setEditing] = useState(null);   // the item being edited
   const [options, setOptions] = useState(null);   // library choices for the dialogs; they have fallbacks
   const [deleting, setDeleting] = useState(null);  // the item being deleted, e.g. { area: "rooms", index: 0 }
   const [impact, setImpact] = useState(null);      // its delete preview, from api.config.deleteImpact
@@ -59,7 +62,6 @@ export default function ConfigEditor() {
       setLoadingFile(false);
     }
   }
-
 
   useEffect(() => {
     if (!hasConfig) return;
@@ -152,7 +154,9 @@ export default function ConfigEditor() {
   const status = configStatus(config);
   const bannerTone = status.tone === "neutral" ? "info" : status.tone;
   const items = doc?.document.config;                     // rooms, labs, courses, faculty
-  const patterns = doc?.document.time_slot_config.classes; // class patterns
+  const timeSlots = doc?.document.time_slot_config;        // time blocks, timing options
+  const patterns = timeSlots?.classes;                     // class patterns
+  const weekdays = options?.weekdays?.length ? options.weekdays : ["MON", "TUE", "WED", "THU", "FRI"];
   const enabled = patterns?.filter((p) => !p.disabled).length;
   return (
     <div className="editor">
@@ -288,7 +292,13 @@ export default function ConfigEditor() {
                 onEdit={() => setEditing({ area: "patterns", index: i })} />
             ))}
           </CardRow>
-          {/* Later: TimeSlotsCard and SettingsCard (edit-only, not part of this pass) */}
+          <TimeSlotsCard
+            timeSlots={timeSlots}
+            days={weekdays}
+            onEditDay={(day) => setEditing({ area: "time_slots", day })}
+            onEditTiming={() => setEditing({ area: "timing" })}
+          />
+          {/* Later: SettingsCard (edit-only) */}
           {!deleting && editing?.area === "faculty" && (
             <FacultyDialog
               key={`faculty-${editing.index}`}
@@ -345,13 +355,29 @@ export default function ConfigEditor() {
               onSave={(draft) => console.log("save", editing, draft)}   /* For testing, Eman replaces this */
             />
           )}
+          {editing?.area === "time_slots" && (
+            <DayBlocksDialog
+              key={`time_slots-${editing.day}`}
+              day={editing.day}
+              times={timeSlots.times}
+              onCancel={() => setEditing(null)}
+              onSave={(times) => console.log("save time slots", { times })}   /* Eman: api.config.updateTimeSlots({ times }) */
+            />
+          )}
+          {editing?.area === "timing" && (
+            <TimeSlotsDialog
+              timeSlots={timeSlots}
+              onCancel={() => setEditing(null)}
+              onSave={(values) => console.log("save time slots", values)}   /* Eman: api.config.updateTimeSlots(values) */
+            />
+          )}
           {deleting && (
             <DeleteDialog
               key={`delete-${deleting.area}-${deleting.index}`}
               impact={shownImpact?.reply ?? null}
               loadError={shownImpact?.error}
               onCancel={() => setDeleting(null)}   /* back to the edit dialog */
-              onConfirm={() => console.log("delete", deleting)}   /* Eman replaces this */
+              onConfirm={() => console.log("delete", deleting)}   /* For testing, Eman replaces this */
             />
           )}
         </>
