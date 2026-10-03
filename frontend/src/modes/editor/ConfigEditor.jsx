@@ -23,6 +23,7 @@ import CourseCard from "./cards/CourseCard.jsx";
 import FacultyCard from "./cards/FacultyCard.jsx";
 import PatternCard from "./cards/PatternCard.jsx";
 import TimeSlotsCard from "./cards/TimeSlotsCard.jsx";
+import SettingsCard from "./cards/SettingsCard.jsx";
 import ResourceDialog from "./dialogs/ResourceDialog.jsx";
 import CourseDialog from "./dialogs/CourseDialog.jsx";
 import PatternDialog from "./dialogs/PatternDialog.jsx";
@@ -158,6 +159,7 @@ export default function ConfigEditor() {
   const patterns = timeSlots?.classes;                     // class patterns
   const weekdays = options?.weekdays?.length ? options.weekdays : ["MON", "TUE", "WED", "THU", "FRI"];
   const enabled = patterns?.filter((p) => !p.disabled).length;
+  const settings = doc && { limit: doc.document.limit, optimizer_flags: doc.document.optimizer_flags };
   return (
     <div className="editor">
       <PageHeader
@@ -292,13 +294,19 @@ export default function ConfigEditor() {
                 onEdit={() => setEditing({ area: "patterns", index: i })} />
             ))}
           </CardRow>
-          <TimeSlotsCard
-            timeSlots={timeSlots}
-            days={weekdays}
-            onEditDay={(day) => setEditing({ area: "time_slots", day })}
-            onEditTiming={() => setEditing({ area: "timing" })}
-          />
-          {/* Later: SettingsCard (edit-only) */}
+          <div className="editor-pair">
+            <TimeSlotsCard
+              timeSlots={timeSlots}
+              days={weekdays}
+              onEditDay={(day) => setEditing({ area: "time_slots", day })}
+              onEditTiming={() => setEditing({ area: "timing" })}
+            />
+            <SettingsCard
+              settings={settings}
+              flags={options?.optimizer_flags}
+              onApply={(values) => console.log("save settings", values)}   /* Eman: api.config.updateSettings(values) */
+            />
+          </div>
           {!deleting && editing?.area === "faculty" && (
             <FacultyDialog
               key={`faculty-${editing.index}`}
