@@ -32,37 +32,20 @@ import DeleteDialog from "./dialogs/DeleteDialog.jsx";
 import DayBlocksDialog from "./dialogs/DayBlocksDialog.jsx";
 import TimeSlotsDialog from "./dialogs/TimeSlotsDialog.jsx";
 
-import { loadConfiguration, loadEmptyConfig } from "../../components/APICommunication";
+import { Load, Empty_Click } from "../../state/EventHandlers.jsx";
 
 export default function ConfigEditor() {
   const { state, loading } = useAppState();
   const config = state?.config;
   const [doc, setDoc] = useState(null);
-  const [loadingFile, setLoadingFile] = useState(false);
   const revision = config?.revision;
   const hasConfig = Boolean(config) && config.status !== "none";
-  const fileInputRef = useRef(null)
+  const fileInputRef = useRef(null);
+	const [loadingFile, setLoadingFile] = useState(false);
   const [editing, setEditing] = useState(null);   // the item being edited
   const [options, setOptions] = useState(null);   // library choices for the dialogs; they have fallbacks
   const [deleting, setDeleting] = useState(null);  // the item being deleted, e.g. { area: "rooms", index: 0 }
   const [impact, setImpact] = useState(null);      // its delete preview, from api.config.deleteImpact
-
-  const Empty_Click = async () => {
-
-    setLoadingFile(true);
-
-    try {
-      const res = await loadEmptyConfig();
-
-      return res.json();
-    } catch (error) {
-      return error;
-
-    } finally {
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      setLoadingFile(false);
-    }
-  }
 
   useEffect(() => {
     if (!hasConfig) return;
@@ -109,36 +92,13 @@ export default function ConfigEditor() {
           mark={<Penne size={40} />}
           actions={
             <>
-              <Button variant="primary" onClick={() => Empty_Click()}>New</Button>
+              <Button variant="primary" onClick={() => Empty_Click(setLoadingFile)}>New</Button>
               <Button onClick={() => { fileInputRef.current.click(); }}>Load JSON...</Button>
               <input
                 ref={fileInputRef}
                 type="file"
                 style={{ display: "none" }}
-                onChange={async (event) => {
-                  setLoadingFile(true);
-                  const file = event.target.files[0];
-                  if (!file) return;
-                  try {
-                    const res = await loadConfiguration(file);
-
-                    if (!res.ok) {
-                      const errorText = await res.text();
-                      console.log("Server response:", errorText);
-                      throw new Error(errorText);
-                    }
-
-                    else {
-                      return res.json();
-                    }
-                  } catch (err) {
-                    return err;
-                  } finally {
-                    await new Promise(resolve => setTimeout(resolve, 2000));
-                    config.status = "valid";
-                    setLoadingFile(false);
-                  }
-                }}
+                onChange={(event) => Load (event, setLoadingFile) }
               />
 
             </>
@@ -173,33 +133,14 @@ export default function ConfigEditor() {
         actions={
           <>
             <Button variant="ghost">Raw JSON</Button>
-            <Button onClick={Empty_Click}>New</Button>
+            <Button onClick={() => Empty_Click(setLoadingFile)}>New</Button>
 
             <Button onClick={() => fileInputRef.current.click()}>Load JSON...</Button>
             <input
               ref={fileInputRef}
               type="file"
               style={{ display: "none" }}
-              onChange={async (event) => {
-                setLoadingFile(true);
-                const file = event.target.files[0];
-                if (!file) return;
-                try {
-                  const res = await loadConfiguration(file);
-                  if (!res.ok) {
-                    //	config.status = "none";
-                    throw new Error("Invalid configuration file");
-                  } else {
-                    //	config.status = "valid";
-                    return res.json();
-                  }
-                } catch (err) {
-                  return err;
-                } finally {
-                  await new Promise(resolve => setTimeout(resolve, 2000));
-                  setLoadingFile(false);
-                }
-              }}
+              onChange= {(event) => Load(event, setLoadingFile) }
             />
 
 
