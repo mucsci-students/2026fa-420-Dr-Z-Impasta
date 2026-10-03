@@ -167,7 +167,7 @@ export default function FacultyDialog({
           value={draft.times}
           onChange={(times) => set("times", times)}
           days={weekdays}
-          error={errorFor("times")}
+          issues={issuesFor(error?.issues, { area: "faculty", index: index ?? undefined, field: "times" })}
         />
 
         <PreferenceEditor

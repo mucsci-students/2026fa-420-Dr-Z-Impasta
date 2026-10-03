@@ -339,3 +339,8 @@
   align-items: center;
   gap: var(--space-1);
 }
+
+.avail-editor__error {
+  grid-column: 2;         /* under the day's hours, not its name */
+  margin: 0;
+}

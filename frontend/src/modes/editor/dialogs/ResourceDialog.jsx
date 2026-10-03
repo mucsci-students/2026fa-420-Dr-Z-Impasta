@@ -113,7 +113,7 @@ export default function ResourceDialog({ area, index, resource, suggestions, opt
             value={draft.times}
             onChange={(times) => set("times", times)}
             days={weekdays}
-            error={errorFor("times")}
+            issues={issuesFor(error?.issues, { area, index: index ?? undefined, field: "times" })}
           />
         )}
       </Dialog>
