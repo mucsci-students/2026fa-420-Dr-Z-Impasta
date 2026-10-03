@@ -20,3 +20,183 @@
 // use the same per-day times shape, so the shared AvailabilityEditor.jsx covers all of them. Rooms
 // and labs also need an "Always available" choice that sets times to null. For faculty, an empty
 // day just means unavailable.
+
+import { useEffect, useState } from "react";
+import { api } from "../../../api/client.js";
+import Button from "../../../components/Button.jsx";
+import ConfirmDialog from "../../../components/ConfirmDialog.jsx";
+import Dialog from "../../../components/Dialog.jsx";
+import ErrorMessage from "../../../components/ErrorMessage.jsx";
+import Field from "../../../components/Field.jsx";
+import UnsavedChangesPrompt from "../../../components/UnsavedChangesPrompt.jsx";
+import { issuesFor } from "../../../components/issues.js";
+import CheckboxList from "../CheckboxList.jsx";
+import TagInput from "../TagInput.jsx";
+import { MODALITY_NAMES } from "../labels.js";
+
+const NEW_COURSE = {
+  course_id: "",
+  section_id: null,
+  credits: null,
+  capacity: null,
+  room: [],
+  lab: [],
+  conflicts: [],
+  faculty: null,
+  modality: "in_person",
+  required_room_features: [],
+  required_lab_features: [],
+  reserve_room_during_lab: true,
+};
+
+/** Text from a number box → a number, or null when empty. */
+const toNumber = (text) => (text === "" ? null : Number(text));
+
+/**
+ * Add or edit a course section. Edits a draft; nothing changes until Save succeeds.
+ * `rooms`, `labs`, `faculty`, and `courseIds` are the names to choose from; the
+ * suggestion lists are the features existing rooms and labs already have.
+ */
+export default function CourseDialog({
+  index,
+  course,
+  label,
+  rooms = [],
+  labs = [],
+  faculty = [],
+  courseIds = [],
+  roomFeatures = [],
+  labFeatures = [],
+  busy,
+  error,
+  onSave,
+  onCancel,
+  onDelete,
+}) {
+  const isNew = index === null;
+  const original = { ...NEW_COURSE, ...course };   // fill defaults the document may omit
+  const [draft, setDraft] = useState(original);
+  const isDirty = JSON.stringify(draft) !== JSON.stringify(original);
+  const [confirmingDiscard, setConfirmingDiscard] = useState(false);
+  const [modalities, setModalities] = useState(Object.keys(MODALITY_NAMES));
+
+  useEffect(() => {
+    api.config.options().then((options) => {
+      if (options?.modalities?.length) setModalities(options.modalities);
+    });
+  }, []);
+
+  /** Cancel, Escape, or ×: ask first if there are unsaved edits. */
+  function requestClose() {
+    if (isDirty) setConfirmingDiscard(true);
+    else onCancel?.();
+  }
+
+  /** Change one field of the draft. */
+  function set(field, value) {
+    setDraft((d) => ({ ...d, [field]: value }));
+  }
+
+  /** The library's message for one field, if the last Save was rejected. */
+  function errorFor(field) {
+    const found = issuesFor(error?.issues, { area: "courses", index: index ?? undefined, field });
+    return found.length > 0 ? found.map((issue) => issue.message).join(" ") : undefined;
+  }
+
+  // A course can't conflict with itself; keep any saved IDs even if no course has them now.
+  const conflictOptions = [...new Set([...courseIds, ...draft.conflicts])].filter((id) => id !== draft.course_id);
+
+  // The prompts are siblings of the Dialog, not children; see ResourceDialog.
+  return (
+    <>
+      <Dialog
+        open
+        title={isNew ? "Add course" : `Edit ${label ?? original.course_id}`}
+        onClose={requestClose}
+        actions={
+          <>
+            {!isNew && (
+              <Button variant="danger" onClick={onDelete} disabled={busy}>Delete</Button>
+            )}
+            <Button onClick={requestClose} disabled={busy}>Cancel</Button>
+            <Button variant="primary" busy={busy} onClick={() => onSave?.(draft)}>
+              {isNew ? "Add course" : "Save"}
+            </Button>
+          </>
+        }
+      >
+        <ErrorMessage error={error} title="Not saved." />
+
+        <div className="form-grid">
+          <Field label="Course ID" required help="Repeating an ID adds another section." error={errorFor("course_id")}>
+            <input value={draft.course_id} onChange={(e) => set("course_id", e.target.value)} placeholder="CMSC 140" data-autofocus />
+          </Field>
+          <Field label="Section" help="Leave blank to number sections automatically (.01, .02…)." error={errorFor("section_id")}>
+            <input value={draft.section_id ?? ""} onChange={(e) => set("section_id", e.target.value === "" ? null : e.target.value)} />
+          </Field>
+          <Field label="Credits" required error={errorFor("credits")}>
+            <input type="number" min={0} value={draft.credits ?? ""} onChange={(e) => set("credits", toNumber(e.target.value))} />
+          </Field>
+          <Field label="Capacity" required help="Most students the section can hold." error={errorFor("capacity")}>
+            <input type="number" min={1} value={draft.capacity ?? ""} onChange={(e) => set("capacity", toNumber(e.target.value))} />
+          </Field>
+        </div>
+
+        <Field label="Modality" error={errorFor("modality")}>
+          <select value={draft.modality} onChange={(e) => set("modality", e.target.value)}>
+            {modalities.map((m) => (
+              <option key={m} value={m}>{MODALITY_NAMES[m] ?? m}</option>
+            ))}
+          </select>
+        </Field>
+
+        <CheckboxList legend="Rooms" options={rooms} value={draft.room} onChange={(v) => set("room", v)} empty="No rooms yet" error={errorFor("room")} />
+        <Field label="Required room features" help="Only rooms with every tag can hold this course." error={errorFor("required_room_features")}>
+          <TagInput value={draft.required_room_features} onChange={(tags) => set("required_room_features", tags)} suggestions={roomFeatures} />
+        </Field>
+
+        <CheckboxList legend="Labs" options={labs} value={draft.lab} onChange={(v) => set("lab", v)} empty="No labs yet" error={errorFor("lab")} />
+        {draft.lab.length > 0 && (
+          <>
+            <Field label="Required lab features" help="Only labs with every tag can hold the lab meeting." error={errorFor("required_lab_features")}>
+              <TagInput value={draft.required_lab_features} onChange={(tags) => set("required_lab_features", tags)} suggestions={labFeatures} />
+            </Field>
+            <label className="checkbox">
+              <input type="checkbox" checked={draft.reserve_room_during_lab} onChange={(e) => set("reserve_room_during_lab", e.target.checked)} />
+              Keep the room reserved during the lab
+            </label>
+          </>
+        )}
+
+        <fieldset className="checkbox-list">
+          <legend>Faculty</legend>
+          <label className="checkbox">
+            <input type="radio" name="faculty-mode" checked={draft.faculty === null} onChange={() => set("faculty", null)} />
+            Any (from faculty course preferences)
+          </label>
+          <label className="checkbox">
+            <input type="radio" name="faculty-mode" checked={draft.faculty !== null} onChange={() => set("faculty", original.faculty ?? [])} />
+            Specific
+          </label>
+        </fieldset>
+        {draft.faculty !== null && (
+          <CheckboxList legend="Who can teach it" options={faculty} value={draft.faculty} onChange={(v) => set("faculty", v)} empty="No faculty yet" error={errorFor("faculty")} />
+        )}
+
+        <CheckboxList legend="Conflicts" options={conflictOptions} value={draft.conflicts} onChange={(v) => set("conflicts", v)} empty="No other courses" error={errorFor("conflicts")} />
+      </Dialog>
+      <UnsavedChangesPrompt when={isDirty} />
+      <ConfirmDialog
+        open={confirmingDiscard}
+        title="Discard changes?"
+        destructive
+        confirmLabel="Discard"
+        cancelLabel="Keep editing"
+        onConfirm={onCancel}
+        onCancel={() => setConfirmingDiscard(false)}
+      >
+        <p>Your changes to this course haven't been saved.</p>
+      </ConfirmDialog>
+    </>
+  );
+}

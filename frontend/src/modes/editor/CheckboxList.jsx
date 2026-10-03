@@ -1,0 +1,29 @@
+/** Pick any number of names from `options`. `value` is the list of picked names. */
+export default function CheckboxList({ legend, options, value, onChange, empty = "None to choose from", error }) {
+  function toggle(name) {
+    if (value.includes(name)) {
+      onChange(value.filter((v) => v !== name));
+    } else {
+      onChange([...value, name]);
+    }
+  }
+
+  return (
+    <fieldset className="checkbox-list">
+      <legend>{legend}</legend>
+      {options.length === 0 && <span className="muted">{empty}</span>}
+      {options.map((name) => (
+        <label key={name} className="checkbox">
+          <input type="checkbox" checked={value.includes(name)} onChange={() => toggle(name)} />
+          {name}
+        </label>
+      ))}
+      {error && (
+        <p className="field__error">
+          <span aria-hidden="true">⚠ </span>
+          {error}
+        </p>
+      )}
+    </fieldset>
+  );
+}

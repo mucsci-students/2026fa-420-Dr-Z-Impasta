@@ -23,6 +23,7 @@ import CourseCard from "./cards/CourseCard.jsx";
 import FacultyCard from "./cards/FacultyCard.jsx";
 import PatternCard from "./cards/PatternCard.jsx";
 import ResourceDialog from "./dialogs/ResourceDialog.jsx";
+import CourseDialog from "./dialogs/CourseDialog.jsx";
 
 import { loadConfiguration, loadEmptyConfig } from "../../components/APICommunication";
 
@@ -263,6 +264,22 @@ export default function ConfigEditor() {
             ))}
           </CardRow>
           {/* Later: TimeSlotsCard and SettingsCard (edit-only, not part of this pass) */}
+          {editing?.area === "courses" && (
+            <CourseDialog
+              key={`courses-${editing.index}`}
+              index={editing.index}
+              course={editing.index === null ? null : items.courses[editing.index]}
+              label={editing.index === null ? null : doc.sections[editing.index]}
+              rooms={items.rooms.map((r) => r.name)}
+              labs={items.labs.map((l) => l.name)}
+              faculty={items.faculty.map((f) => f.name)}
+              courseIds={[...new Set(items.courses.map((c) => c.course_id))]}
+              roomFeatures={[...new Set(items.rooms.flatMap((r) => r.features ?? []))]}
+              labFeatures={[...new Set(items.labs.flatMap((l) => l.features ?? []))]}
+              onCancel={() => setEditing(null)}
+              onSave={(draft) => console.log("save", editing, draft)}   /* For testing, Eman replaces this */
+            />
+          )}
           {(editing?.area === "rooms" || editing?.area === "labs") && (
             <ResourceDialog
               key={`${editing.area}-${editing.index}`}

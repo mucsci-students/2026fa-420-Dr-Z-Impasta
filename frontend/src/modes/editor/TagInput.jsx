@@ -7,17 +7,13 @@ export default function TagInput({ value, onChange, suggestions = [], placeholde
 
   function add() {
     const tag = text.trim();
-    if (!tag) return;
-    if (value.includes(tag)) {
-      setText("");
-      return;
-    }
-    onChange([...value, tag]);
     setText("");
+    if (tag === "" || value.includes(tag)) return;
+    onChange([...value, tag]);
   }
 
   function remove(tag) {
-    onChange(value.filter((v) => v !== tag));
+    onChange(value.filter((t) => t !== tag));
   }
 
   return (
@@ -38,13 +34,15 @@ export default function TagInput({ value, onChange, suggestions = [], placeholde
         onChange={(e) => setText(e.target.value)}
         onKeyDown={(e) => {
           if (e.key === "Enter") {
-            e.preventDefault();   // don't submit or close anything
+            e.preventDefault();
             add();
           }
         }}
       />
       <datalist id={listId}>
-        {suggestions.filter((s) => !value.includes(s)).map((s) => <option key={s} value={s} />)}
+        {suggestions.filter((s) => !value.includes(s)).map((s) => (
+          <option key={s} value={s} />
+        ))}
       </datalist>
     </div>
   );

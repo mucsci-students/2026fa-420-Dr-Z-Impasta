@@ -7,8 +7,6 @@
 
 import { plural } from "../../../format.js";
 
-const MODALITY_NAMES = { in_person: "In person", online: "Online", hybrid: "Hybrid" };
-
 /** A course section: identity, credits, capacity, resources, faculty, conflicts, and requirements. */
 export default function CourseCard({ course, label, onEdit }) {
   const section = label.slice(course.course_id.length);   // "CMSC 140.01" → ".01"
