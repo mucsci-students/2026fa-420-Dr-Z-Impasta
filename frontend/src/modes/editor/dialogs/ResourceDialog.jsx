@@ -80,8 +80,8 @@ export default function ResourceDialog({ area, index, resource, suggestions, bus
         </Field>
 
         <label className="checkbox">
-          <input type="checkbox" checked={draft.times === null} onChange={(e) => set("times", e.target.checked ? null : original.times ?? NO_HOURS)} />
-          Always available
+          {/*<input type="checkbox" checked={draft.times === null} onChange={(e) => set("times", e.target.checked ? null : original.times ?? NO_HOURS)} />*/}
+          Availability: Always / Set hours
         </label>
         {draft.times !== null && <p className="muted">Day-by-day hours: next step (AvailabilityEditor).</p>}
       </Dialog>

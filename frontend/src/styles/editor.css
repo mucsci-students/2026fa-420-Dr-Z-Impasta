@@ -235,10 +235,6 @@
   min-height: 0;     /* undo base.css's 32px input height, as with the toggle */
 }
 
-.editor .dialog {
-  overflow: visible;
-}
-
 .form-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;   /* the short fields two per row */
@@ -308,4 +304,34 @@
 .meetings-editor__error {
   grid-column: 1 / -1;    /* a row's error spans the whole row, under its fields */
   margin: 0;
+}
+
+.pref-editor {
+  border: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: var(--space-2);
+}
+
+.pref-editor legend {
+  font-weight: 500;
+  padding: 0;
+  margin-bottom: var(--space-2);
+}
+
+.pref-editor__row {
+  display: grid;
+  grid-template-columns: 1fr 72px 24px;   /* name, score, remove */
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.pref-editor__remove {
+  border: none;
+  background: none;
+  padding: 0;
+  color: var(--muted);
+  cursor: pointer;
+  font: inherit;
 }

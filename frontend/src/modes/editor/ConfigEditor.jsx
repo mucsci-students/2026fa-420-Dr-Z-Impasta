@@ -25,6 +25,7 @@ import PatternCard from "./cards/PatternCard.jsx";
 import ResourceDialog from "./dialogs/ResourceDialog.jsx";
 import CourseDialog from "./dialogs/CourseDialog.jsx";
 import PatternDialog from "./dialogs/PatternDialog.jsx";
+import FacultyDialog from "./dialogs/FacultyDialog.jsx";
 
 import { loadConfiguration, loadEmptyConfig } from "../../components/APICommunication";
 
@@ -65,7 +66,7 @@ export default function ConfigEditor() {
   }, [hasConfig, revision]);
 
   useEffect(() => {
-    api.config.options().then(setOptions).catch(() => {});   // the dialogs' fallbacks cover a failure
+    api.config.options().then(setOptions).catch(() => { });   // the dialogs' fallbacks cover a failure
   }, []);
 
   if (loading || loadingFile) {
@@ -163,7 +164,6 @@ export default function ConfigEditor() {
                   if (!res.ok) {
                     //	config.status = "none";
                     throw new Error("Invalid configuration file");
-                    return res;
                   } else {
                     //	config.status = "valid";
                     return res.json();
@@ -270,6 +270,19 @@ export default function ConfigEditor() {
             ))}
           </CardRow>
           {/* Later: TimeSlotsCard and SettingsCard (edit-only, not part of this pass) */}
+          {editing?.area === "faculty" && (
+            <FacultyDialog
+              key={`faculty-${editing.index}`}
+              index={editing.index}
+              faculty={editing.index === null ? null : items.faculty[editing.index]}
+              courseIds={[...new Set(items.courses.map((c) => c.course_id))]}
+              rooms={items.rooms.map((r) => r.name)}
+              labs={items.labs.map((l) => l.name)}
+              options={options}
+              onCancel={() => setEditing(null)}
+              onSave={(draft) => console.log("save", editing, draft)}   /* For testing, Eman replaces this */
+            />
+          )}
           {editing?.area === "courses" && (
             <CourseDialog
               key={`courses-${editing.index}`}

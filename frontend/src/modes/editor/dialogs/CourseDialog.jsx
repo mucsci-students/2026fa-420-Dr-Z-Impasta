@@ -130,7 +130,7 @@ export default function CourseDialog({
             <input value={draft.section_id ?? ""} onChange={(e) => set("section_id", e.target.value === "" ? null : e.target.value)} />
           </Field>
           <Field label="Credits" required error={errorFor("credits")}>
-            <input type="number" min={0} value={draft.credits ?? ""} onChange={(e) => set("credits", toNumber(e.target.value))} />
+            <input type="number" min={1} value={draft.credits ?? ""} onChange={(e) => set("credits", toNumber(e.target.value))} />
           </Field>
           <Field label="Capacity" required help="Most students the section can hold." error={errorFor("capacity")}>
             <input type="number" min={1} value={draft.capacity ?? ""} onChange={(e) => set("capacity", toNumber(e.target.value))} />
