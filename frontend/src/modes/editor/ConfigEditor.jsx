@@ -22,6 +22,7 @@ import ResourceCard from "./cards/ResourceCard.jsx";
 import CourseCard from "./cards/CourseCard.jsx";
 import FacultyCard from "./cards/FacultyCard.jsx";
 import PatternCard from "./cards/PatternCard.jsx";
+import ResourceDialog from "./dialogs/ResourceDialog.jsx";
 
 import { loadConfiguration, loadEmptyConfig } from "../../components/APICommunication";
 
@@ -33,7 +34,7 @@ export default function ConfigEditor() {
   const revision = config?.revision;
   const hasConfig = Boolean(config) && config.status !== "none";
   const fileInputRef = useRef(null)
-  const [/*editing*/, setEditing] = useState(null);   // editing used for dialog (not implemented)
+  const [editing, setEditing] = useState(null);   // editing used for dialog (not implemented)
 
 		  const Empty_Click = async () => {
 			 
@@ -262,6 +263,17 @@ export default function ConfigEditor() {
             ))}
           </CardRow>
           {/* Later: TimeSlotsCard and SettingsCard (edit-only, not part of this pass) */}
+          {(editing?.area === "rooms" || editing?.area === "labs") && (
+            <ResourceDialog
+              key={`${editing.area}-${editing.index}`}
+              area={editing.area}
+              index={editing.index}
+              resource={editing.index === null ? null : items[editing.area][editing.index]}
+              suggestions={[...new Set(items[editing.area].flatMap((r) => r.features ?? []))]}
+              onCancel={() => setEditing(null)}
+              onSave={(draft) => console.log("save", editing, draft)}   /* For testing, Eman replaces this */
+            />
+          )}
         </>
       )}
     </div>
