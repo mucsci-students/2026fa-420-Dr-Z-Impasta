@@ -158,6 +158,9 @@
   position: relative;
   width: 36px;
   height: 20px;
+  min-height: 0;
+  padding: 0;
+  border: none;
   margin: 0;
   border-radius: 999px;
   background: var(--line);
@@ -168,8 +171,8 @@
 .toggle input::after {           /* the round thumb */
   content: "";
   position: absolute;
-  top: 1.5px;
-  left: 0px;
+  top: 2.1px;
+  left: 1.5px;
   width: 15px;
   height: 15px;
   border-radius: 50%;
@@ -189,4 +192,50 @@
 .toggle input:focus-visible {
   outline: none;
   box-shadow: var(--focus);
+}
+
+.tag-input {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  align-items: center;
+}
+
+.tag-input__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 2px var(--space-2);
+  border-radius: 999px;
+  background: var(--surface-3);
+  font-size: 12px;
+}
+
+.tag-input__chip button {
+  border: none;
+  background: none;
+  padding: 0;
+  cursor: pointer;
+  color: var(--muted);
+  font: inherit;
+}
+
+.tag-input input {
+  flex: 1;
+  min-width: 140px;
+}
+
+.checkbox {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.checkbox input {
+  min-height: 0;     /* undo base.css's 32px input height, as with the toggle */
+}
+
+.editor .dialog .help-tip__text {
+  left: 0;
+  transform: none;
 }
