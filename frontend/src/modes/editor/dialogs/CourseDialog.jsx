@@ -21,8 +21,7 @@
 // and labs also need an "Always available" choice that sets times to null. For faculty, an empty
 // day just means unavailable.
 
-import { useEffect, useState } from "react";
-import { api } from "../../../api/client.js";
+import { useState } from "react";
 import Button from "../../../components/Button.jsx";
 import ConfirmDialog from "../../../components/ConfirmDialog.jsx";
 import Dialog from "../../../components/Dialog.jsx";
@@ -55,7 +54,8 @@ const toNumber = (text) => (text === "" ? null : Number(text));
 /**
  * Add or edit a course section. Edits a draft; nothing changes until Save succeeds.
  * `rooms`, `labs`, `faculty`, and `courseIds` are the names to choose from; the
- * suggestion lists are the features existing rooms and labs already have.
+ * suggestion lists are the features existing rooms and labs already have. `options` is the
+ * reply from api.config.options(); fallbacks are used until it arrives.
  */
 export default function CourseDialog({
   index,
@@ -67,6 +67,7 @@ export default function CourseDialog({
   courseIds = [],
   roomFeatures = [],
   labFeatures = [],
+  options,
   busy,
   error,
   onSave,
@@ -78,13 +79,7 @@ export default function CourseDialog({
   const [draft, setDraft] = useState(original);
   const isDirty = JSON.stringify(draft) !== JSON.stringify(original);
   const [confirmingDiscard, setConfirmingDiscard] = useState(false);
-  const [modalities, setModalities] = useState(Object.keys(MODALITY_NAMES));
-
-  useEffect(() => {
-    api.config.options().then((options) => {
-      if (options?.modalities?.length) setModalities(options.modalities);
-    });
-  }, []);
+  const modalities = options?.modalities?.length ? options.modalities : Object.keys(MODALITY_NAMES);
 
   /** Cancel, Escape, or ×: ask first if there are unsaved edits. */
   function requestClose() {

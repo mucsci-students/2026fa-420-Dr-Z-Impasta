@@ -24,6 +24,7 @@ import FacultyCard from "./cards/FacultyCard.jsx";
 import PatternCard from "./cards/PatternCard.jsx";
 import ResourceDialog from "./dialogs/ResourceDialog.jsx";
 import CourseDialog from "./dialogs/CourseDialog.jsx";
+import PatternDialog from "./dialogs/PatternDialog.jsx";
 
 import { loadConfiguration, loadEmptyConfig } from "../../components/APICommunication";
 
@@ -36,23 +37,24 @@ export default function ConfigEditor() {
   const hasConfig = Boolean(config) && config.status !== "none";
   const fileInputRef = useRef(null)
   const [editing, setEditing] = useState(null);   // editing used for dialog (not implemented)
+  const [options, setOptions] = useState(null);   // library choices for the dialogs; they have fallbacks
 
-		  const Empty_Click = async () => {
-			 
-			  setLoadingFile(true);
+  const Empty_Click = async () => {
 
-			  try {
-				  const res = await loadEmptyConfig();
-				  
-				  return res.json();
-			  } catch(error) {
-				  return error;
-			  
-			  } finally {
-				  await new Promise(resolve => setTimeout(resolve, 2000));
-				  setLoadingFile(false);
-			  }
-		  }
+    setLoadingFile(true);
+
+    try {
+      const res = await loadEmptyConfig();
+
+      return res.json();
+    } catch (error) {
+      return error;
+
+    } finally {
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      setLoadingFile(false);
+    }
+  }
 
 
   useEffect(() => {
@@ -61,6 +63,10 @@ export default function ConfigEditor() {
       setDoc({ document: reply.document, sections: reply.sections });
     });
   }, [hasConfig, revision]);
+
+  useEffect(() => {
+    api.config.options().then(setOptions).catch(() => {});   // the dialogs' fallbacks cover a failure
+  }, []);
 
   if (loading || loadingFile) {
     return (
@@ -80,37 +86,37 @@ export default function ConfigEditor() {
           mark={<Penne size={40} />}
           actions={
             <>
-              <Button variant="primary" onClick={() => Empty_Click() }>New</Button>
-		  <Button onClick={() => { fileInputRef.current.click(); }}>Load JSON...</Button>
-		  <input 
-		  ref={fileInputRef}
-		  type="file"
-		  style={{display: "none"}}
-		  onChange={async (event) => {
-			  setLoadingFile(true);
-			  const file = event.target.files[0];
-			  if(!file) return;
-			  try {
-				  const res = await loadConfiguration(file);
-				  
-				  if (!res.ok) {
-					      const errorText = await res.text();
-					      console.log("Server response:", errorText);
-					      throw new Error(errorText);
-				  }
+              <Button variant="primary" onClick={() => Empty_Click()}>New</Button>
+              <Button onClick={() => { fileInputRef.current.click(); }}>Load JSON...</Button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                style={{ display: "none" }}
+                onChange={async (event) => {
+                  setLoadingFile(true);
+                  const file = event.target.files[0];
+                  if (!file) return;
+                  try {
+                    const res = await loadConfiguration(file);
 
-				  else {
-					  return res.json();
-				  }
-			  } catch(err) {
-				  return err;
-			  } finally {
-				  await new Promise(resolve => setTimeout(resolve, 2000));
-				  config.status = "valid"; 
-				  setLoadingFile(false);
-			  }
-		  }}
-		  />
+                    if (!res.ok) {
+                      const errorText = await res.text();
+                      console.log("Server response:", errorText);
+                      throw new Error(errorText);
+                    }
+
+                    else {
+                      return res.json();
+                    }
+                  } catch (err) {
+                    return err;
+                  } finally {
+                    await new Promise(resolve => setTimeout(resolve, 2000));
+                    config.status = "valid";
+                    setLoadingFile(false);
+                  }
+                }}
+              />
 
             </>
           }
@@ -141,35 +147,35 @@ export default function ConfigEditor() {
         actions={
           <>
             <Button variant="ghost">Raw JSON</Button>
-            <Button onClick={ Empty_Click }>New</Button>
+            <Button onClick={Empty_Click}>New</Button>
 
-		<Button onClick={() => fileInputRef.current.click()}>Load JSON...</Button>
-		<input
-		ref={fileInputRef}
-		type="file"
-		style={{display: "none"}}
-		onChange={async (event) => {
-			setLoadingFile(true);
-			const file = event.target.files[0];
-			if (!file) return;
-			try {
-				const res = await loadConfiguration(file);
-				if(!res.ok) {
-				//	config.status = "none";
-					throw new Error("Invalid configuration file");
-					return res;
-				} else {
-				//	config.status = "valid";
-					return res.json();
-				}
-			} catch(err) {
-				return err;
-			} finally {
-				await new Promise(resolve => setTimeout(resolve, 2000));
-				setLoadingFile(false);
-			  }
-		}}
-		/>
+            <Button onClick={() => fileInputRef.current.click()}>Load JSON...</Button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              style={{ display: "none" }}
+              onChange={async (event) => {
+                setLoadingFile(true);
+                const file = event.target.files[0];
+                if (!file) return;
+                try {
+                  const res = await loadConfiguration(file);
+                  if (!res.ok) {
+                    //	config.status = "none";
+                    throw new Error("Invalid configuration file");
+                    return res;
+                  } else {
+                    //	config.status = "valid";
+                    return res.json();
+                  }
+                } catch (err) {
+                  return err;
+                } finally {
+                  await new Promise(resolve => setTimeout(resolve, 2000));
+                  setLoadingFile(false);
+                }
+              }}
+            />
 
 
             <Button>Save JSON...</Button>
@@ -276,6 +282,7 @@ export default function ConfigEditor() {
               courseIds={[...new Set(items.courses.map((c) => c.course_id))]}
               roomFeatures={[...new Set(items.rooms.flatMap((r) => r.features ?? []))]}
               labFeatures={[...new Set(items.labs.flatMap((l) => l.features ?? []))]}
+              options={options}
               onCancel={() => setEditing(null)}
               onSave={(draft) => console.log("save", editing, draft)}   /* For testing, Eman replaces this */
             />
@@ -289,6 +296,16 @@ export default function ConfigEditor() {
               suggestions={[...new Set(items[editing.area].flatMap((r) => r.features ?? []))]}
               onCancel={() => setEditing(null)}
               onSave={(draft) => console.log("save", editing, draft)}   /* For testing, Eman replaces this */
+            />
+          )}
+          {editing?.area === "patterns" && (
+            <PatternDialog
+              key={`patterns-${editing.index}`}
+              index={editing.index}
+              pattern={editing.index === null ? null : patterns[editing.index]}
+              options={options}
+              onCancel={() => setEditing(null)}
+              onSave={(draft) => console.log("save", editing, draft)}   /* Eman replaces this */
             />
           )}
         </>
