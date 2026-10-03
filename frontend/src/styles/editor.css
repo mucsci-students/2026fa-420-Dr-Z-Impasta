@@ -261,7 +261,10 @@
   flex-basis: 100%;                 /* its own row under the checkboxes */
 }
 
-.meetings-editor {
+/* The fieldsets of the list editors: no box, rows stacked */
+.meetings-editor,
+.pref-editor,
+.avail-editor {
   border: none;
   padding: 0;
   margin: 0;
@@ -269,7 +272,9 @@
   gap: var(--space-2);
 }
 
-.meetings-editor legend {
+.meetings-editor legend,
+.pref-editor legend,
+.avail-editor legend {
   font-weight: 500;
   padding: 0;
   margin-bottom: var(--space-2);
@@ -292,7 +297,9 @@
   min-height: 0;          /* undo base.css's input height */
 }
 
-.meetings-editor__remove {
+.meetings-editor__remove,
+.pref-editor__remove,
+.avail-editor__remove {
   border: none;
   background: none;
   padding: 0;
@@ -306,20 +313,6 @@
   margin: 0;
 }
 
-.pref-editor {
-  border: none;
-  padding: 0;
-  margin: 0;
-  display: grid;
-  gap: var(--space-2);
-}
-
-.pref-editor legend {
-  font-weight: 500;
-  padding: 0;
-  margin-bottom: var(--space-2);
-}
-
 .pref-editor__row {
   display: grid;
   grid-template-columns: 1fr 72px 24px;   /* name, score, remove */
@@ -327,11 +320,22 @@
   align-items: center;
 }
 
-.pref-editor__remove {
-  border: none;
-  background: none;
-  padding: 0;
-  color: var(--muted);
-  cursor: pointer;
-  font: inherit;
+.avail-editor__day {
+  display: grid;
+  grid-template-columns: 84px 1fr;   /* day name, then its hours */
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.avail-editor__ranges {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.avail-editor__range {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
 }

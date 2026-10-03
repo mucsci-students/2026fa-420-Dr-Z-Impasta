@@ -328,6 +328,7 @@ export default function ConfigEditor() {
               index={editing.index}
               resource={editing.index === null ? null : items[editing.area][editing.index]}
               suggestions={[...new Set(items[editing.area].flatMap((r) => r.features ?? []))]}
+              options={options}
               onCancel={() => setEditing(null)}
               onDelete={() => setDeleting(editing)}
               onSave={(draft) => console.log("save", editing, draft)}   /* For testing, Eman replaces this */

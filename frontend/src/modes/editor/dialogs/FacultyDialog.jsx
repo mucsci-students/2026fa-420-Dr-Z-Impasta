@@ -20,7 +20,7 @@ import ErrorMessage from "../../../components/ErrorMessage.jsx";
 import Field from "../../../components/Field.jsx";
 import UnsavedChangesPrompt from "../../../components/UnsavedChangesPrompt.jsx";
 import { issuesFor } from "../../../components/issues.js";
-import AvailabilityChips from "../AvailabilityChips.jsx";
+import AvailabilityEditor from "../AvailabilityEditor.jsx";
 import CheckboxList from "../CheckboxList.jsx";
 import PreferenceEditor from "../PreferenceEditor.jsx";
 
@@ -44,8 +44,8 @@ const toNumber = (text) => (text === "" ? null : Number(text));
 
 /**
  * Add or edit a faculty member. Edits a draft; nothing changes until Save succeeds.
- * `courseIds`, `rooms`, and `labs` are the names their preferences can use. Availability
- * (`times`) is shown but not edited yet: Save sends it back unchanged.
+ * `courseIds`, `rooms`, and `labs` are the names their preferences can use. A new faculty
+ * member starts with no hours; a day with no hours means they can't teach that day.
  */
 export default function FacultyDialog({
   index,
@@ -162,16 +162,13 @@ export default function FacultyDialog({
           error={errorFor("mandatory_days")}
         />
 
-        <div>
-          <p className="muted">Availability (editing comes later)</p>
-          <AvailabilityChips times={draft.times} />
-          {errorFor("times") && (
-            <p className="field__error">
-              <span aria-hidden="true">⚠ </span>
-              {errorFor("times")}
-            </p>
-          )}
-        </div>
+        <AvailabilityEditor
+          legend="When they can teach"
+          value={draft.times}
+          onChange={(times) => set("times", times)}
+          days={weekdays}
+          error={errorFor("times")}
+        />
 
         <PreferenceEditor
           legend="Course preferences"

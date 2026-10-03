@@ -4,7 +4,8 @@
 // | capacity | number, required              |
 // | features | TagInput                      |
 // | times    | checkbox + AvailabilityEditor | "Always available" checked = null;
-// |          |                               | unchecked shows the editor
+// |          |                               | unchecked shows the editor, starting from
+// |          |                               | the last hours set, or weekdays 08:00–17:00
 
 import { useState } from "react";
 import Button from "../../../components/Button.jsx";
@@ -14,19 +15,38 @@ import ErrorMessage from "../../../components/ErrorMessage.jsx";
 import Field from "../../../components/Field.jsx";
 import UnsavedChangesPrompt from "../../../components/UnsavedChangesPrompt.jsx";
 import { issuesFor } from "../../../components/issues.js";
+import AvailabilityEditor from "../AvailabilityEditor.jsx";
 import TagInput from "../TagInput.jsx";
 
 const NEW_RESOURCE = { name: "", capacity: null, features: [], times: null };
-const NO_HOURS = { MON: [], TUE: [], WED: [], THU: [], FRI: [] };
+const WEEKDAYS = ["MON", "TUE", "WED", "THU", "FRI"];
+/** Where set hours start when "Always available" is unticked, so the room isn't left unusable. */
+const WORKDAY = [{ start: "08:00", end: "17:00" }];
 
-/** Add or edit a room or lab. Edits a draft; nothing changes until Save succeeds. */
-export default function ResourceDialog({ area, index, resource, suggestions, busy, error, onSave, onCancel, onDelete }) {
+/**
+ * Add or edit a room or lab. Edits a draft; nothing changes until Save succeeds.
+ * `options` is the reply from api.config.options(); fallbacks are used until it arrives.
+ */
+export default function ResourceDialog({ area, index, resource, suggestions, options, busy, error, onSave, onCancel, onDelete }) {
   const isNew = index === null;
   const kind = area === "rooms" ? "room" : "lab";
   const original = { ...NEW_RESOURCE, ...resource };   // fill defaults the document may omit
   const [draft, setDraft] = useState(original);
   const isDirty = JSON.stringify(draft) !== JSON.stringify(original);
   const [confirmingDiscard, setConfirmingDiscard] = useState(false);
+  const weekdays = options?.weekdays?.length ? options.weekdays : WEEKDAYS;
+  // The hours to bring back when "Always available" is unticked: the last ones set in this dialog
+  const [lastHours, setLastHours] = useState(original.times);
+
+  /** Tick: remember the hours, then clear them. Untick: bring back the remembered or default hours. */
+  function setAlwaysAvailable(always) {
+    if (always) {
+      setLastHours(draft.times);
+      set("times", null);
+    } else {
+      set("times", lastHours ?? Object.fromEntries(weekdays.map((day) => [day, WORKDAY])));
+    }
+  }
 
   /** Cancel, Escape, or ×: ask first if there are unsaved edits. */
   function requestClose() {
@@ -80,10 +100,22 @@ export default function ResourceDialog({ area, index, resource, suggestions, bus
         </Field>
 
         <label className="checkbox">
-          {/*<input type="checkbox" checked={draft.times === null} onChange={(e) => set("times", e.target.checked ? null : original.times ?? NO_HOURS)} />*/}
-          Availability: Always / Set hours
+          <input
+            type="checkbox"
+            checked={draft.times === null}
+            onChange={(e) => setAlwaysAvailable(e.target.checked)}
+          />
+          Always available
         </label>
-        {draft.times !== null && <p className="muted">Day-by-day hours: next step (AvailabilityEditor).</p>}
+        {draft.times !== null && (
+          <AvailabilityEditor
+            legend={`When the ${kind} can be used`}
+            value={draft.times}
+            onChange={(times) => set("times", times)}
+            days={weekdays}
+            error={errorFor("times")}
+          />
+        )}
       </Dialog>
       <UnsavedChangesPrompt when={isDirty} />
       <ConfirmDialog
