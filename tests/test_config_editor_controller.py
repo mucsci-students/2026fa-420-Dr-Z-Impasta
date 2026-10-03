@@ -68,7 +68,7 @@ def test_faculty_mandatory_days_buttons() -> None:
 
 
 def test_faculty_validate_and_apply_button() -> None:
-    return None
+    assert CTRL.validate_apply_item("faculty", "faculty", [("name", "Harry")]) == 4
 
 
 def test_course_add_button() -> None:

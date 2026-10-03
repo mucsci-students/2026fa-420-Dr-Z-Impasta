@@ -13,6 +13,17 @@ export const loadConfiguration = async (file) => {
 			discard_changes: false,
 		}),
 	});
-	return await response;
+	return response;
 	
 };
+
+export const loadEmptyConfig = async() => {
+	const response = await fetch("/api/config/load_empty", {
+		method: "POST",
+		headers: {
+			"Content-Type": "application/json",
+		},
+		body: JSON.stringify({}),
+	});
+	return response;
+}

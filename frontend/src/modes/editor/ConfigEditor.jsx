@@ -23,7 +23,7 @@ import CourseCard from "./cards/CourseCard.jsx";
 import FacultyCard from "./cards/FacultyCard.jsx";
 import PatternCard from "./cards/PatternCard.jsx";
 
-import { loadConfiguration } from "../../components/APICommunication";
+import { loadConfiguration, loadEmptyConfig } from "../../components/APICommunication";
 
 export default function ConfigEditor() {
   const { state, loading } = useAppState();
@@ -34,6 +34,24 @@ export default function ConfigEditor() {
   const hasConfig = Boolean(config) && config.status !== "none";
   const fileInputRef = useRef(null)
   const [/*editing*/, setEditing] = useState(null);   // editing used for dialog (not implemented)
+
+		  const Empty_Click = async () => {
+			 
+			  setLoadingFile(true);
+
+			  try {
+				  const res = await loadEmptyConfig();
+				  
+				  return res.json();
+			  } catch(error) {
+				  return error;
+			  
+			  } finally {
+				  await new Promise(resolve => setTimeout(resolve, 2000));
+				  setLoadingFile(false);
+			  }
+		  }
+
 
   useEffect(() => {
     if (!hasConfig) return;
@@ -60,35 +78,38 @@ export default function ConfigEditor() {
           mark={<Penne size={40} />}
           actions={
             <>
-              <Button variant="primary">New</Button>
+              <Button variant="primary" onClick={() => Empty_Click() }>New</Button>
+		  <Button onClick={() => { fileInputRef.current.click(); }}>Load JSON...</Button>
+		  <input 
+		  ref={fileInputRef}
+		  type="file"
+		  style={{display: "none"}}
+		  onChange={async (event) => {
+			  setLoadingFile(true);
+			  const file = event.target.files[0];
+			  if(!file) return;
+			  try {
+				  const res = await loadConfiguration(file);
+				  
+				  if (!res.ok) {
+					      const errorText = await res.text();
+					      console.log("Server response:", errorText);
+					      throw new Error(errorText);
+				  }
 
-              <Button onClick={() => { fileInputRef.current.click(); }}>Load JSON...</Button>
-              <input
-                ref={fileInputRef}
-                type="file"
-                style={{ display: "none" }}
-                onChange={async (event) => {
-                  const file = event.target.files[0];
-                  if (!file) return;
-                  setLoadingFile(true);
-                  try {
-                    const res = await loadConfiguration(file);
+				  else {
+					  return res.json();
+				  }
+			  } catch(err) {
+				  return err;
+			  } finally {
+				  await new Promise(resolve => setTimeout(resolve, 2000));
+				  config.status = "valid"; 
+				  setLoadingFile(false);
+			  }
+		  }}
+		  />
 
-                    if (!res.ok) {
-                      throw new Error("Invalid configuration file");
-                    }
-                    else {
-                      return res.json();
-                    }
-                  } catch (err) {
-                    return err;
-                  } finally {
-                    await new Promise(resolve => setTimeout(resolve, 2000));
-                    config.status = "valid";
-                    setLoadingFile(false);
-                  }
-                }}
-              />
             </>
           }
         >
@@ -118,34 +139,36 @@ export default function ConfigEditor() {
         actions={
           <>
             <Button variant="ghost">Raw JSON</Button>
-            <Button>New</Button>
+            <Button onClick={ Empty_Click }>New</Button>
 
-            <Button onClick={() => fileInputRef.current.click()}>Load JSON...</Button>
-            <input
-              ref={fileInputRef}
-              type="file"
-              style={{ display: "none" }}
-              onChange={async (event) => {
-                const file = event.target.files[0];
-                if (!file) return;
-                setLoadingFile(true);
-                try {
-                  const res = await loadConfiguration(file);
-                  if (!res.ok) {
-                    //	config.status = "none";
-                    throw new Error("Invalid configuration file");
-                  } else {
-                    //	config.status = "valid";
-                    return res.json();
-                  }
-                } catch (err) {
-                  return err;
-                } finally {
-                  await new Promise(resolve => setTimeout(resolve, 2000));
-                  setLoadingFile(false);
-                }
-              }}
-            />
+		<Button onClick={() => fileInputRef.current.click()}>Load JSON...</Button>
+		<input
+		ref={fileInputRef}
+		type="file"
+		style={{display: "none"}}
+		onChange={async (event) => {
+			setLoadingFile(true);
+			const file = event.target.files[0];
+			if (!file) return;
+			try {
+				const res = await loadConfiguration(file);
+				if(!res.ok) {
+				//	config.status = "none";
+					throw new Error("Invalid configuration file");
+					return res;
+				} else {
+				//	config.status = "valid";
+					return res.json();
+				}
+			} catch(err) {
+				return err;
+			} finally {
+				await new Promise(resolve => setTimeout(resolve, 2000));
+				setLoadingFile(false);
+			  }
+		}}
+		/>
+
 
             <Button>Save JSON...</Button>
             <Button variant="primary">Validate</Button>
@@ -167,6 +190,7 @@ export default function ConfigEditor() {
             onAdd={() => setEditing({ area: "faculty", index: null })}
           >
             {items.faculty.map((f, i) => (
+
               <FacultyCard
                 key={i}
                 faculty={f}
@@ -185,11 +209,14 @@ export default function ConfigEditor() {
                 key={i}
                 course={c}
                 label={doc.sections[i]}
+
                 onEdit={() => setEditing({ area: "courses", index: i })}
+
               />
             ))}
           </CardRow>
           <div className="editor-pair">
+
             <CardRow
               title="Rooms"
               meta={items.rooms.length}

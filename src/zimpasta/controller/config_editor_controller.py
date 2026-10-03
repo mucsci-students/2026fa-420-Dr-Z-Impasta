@@ -7,6 +7,7 @@ class ConfigEditorController:
     REVISION_COUNTER = 0
     CURR_FILENAME = ""
     EXP_FORMAT = ExportFormat.parse("json")
+    CURR_FILE = None
 
     def __init__(self, app: AppController) -> None:
         self.app = app
@@ -17,7 +18,9 @@ class ConfigEditorController:
         Returns the status of the loaded file: VALID = "valid",
         INCOMPLETE = "incomplete", or NONE = "none"""
         self.CURR_FILENAME = filename
+        self.CURR_FILE = config_doc["document"]
         config_doc = self.app.load_configuration(self.CURR_FILENAME, content)
+
         return config_doc["state"]["status"]
 
     def save_json(self, path: str) -> bool:
@@ -67,5 +70,11 @@ class ConfigEditorController:
             blockers.append({block["label"], block["field"]})
         return blockers
 
-    def validate_apply_item(self) -> None:
+    def validate_apply_item(self, section: str, area: str, values: list[tuple]) -> None:
+        allowed = allowed_keys(section)
+        change = self.workspace._update_section(section, area, allowed, values)
+        print(change)
+        return None
+
+    def allowed_keys(section: str) -> None:
         return None
