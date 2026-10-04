@@ -6,18 +6,21 @@ const ConfigStatusObj = Object.freeze({
 	VALID: "valid"
 });
 
+const Error = (error, title, labels, onDismiss) => {
+	return { "error" : error, "title" : title, "labels" : labels, "onDismiss" : onDismiss };
+};
 
-export const Load = async(event, setLoadingFile) => {
+export const Load = async(event, setLoadingFile, setError) => {
 	setLoadingFile(true);
 	const file = event.target.files[0];
 	if(!file) return;
 	try {
 		const res = await loadConfiguration(file);
 
-		if (!res.ok) {
-			const errorText = await res.text();
-			console.log("Server response:", errorText);
-			throw new Error(errorText);
+		if (!res.ok) {	
+			const component = Error(res, "Invalid configuration file", res.issues, () => setError(null));
+			setError(component);
+			return;
 		}
 
 		else {
@@ -46,6 +49,7 @@ export const Empty_Click = async(setLoadingFile) => {
 		}
 };
 
+// TODO: add UI error handling
 export const Validate = async() => {
 
 	try {

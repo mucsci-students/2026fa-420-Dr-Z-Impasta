@@ -32,6 +32,7 @@ import DeleteDialog from "./dialogs/DeleteDialog.jsx";
 import DayBlocksDialog from "./dialogs/DayBlocksDialog.jsx";
 import TimeSlotsDialog from "./dialogs/TimeSlotsDialog.jsx";
 
+import ErrorMessage from "../../components/ErrorMessage.jsx";
 import { Load, Empty_Click, Validate, Save } from "../../state/EventHandlers.jsx";
 
 export default function ConfigEditor() {
@@ -40,12 +41,13 @@ export default function ConfigEditor() {
   const [doc, setDoc] = useState(null);
   const revision = config?.revision;
   const hasConfig = Boolean(config) && config.status !== "none";
-  const fileInputRef = useRef(null);
-	const [loadingFile, setLoadingFile] = useState(false);
+  const fileInputRef = useRef(null); //
+	const [loadingFile, setLoadingFile] = useState(false); //
   const [editing, setEditing] = useState(null);   // the item being edited
   const [options, setOptions] = useState(null);   // library choices for the dialogs; they have fallbacks
   const [deleting, setDeleting] = useState(null);  // the item being deleted, e.g. { area: "rooms", index: 0 }
   const [impact, setImpact] = useState(null);      // its delete preview, from api.config.deleteImpact
+	const[error, setError] = useState(null); //
 
   useEffect(() => {
     if (!hasConfig) return;
@@ -83,6 +85,19 @@ export default function ConfigEditor() {
     );
   }
 
+	if(error) {
+		return (
+			<div>
+				<ErrorMessage 
+					error={error.error}
+					title={error.title}
+					labels={error.labels}
+					onDismiss={error.onDismiss}
+				/>
+			</div>
+		);
+	}
+
   if (!config || config.status === "none") {
     return (
       <>
@@ -98,7 +113,7 @@ export default function ConfigEditor() {
                 ref={fileInputRef}
                 type="file"
                 style={{ display: "none" }}
-                onChange={(event) => Load (event, setLoadingFile) }
+                onChange={(event) => Load (event, setLoadingFile, setError) }
               />
 
             </>
@@ -140,7 +155,7 @@ export default function ConfigEditor() {
               ref={fileInputRef}
               type="file"
               style={{ display: "none" }}
-              onChange= {(event) => Load(event, setLoadingFile) }
+              onChange= {(event) => Load(event, setLoadingFile, setError) }
             />
 
 
