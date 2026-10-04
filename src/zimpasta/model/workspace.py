@@ -371,7 +371,9 @@ class ConfigWorkspace:
         self.load_text(text, filename=path.name, discard_changes=discard_changes)
 
     def load_empty(self, discard_changes: bool = False) -> None:
-
+        """Loads an "empty" config file,
+        "empty" is not completely empty but rather defined as
+        the minimum number of entries per key that is allowed by CombinedConfig.model_validate"""
         empty_config_path = Path(__file__).parent / "new_config.json"
         with open(empty_config_path) as f:
             empty_data_str = f.read()

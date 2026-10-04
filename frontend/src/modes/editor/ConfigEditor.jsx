@@ -32,7 +32,7 @@ import DeleteDialog from "./dialogs/DeleteDialog.jsx";
 import DayBlocksDialog from "./dialogs/DayBlocksDialog.jsx";
 import TimeSlotsDialog from "./dialogs/TimeSlotsDialog.jsx";
 
-import { Load, Empty_Click } from "../../state/EventHandlers.jsx";
+import { Load, Empty_Click, Validate, Save } from "../../state/EventHandlers.jsx";
 
 export default function ConfigEditor() {
   const { state, loading } = useAppState();
@@ -144,8 +144,8 @@ export default function ConfigEditor() {
             />
 
 
-            <Button>Save JSON...</Button>
-            <Button variant="primary">Validate</Button>
+            <Button onClick={ () => Save() }>Save JSON...</Button>
+            <Button variant="primary" onClick={ () =>  Validate() }>Validate</Button>
           </>
         }
       />

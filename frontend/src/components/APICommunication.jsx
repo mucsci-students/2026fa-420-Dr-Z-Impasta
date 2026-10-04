@@ -25,5 +25,22 @@ export const loadEmptyConfig = async() => {
 		},
 		body: JSON.stringify({}),
 	});
-	return response;
-}
+	return response.json();
+};
+
+export const validateConfig = async () => {
+	const response = await fetch("/api/config/validate", {
+		method: "POST",
+	});
+	return response.json();
+};
+
+export const saveConfig = async () => {
+	const response = await fetch("api/config/export", {
+		method: "GET",
+	});
+
+	const filename = response.headers.get("Content-Disposition").split("=")[1];
+	const resJSON = await response.json();
+	return { "content": resJSON, "filename" : filename.replace(".json", "") };
+};
