@@ -1,5 +1,5 @@
 
-export const loadConfiguration = async (file) => {
+export const loadConfiguration = async(file) => {
 	const content = await file.text();
 
 	const response = await fetch("/api/config/load", {
@@ -28,19 +28,44 @@ export const loadEmptyConfig = async() => {
 	return response.json();
 };
 
-export const validateConfig = async () => {
+export const validateConfig = async() => {
 	const response = await fetch("/api/config/validate", {
 		method: "POST",
 	});
 	return response.json();
 };
 
-export const saveConfig = async () => {
-	const response = await fetch("api/config/export", {
+export const saveConfig = async() => {
+	const response = await fetch("/api/config/export", {
 		method: "GET",
 	});
 
 	const filename = response.headers.get("Content-Disposition").split("=")[1];
 	const resJSON = await response.json();
 	return { "content": resJSON, "filename" : filename.replace(".json", "") };
+};
+
+export const addItem = async(area, object) => {
+
+	const response = await fetch(`/api/config/${area}`, {
+		method: "POST",
+		headers: {
+			"Content-Type": "application/json",
+		},
+		body: JSON.stringify(object),
+	});
+	return response;
+};
+
+export const replaceItem = async(area, index, item) => {
+
+	const response = await fetch(`/api/config/${area}/${index}`, {
+		method: "PUT",
+		headers: {
+			"Content-Type": "application/json",
+		},
+		body: JSON.stringify(item),
+	});
+
+	return response;
 };

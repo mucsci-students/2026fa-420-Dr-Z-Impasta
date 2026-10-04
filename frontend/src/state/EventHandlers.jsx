@@ -1,4 +1,4 @@
-import { loadConfiguration, loadEmptyConfig, validateConfig, saveConfig } from "../components/APICommunication";
+import { loadConfiguration, loadEmptyConfig, validateConfig, saveConfig, addItem, replaceItem } from "../components/APICommunication";
 
 const ConfigStatusObj = Object.freeze({
 	NONE: "none",
@@ -61,6 +61,7 @@ export const Validate = async() => {
 	}
 };
 
+// TODO: change status on GUI to the green Saved/Valid when the file is saved
 export const Save = async() => {
 
 	const report = await Validate();
@@ -79,7 +80,7 @@ export const Save = async() => {
 };
 
 
-const Download = async (content, filename) => {
+const Download = async(content, filename) => {
 
 	if ("showSaveFilePicker" in window) {
 		const fileHandle = await window.showSaveFilePicker({
@@ -115,5 +116,44 @@ const Download = async (content, filename) => {
 	link.click();
         link.remove();
 	URL.revokeObjectURL(url);
+};
+
+// TODO: add a UI for errors
+export const ValidateAndSaveItem = async(editing, draft, setEditing) => {
+	const area = editing.area;
+	const index = editing.index;
+	if(index == null) {
+
+		try {
+			const res = await addItem(area, draft);
+
+			if(!res.ok) {
+				console.log(res.json());
+			} else {
+				setEditing(null);
+			}
+
+			return res;
+
+		} catch(err) {
+
+		}
+
+	} else {
+		try {
+			const res = await replaceItem(area, index, draft);
+			
+			if(!res.ok) {
+				console.log(res.json());
+			} else {
+				setEditing(null);
+			}
+
+			return res;
+
+		} catch(err) {
+
+		}
+	}
 };
 

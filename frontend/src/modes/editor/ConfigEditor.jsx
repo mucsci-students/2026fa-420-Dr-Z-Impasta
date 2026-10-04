@@ -33,7 +33,7 @@ import DayBlocksDialog from "./dialogs/DayBlocksDialog.jsx";
 import TimeSlotsDialog from "./dialogs/TimeSlotsDialog.jsx";
 
 import ErrorMessage from "../../components/ErrorMessage.jsx";
-import { Load, Empty_Click, Validate, Save } from "../../state/EventHandlers.jsx";
+import { Load, Empty_Click, Validate, Save, ValidateAndSaveItem } from "../../state/EventHandlers.jsx";
 
 export default function ConfigEditor() {
   const { state, loading } = useAppState();
@@ -274,7 +274,7 @@ export default function ConfigEditor() {
               options={options}
               onCancel={() => setEditing(null)}
               onDelete={() => setDeleting(editing)}
-              onSave={(draft) => console.log("save", editing, draft)}   /* For testing, Eman replaces this */
+              onSave={(draft) => ValidateAndSaveItem(editing, draft, setEditing) }   /* For testing, Eman replaces this */
             />
           )}
           {!deleting && editing?.area === "courses" && (
@@ -292,7 +292,7 @@ export default function ConfigEditor() {
               options={options}
               onCancel={() => setEditing(null)}
               onDelete={() => setDeleting(editing)}
-              onSave={(draft) => console.log("save", editing, draft)}   /* For testing, Eman replaces this */
+              onSave={(draft) => ValidateAndSaveItem(editing, draft, setEditing) }   /* For testing, Eman replaces this */
             />
           )}
           {!deleting && (editing?.area === "rooms" || editing?.area === "labs") && (
@@ -305,7 +305,7 @@ export default function ConfigEditor() {
               options={options}
               onCancel={() => setEditing(null)}
               onDelete={() => setDeleting(editing)}
-              onSave={(draft) => console.log("save", editing, draft)}   /* For testing, Eman replaces this */
+              onSave={(draft) => ValidateAndSaveItem(editing, draft, setEditing) }   /* For testing, Eman replaces this */
             />
           )}
           {!deleting && editing?.area === "patterns" && (
@@ -316,7 +316,7 @@ export default function ConfigEditor() {
               options={options}
               onCancel={() => setEditing(null)}
               onDelete={() => setDeleting(editing)}
-              onSave={(draft) => console.log("save", editing, draft)}   /* For testing, Eman replaces this */
+              onSave={(draft) => ValidateAndSaveItem(editing, draft, setEditing) }   /* For testing, Eman replaces this */
             />
           )}
           {editing?.area === "time_slots" && (
