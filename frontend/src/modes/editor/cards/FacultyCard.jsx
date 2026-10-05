@@ -1,13 +1,9 @@
 // Description: Name; credits (12 cr, or 12–14 cr when minimum_credits ≠ maximum_credits); Mo–Fr
 // availability chips; Mandatory; Limits (unique_course_limit, maximum_days);
-// Prefers (course names).
-//
-// Missing From Mockup: Room prefs (room_preferences) and Lab prefs (lab_preferences). The
-// preference scores: the mockup shows only names (CMSC 362, CMSC 476 +1), but each name has a
-// score, e.g. CMSC 362 (5). Multiple ranges per day: a chip like 11–16 assumes one range, but a
-// day can have several (9–12, 13–17).
+// Prefers (course names); Room prefs (room_preferences); Lab prefs (lab_preferences).
 
-import { plural } from "../../../format.js";
+// TODO: Remove more than 1 time slot in availability chips. No "add hours" for an already existing availability.
+
 import AvailabilityChips from "../AvailabilityChips.jsx";
 
 const WEEKDAYS = ["MON", "TUE", "WED", "THU", "FRI"];
@@ -27,8 +23,11 @@ export default function FacultyCard({ faculty, onEdit }) {
       : `${faculty.minimum_credits}–${faculty.maximum_credits} cr`;
   const mandatoryDays = WEEKDAYS.filter((d) => faculty.mandatory_days.includes(d));
   const mandatory = mandatoryDays.length > 0 ? mandatoryDays.join(", ") : "None";
-  const days = faculty.maximum_days < 5 ? ` · ${faculty.maximum_days} days max` : "";
-  const limits = `${plural(faculty.unique_course_limit, "unique course")}${days}`;
+  const coursePreferences = preferenceText(faculty.course_preferences);
+  const roomPreferences = preferenceText(faculty.room_preferences);
+  const labPreferences = preferenceText(faculty.lab_preferences);
+  const uniqueCourseLimit = faculty.unique_course_limit;
+  const maximumDays = faculty.maximum_days;
 
   return (
     <article
@@ -43,12 +42,18 @@ export default function FacultyCard({ faculty, onEdit }) {
       </div>
       <AvailabilityChips times={faculty.times} />
       <dl className="item-card__facts">
-        <dt>Mandatory</dt>
+        <dt>Mandatory Days</dt>
         <dd>{mandatory}</dd>
-        <dt>Limits</dt>
-        <dd>{limits}</dd>
-        <dt>Prefers</dt>
-        <dd>{preferenceText(faculty.course_preferences)}</dd>
+        <dt>Unique Course Limit</dt>
+        <dd>{uniqueCourseLimit}</dd>
+        <dt>Maximum Days</dt>
+        <dd>{maximumDays}</dd>
+        <dt>Course Preferences</dt>
+        <dd>{coursePreferences}</dd>
+        <dt>Room Preferences</dt>
+        <dd>{roomPreferences}</dd>
+        <dt>Lab Preferences</dt>
+        <dd>{labPreferences}</dd>
       </dl>
     </article>
   );
