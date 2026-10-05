@@ -3,7 +3,7 @@
 // badge next to LAB. Per-meeting start time (meetings[].start_time): a meeting can have its own
 // start that overrides the pattern's.
 
-// Known Bugs: Can't reset the pattern's start time once set. Toggle button does not work on the view.
+// Known Bugs: Can't reset the pattern's start time once set.
 
 import Badge from "../../../components/Badge.jsx";
 

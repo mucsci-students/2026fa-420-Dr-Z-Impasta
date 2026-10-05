@@ -247,7 +247,11 @@ export default function ConfigEditor() {
               <PatternCard
                 key={i}
                 pattern={p}
-                onEdit={() => setEditing({ area: "patterns", index: i })} />
+                onEdit={() => setEditing({ area: "patterns", index: i })}
+                onToggle={() =>
+                  ValidateAndSaveItem({ area: "patterns", index: i }, { ...p, disabled: !p.disabled }, () => {})
+                }
+              />
             ))}
           </CardRow>
           <div className="editor-pair">
