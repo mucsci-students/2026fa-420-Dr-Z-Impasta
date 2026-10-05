@@ -1,0 +1,194 @@
+// Description:
+// | Field                 | Control                 | Notes
+// | credits               | number, required        |
+// | disabled              | switch (Enabled)        | Inverted: switch on = disabled: false.
+// |                       |                         | Show the word too, not just the switch
+// | start_time            | time, optional          | Empty = null ("Any start time")
+// | meetings              | list, add/remove rows   | Required; one row per meeting
+// | meetings[].day        | select (weekdays)       | Options from api.config.options()
+// | meetings[].duration   | number, required        | Minutes
+// | meetings[].lab        | checkbox                | One lab meeting per pattern; the library
+// |                       |                         | reports it, don't check in JS
+// | meetings[].delivery   | select (delivery modes) | Defaults to in_person
+// | meetings[].start_time | time, optional          | Overrides the pattern's start_time
+
+import { useState } from "react";
+import Button from "../../../components/Button.jsx";
+import ConfirmDialog from "../../../components/ConfirmDialog.jsx";
+import Dialog from "../../../components/Dialog.jsx";
+import ErrorMessage from "../../../components/ErrorMessage.jsx";
+import Field from "../../../components/Field.jsx";
+import UnsavedChangesPrompt from "../../../components/UnsavedChangesPrompt.jsx";
+import { issuesFor } from "../../../components/issues.js";
+import { DELIVERY_NAMES } from "../labels.js";
+
+const NEW_MEETING = { day: "MON", start_time: null, duration: 50, lab: false, delivery: "in_person" };
+const NEW_PATTERN = { credits: null, meetings: [NEW_MEETING], disabled: false, start_time: null };
+const WEEKDAYS = ["MON", "TUE", "WED", "THU", "FRI"];
+
+const toNumber = (text) => (text === "" ? null : Number(text));
+const toTime = (text) => (text === "" ? null : text);   // an empty time box means "not set"
+
+// Row keys for meetings, so removing a row doesn't hand its state to the next one
+let nextMeetingKey = 0;
+const newMeetingKeys = (count) => Array.from({ length: count }, () => nextMeetingKey++);
+
+/**
+ * Add or edit a class pattern and its meetings. Edits a draft; nothing changes until Save succeeds.
+ * `options` is the reply from api.config.options(); fallbacks are used until it arrives.
+ */
+export default function PatternDialog({ index, pattern, options, busy, error, onSave, onCancel, onDelete }) {
+  const isNew = index === null;
+  const original = pattern ?? NEW_PATTERN;
+  const [draft, setDraft] = useState(original);
+  const isDirty = JSON.stringify(draft) !== JSON.stringify(original);
+  const [confirmingDiscard, setConfirmingDiscard] = useState(false);
+
+  // One key per row of draft.meetings, in the same order
+  const [meetingKeys, setMeetingKeys] = useState(() => newMeetingKeys(original.meetings.length));
+  // The row keys when Save was last pressed; the server's `meetings.N` errors refer to these positions
+  const [savedKeys, setSavedKeys] = useState(meetingKeys);
+
+  const weekdays = options?.weekdays?.length ? options.weekdays : WEEKDAYS;
+  const deliveryModes = options?.delivery_modes?.length ? options.delivery_modes : Object.keys(DELIVERY_NAMES);
+
+  /** Cancel, Escape, or ×: ask first if there are unsaved edits. */
+  function requestClose() {
+    if (isDirty) setConfirmingDiscard(true);
+    else onCancel?.();
+  }
+
+  function save() {
+    setSavedKeys(meetingKeys);
+    onSave?.(draft);
+  }
+
+  function set(field, value) {
+    setDraft((d) => ({ ...d, [field]: value }));
+  }
+
+  /** Change one field of meeting number i. */
+  function setMeeting(i, field, value) {
+    set("meetings", draft.meetings.map((m, j) => (j === i ? { ...m, [field]: value } : m)));
+  }
+
+  /** Add a meeting on the first weekday the pattern doesn't use yet. */
+  function addMeeting() {
+    const used = new Set(draft.meetings.map((m) => m.day));
+    const day = weekdays.find((d) => !used.has(d)) ?? weekdays[0];
+    const [key] = newMeetingKeys(1);
+    set("meetings", [...draft.meetings, { ...NEW_MEETING, day }]);
+    setMeetingKeys((keys) => [...keys, key]);
+  }
+
+  function removeMeeting(i) {
+    set("meetings", draft.meetings.filter((_, j) => j !== i));
+    setMeetingKeys((keys) => keys.filter((_, j) => j !== i));
+  }
+
+  /** The library's message for one field. `exact` leaves out the issues for its sub-fields. */
+  function errorFor(field, exact = false) {
+    const found = issuesFor(error?.issues, { area: "patterns", index: index ?? undefined, field })
+      .filter((issue) => !exact || issue.field === field);
+    return found.length > 0 ? found.map((issue) => issue.message).join(" ") : undefined;
+  }
+
+  /** The library's message for the meeting row with this key, from where it was at the last Save. */
+  function meetingError(key) {
+    const position = savedKeys.indexOf(key);
+    return position === -1 ? undefined : errorFor(`meetings.${position}`);
+  }
+
+  // The prompts are siblings of the Dialog, not children; see ResourceDialog.
+  return (
+    <>
+      <Dialog
+        open
+        width="640px"
+        title={isNew ? "Add class pattern" : `Edit ${original.credits}-credit pattern`}
+        onClose={requestClose}
+        actions={
+          <>
+            {!isNew && <Button variant="danger" onClick={onDelete} disabled={busy}>Delete</Button>}
+            <Button onClick={requestClose} disabled={busy}>Cancel</Button>
+            <Button variant="primary" busy={busy} onClick={save}>
+              {isNew ? "Add pattern" : "Save"}
+            </Button>
+          </>
+        }
+      >
+        <ErrorMessage error={error} title="Not saved." />
+
+        <div className="form-grid">
+          <Field label="Credits" required error={errorFor("credits")}>
+            <input type="number" min={1} value={draft.credits ?? ""}
+              onChange={(e) => set("credits", toNumber(e.target.value))} data-autofocus />
+          </Field>
+          <Field label="Start time" help="Optional. Meetings without their own start time begin here." error={errorFor("start_time")}>
+            <input type="time" value={draft.start_time ?? ""}
+              onChange={(e) => set("start_time", toTime(e.target.value))} />
+          </Field>
+        </div>
+
+        <label className="toggle">
+          <input type="checkbox" role="switch" checked={!draft.disabled}
+            onChange={(e) => set("disabled", !e.target.checked)} />
+          <span>{draft.disabled ? "Disabled: the scheduler won't use it" : "Enabled"}</span>
+        </label>
+
+        <fieldset className="meetings-editor">
+          <legend>Meetings</legend>
+          <div className="meetings-editor__head" aria-hidden="true">
+            <span>Day</span><span>Minutes</span><span>Lab</span><span>Delivery</span><span>Own start</span><span />
+          </div>
+          {draft.meetings.map((m, i) => {
+            const rowError = meetingError(meetingKeys[i]);
+            return (
+              <div key={meetingKeys[i]} className="meetings-editor__row">
+                <select aria-label={`Meeting ${i + 1} day`} value={m.day}
+                  onChange={(e) => setMeeting(i, "day", e.target.value)}>
+                  {weekdays.map((d) => <option key={d} value={d}>{d}</option>)}
+                </select>
+                <input type="number" min={1} aria-label={`Meeting ${i + 1} minutes`} value={m.duration ?? ""}
+                  onChange={(e) => setMeeting(i, "duration", toNumber(e.target.value))} />
+                <input type="checkbox" aria-label={`Meeting ${i + 1} is the lab`} checked={m.lab}
+                  onChange={(e) => setMeeting(i, "lab", e.target.checked)} />
+                <select aria-label={`Meeting ${i + 1} delivery`} value={m.delivery}
+                  onChange={(e) => setMeeting(i, "delivery", e.target.value)}>
+                  {deliveryModes.map((d) => (
+                    <option key={d} value={d}>
+                      {DELIVERY_NAMES[d] ?? d}
+                    </option>
+                  ))}
+                </select>
+                <input type="time" aria-label={`Meeting ${i + 1} start time`} value={m.start_time ?? ""}
+                  onChange={(e) => setMeeting(i, "start_time", toTime(e.target.value))} />
+                <button type="button" className="meetings-editor__remove" aria-label={`Remove meeting ${i + 1}`}
+                  onClick={() => removeMeeting(i)}>
+                  ×
+                </button>
+                {rowError && <p className="field__error meetings-editor__error">{rowError}</p>}
+              </div>
+            );
+          })}
+          <Button size="sm" variant="ghost" onClick={addMeeting}>
+            + Add meeting
+          </Button>
+          {errorFor("meetings", true) && <p className="field__error">{errorFor("meetings", true)}</p>}
+        </fieldset>
+      </Dialog>
+      <UnsavedChangesPrompt when={isDirty} />
+      <ConfirmDialog
+        open={confirmingDiscard}
+        title="Discard changes?"
+        destructive
+        confirmLabel="Discard"
+        cancelLabel="Keep editing"
+        onConfirm={onCancel}
+        onCancel={() => setConfirmingDiscard(false)}
+      >
+        <p>Your changes to this pattern haven't been saved.</p>
+      </ConfirmDialog>
+    </>
+  );
+}
