@@ -4,12 +4,6 @@
  * Runs the scheduler on the last validated configuration.
  * Run-specific settings are sent as overrides and never change the saved configuration.
  */
-/**
- * Schedule Generator (mode 02).
- *
- * Runs the scheduler on the last validated configuration.
- * Run-specific settings are sent as overrides and never change the saved configuration.
- */
 
 import { useEffect, useState } from "react";
 import { Link } from "react-router";
@@ -26,7 +20,16 @@ import { plural } from "../../format.js";
 import { api } from "../../api/client.js";
 import { useAppState } from "../../state/appStateContext.js";
 import { useAction } from "../../state/useAction.js";
-import { FLAG_NAMES } from "../editor/labels.js";
+
+const FLAG_NAMES = {
+  faculty_course: "Faculty course preferences",
+  faculty_room: "Faculty room preferences",
+  faculty_lab: "Faculty lab preferences",
+  same_room: "Same room",
+  same_lab: "Same lab",
+  pack_rooms: "Pack rooms",
+  pack_labs: "Pack labs",
+};
 
 const SUBTITLE =
   "Runs the scheduler on the last validated configuration. Overrides apply to this run only and never change the saved file.";
