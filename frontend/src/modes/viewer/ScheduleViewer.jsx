@@ -14,6 +14,7 @@ import Badge from "../../components/Badge.jsx";
 import Card from "../../components/Card.jsx";
 import EmptyState from "../../components/EmptyState.jsx";
 import PageHeader from "../../components/PageHeader.jsx";
+import { Lasagna } from "../../components/PastaMarks.jsx";
 import Spinner from "../../components/Spinner.jsx";
 import { plural } from "../../format.js";
 import { useAppState } from "../../state/appStateContext.js";
@@ -161,7 +162,8 @@ export default function ScheduleViewer() {
         <PageHeader title="Schedules" />
         {errorMessage}
         <EmptyState
-          title={generating ? "Generating schedules…" : "No schedules yet"}
+                    title={generating ? "Generating schedules…" : "No schedules yet"}
+                    mark={<Lasagna size={40} />}
           actions={
             <>
               {fileInput}

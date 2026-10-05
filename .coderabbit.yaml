@@ -1,0 +1,83 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+#
+# CodeRabbit reviews each pull request automatically. This file overrides the settings in
+# CodeRabbit's web UI, where automatic reviews are off for this repository. CodeRabbit
+# reads it from the branch under review, so a branch created before this file was merged
+# needs develop merged into it first. Options: https://docs.coderabbit.ai/reference/configuration
+#
+# It only comments. A teammate still approves each pull request.
+
+language: en-US
+tone_instructions: >-
+  Be concise and specific. This is a student team project: say why something matters and
+  suggest a fix. Skip praise and style nitpicks that Ruff or ESLint already enforce.
+
+reviews:
+  profile: chill
+  request_changes_workflow: false
+  poem: false
+  sequence_diagrams: false
+
+  auto_review:
+    enabled: true
+    drafts: false
+    # develop, the default branch, is always reviewed. main receives the release pull requests.
+    base_branches:
+      - main
+
+  # Lock files and build output aren't worth reviewing.
+  path_filters:
+    - "!uv.lock"
+    - "!frontend/package-lock.json"
+    - "!src/zimpasta/web/**"
+    - "!frontend/dist-browser/**"
+
+  path_instructions:
+    - path: "src/zimpasta/model/**"
+      instructions: >-
+        The Model of an MVC application built on the course-constraint-scheduler library.
+        Flag any scheduling or validation rule reimplemented here instead of asked of the
+        library (CombinedConfig validation, Scheduler). Edits to a configuration must
+        validate the whole configuration and change nothing when rejected. Code the
+        controller uses also runs in the browser on Pyodide, so flag new threads,
+        subprocesses, sockets, or file access there; ThreadRunner in generation_job.py and
+        the shell-only config_loader.py and export.py are the existing exceptions.
+    - path: "src/zimpasta/controller/**"
+      instructions: >-
+        The Controller. Each GUI workflow is one AppController method with one route in
+        routes.py. Failures use the single JSON error shape in errors.py with a message
+        written for users. A new or changed route needs pytest tests in tests/controller
+        and an entry in docs/web-api.md. The API is local only: flag anything that reads or
+        writes a file path supplied by a request, or loosens the checks in security.py.
+    - path: "src/zimpasta/commands/**"
+      instructions: >-
+        Shell commands. Each module exposes SPECS and runs through evaluate() in
+        command.py. Input goes through the validated prompts in prompts.py and output
+        through the Console, so commands are testable with ScriptedConsole.
+    - path: "frontend/src/**"
+      instructions: >-
+        The View: React in plain JavaScript and JSX. The team chose not to use TypeScript,
+        so don't suggest it. Components must not reimplement scheduler rules beyond simple
+        input hints, and must not call fetch directly: every request goes through
+        src/api/client.js, which also works in the browser version. Colors come from the
+        tokens in styles/tokens.css. Controls need labels, destructive actions need a
+        confirmation, and nothing may rely on color alone. See docs/gui.md.
+    - path: "tests/**"
+      instructions: >-
+        pytest. Tests should use the small fixture in tests/fixtures and the fakes in
+        tests/helpers.py, not examples/sample_config.json, so the suite stays fast. Prefer
+        asserting on behavior a user would see over internal details.
+    - path: ".github/workflows/**"
+      instructions: >-
+        Workflows must not print secrets or run pull request content with elevated
+        permissions. The Pages deploy needs CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID,
+        which pull requests from forks don't receive.
+
+knowledge_base:
+  # The project's own rules, used as review criteria.
+  code_guidelines:
+    enabled: true
+    filePatterns:
+      - README.md
+      - docs/gui.md
+      - docs/web-api.md
