@@ -329,6 +329,9 @@ new server-side workflow as an `AppController` method with pytest tests.
 - Commit messages follow [Conventional Commits](https://www.conventionalcommits.org/):
   `feat:`, `fix:`, `test:`, `docs:`, `chore:`.
 - Open pull requests against `develop` and fill in `.github/PULL_REQUEST_TEMPLATE.md`.
+- CodeRabbit reviews each pull request automatically, guided by `.coderabbit.yaml`. It only
+  comments; a teammate still approves. A branch created before that file was merged needs
+  `develop` merged into it to be reviewed.
 - Keep `uv.lock` committed and run `uv sync` after pulling.
 
 ## Feature notes
