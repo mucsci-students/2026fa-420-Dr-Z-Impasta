@@ -1,51 +1,21 @@
 /**
- * Client-side exports for the Schedule Viewer.
- *
- * If src/api/client.js has export calls for schedules, prefer those so the
- * files match what the CLI writes; these are the fallback.
+ * Exports go through the server (api.schedules.exportFile), which writes the same
+ * JSON and CSV files as the shell. This file only hands the result to the browser.
  */
-import { buildEvents, compareEvents, formatMinutes } from "./scheduleData.js";
+import { api } from "../../api/client.js";
 
-function downloadFile(fileName, text, type) {
-  const url = URL.createObjectURL(new Blob([text], { type }));
+function downloadFile({ content, filename, type }) {
+  const url = URL.createObjectURL(new Blob([content], { type: type || "application/octet-stream" }));
   const link = document.createElement("a");
   link.href = url;
-  link.download = fileName;
+  link.download = filename;
   document.body.appendChild(link);
   link.click();
   link.remove();
   URL.revokeObjectURL(url);
 }
 
-function csvCell(value) {
-  return `"${String(value ?? "").replaceAll('"', '""')}"`;
-}
-
-/** JSONWriter format: always a list of schedules, so the file loads back. */
-export function exportScheduleJson(schedule, number) {
-  downloadFile(
-    `schedule-${number}.json`,
-    JSON.stringify([schedule], null, 2),
-    "application/json",
-  );
-}
-
-/** Exports the whole schedule (every room, lab and faculty), not only the selected card. */
-export function exportScheduleCsv(schedule, number) {
-  const header = ["Course", "Section", "Type", "Faculty", "Room/Lab", "Day", "Start", "End"];
-  const rows = buildEvents(schedule)
-    .sort(compareEvents)
-    .map((event) => [
-      event.courseId,
-      event.sectionId,
-      event.isOnline ? "Online" : event.isLab ? "Lab" : "Lecture",
-      event.faculty,
-      event.place,
-      event.day,
-      formatMinutes(event.start),
-      formatMinutes(event.end),
-    ]);
-
-  const csv = [header, ...rows].map((row) => row.map(csvCell).join(",")).join("\n");
-  downloadFile(`schedule-${number}.csv`, csv, "text/csv;charset=utf-8");
+/** `which` is a schedule number (starting at 1) or "all"; `format` is "json" or "csv". */
+export async function exportSchedules({ which, format }) {
+  downloadFile(await api.schedules.exportFile({ which, format }));
 }

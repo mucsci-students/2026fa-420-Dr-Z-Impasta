@@ -176,33 +176,3 @@ export function compareEvents(a, b) {
     a.courseId.localeCompare(b.courseId, undefined, { numeric: true })
   );
 }
-
-/* ------------------------------------------------------------------ */
-/* Loading a file                                                      */
-/* ------------------------------------------------------------------ */
-
-/**
- * Accepts what the README says import accepts: a list of schedules, or a
- * single schedule (one list of assignments).
- */
-export function normalizeLoadedFile(parsed, fileName) {
-  let items;
-  if (Array.isArray(parsed) && parsed.every(Array.isArray)) {
-    items = parsed; // list of schedules
-  } else if (Array.isArray(parsed) && parsed.length && parsed.every((a) => a?.course)) {
-    items = [parsed]; // a single schedule
-  } else {
-    items = getScheduleList(parsed);
-  }
-
-  if (!items.length) {
-    throw new Error("No schedules were found in this file.");
-  }
-
-  return {
-    items,
-    source: "loaded",
-    name: fileName,
-    created_at: new Date().toISOString(),
-  };
-}
