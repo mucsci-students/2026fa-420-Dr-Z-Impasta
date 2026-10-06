@@ -31,7 +31,18 @@ export function useSchedules(refreshKey) {
       .exportFile({ which: "all", format: "json" })
       .then(({ content }) => {
         if (cancelled) return;
-        setResult({ loading: false, items: getScheduleList(JSON.parse(content)), error: null });
+        let data;
+        try {
+          data = JSON.parse(content);
+        } catch {
+          setResult({
+            loading: false,
+            items: [],
+            error: "Unable to load schedules: the server returned invalid JSON.",
+          });
+          return;
+        }
+        setResult({ loading: false, items: getScheduleList(data), error: null });
       })
       .catch((error) => {
         if (cancelled) return;

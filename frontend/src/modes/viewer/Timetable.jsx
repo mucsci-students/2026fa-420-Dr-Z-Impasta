@@ -133,6 +133,7 @@ export default function Timetable({ events, groupBy }) {
                         {event.sectionId && (
                           <span className="timetable__section"> .{event.sectionId}</span>
                         )}
+                        {event.isLab && " (Lab)"}
                       </strong>
                       {detail && <span className="timetable__detail">{detail}</span>}
                     </div>
