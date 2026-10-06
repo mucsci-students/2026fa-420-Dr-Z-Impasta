@@ -158,6 +158,27 @@ export default function ScheduleViewer() {
     );
   }
 
+  // Loading failed: say so and offer a retry instead of claiming there are no schedules.
+  if (loadError) {
+    return (
+      <>
+        <PageHeader title="Schedules" />
+        {errorMessage}
+        <EmptyState
+          title="Couldn't load the schedules"
+          mark={<Lasagna size={40} />}
+          actions={
+            <button className="btn btn--primary" type="button" onClick={reload}>
+              Retry
+            </button>
+          }
+        >
+          Nothing was deleted. The schedules couldn't be read from the server, so try again.
+        </EmptyState>
+      </>
+    );
+  }
+
   if (!scheduleCount) {
     const generating = state?.generation?.state === "running";
     const canGenerate = QUICK_GENERATE && state?.config?.status === "valid";
