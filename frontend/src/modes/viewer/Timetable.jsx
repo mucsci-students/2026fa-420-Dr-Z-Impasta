@@ -121,6 +121,7 @@ export default function Timetable({ events, groupBy }) {
 
                   return (
                     <div
+                    <div
                       key={event.id}
                       className={`timetable__event${event.isLab ? " timetable__event--lab" : ""}`}
                       style={eventStyle(item)}
@@ -133,8 +134,8 @@ export default function Timetable({ events, groupBy }) {
                         {event.sectionId && (
                           <span className="timetable__section"> .{event.sectionId}</span>
                         )}
-                        {event.isLab && " (Lab)"}
                       </strong>
+                      {event.isLab && <span className="timetable__detail">Lab</span>}
                       {detail && <span className="timetable__detail">{detail}</span>}
                     </div>
                   );
