@@ -3,6 +3,7 @@
  */
 import { compareEvents, formatMinutes } from "./scheduleData.js";
 
+/** Render the selected group’s meetings in day, time, and course order. */
 export default function ScheduleTable({ events }) {
   const rows = [...events].sort(compareEvents);
 

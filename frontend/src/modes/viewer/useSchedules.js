@@ -19,6 +19,7 @@ function isEmptyError(error) {
   return error?.status === 404 || error?.status === 409;
 }
 
+/** Load schedules on refresh-key changes or reload calls, returning items, loading, and error state. */
 export function useSchedules(refreshKey) {
   const [result, setResult] = useState({ loading: true, items: [], error: null });
   const [reloadCount, setReloadCount] = useState(0);

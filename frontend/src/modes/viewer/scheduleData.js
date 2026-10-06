@@ -55,6 +55,7 @@ function splitCourse(value) {
 /* Times                                                               */
 /* ------------------------------------------------------------------ */
 
+/** Format minutes after midnight as HH:MM, or return TBA for missing or NaN values. */
 export function formatMinutes(minutes) {
   if (minutes == null || Number.isNaN(minutes)) return "TBA";
   const hours = String(Math.floor(minutes / 60)).padStart(2, "0");
@@ -62,6 +63,7 @@ export function formatMinutes(minutes) {
   return `${hours}:${mins}`;
 }
 
+/** Coerce a value with Number and return null when the result is not finite. */
 function toNumber(value) {
   const number = Number(value);
   return Number.isFinite(number) ? number : null;
@@ -135,6 +137,7 @@ const TYPE_ORDER = { Room: 0, Faculty: 0, Lab: 1, Online: 2, Unassigned: 3 };
 export function groupEvents(events, groupBy) {
   const groups = new Map();
 
+  /** Append an event to its group and track distinct assignment objects for section counts. */
   function add(key, name, type, event) {
     if (!groups.has(key)) {
       groups.set(key, { key, name, type, events: [], sections: new Set() });

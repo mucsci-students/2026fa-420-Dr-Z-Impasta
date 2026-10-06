@@ -9,6 +9,7 @@ const HOUR_HEIGHT = 52; // px per hour; keep in sync with nothing else — it's 
 const DAY_START = START_HOUR * 60;
 const DAY_END = END_HOUR * 60;
 
+/** Return whether a weekday event has a positive duration overlapping the visible hours. */
 function isPlaceable(event) {
   return (
     DAYS.includes(event.day) &&
@@ -31,6 +32,7 @@ function layoutDay(events) {
   let laneEnds = [];
   let clusterEnd = -1;
 
+  /** Finalize the cluster’s lane counts and reset the overlap tracking state. */
   function flush() {
     cluster.forEach((item) => {
       item.lanes = laneEnds.length;
@@ -60,6 +62,7 @@ function layoutDay(events) {
   return placed;
 }
 
+/** Compute a lane’s position and size, clipping the event to the visible hours. */
 function eventStyle({ event, lane, lanes }) {
   const start = Math.max(event.start, DAY_START);
   const end = Math.min(event.end, DAY_END);
@@ -71,6 +74,7 @@ function eventStyle({ event, lane, lanes }) {
   };
 }
 
+/** Render weekday events in overlap lanes and report meetings outside the visible grid. */
 export default function Timetable({ events, groupBy }) {
   const hours = [];
   for (let hour = START_HOUR; hour < END_HOUR; hour += 1) hours.push(hour);

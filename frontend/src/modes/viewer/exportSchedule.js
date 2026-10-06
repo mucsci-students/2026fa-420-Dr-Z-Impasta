@@ -4,6 +4,7 @@
  */
 import { api } from "../../api/client.js";
 
+/** Download exported content with its filename and MIME type, then release the blob URL. */
 function downloadFile({ content, filename, type }) {
   const url = URL.createObjectURL(new Blob([content], { type: type || "application/octet-stream" }));
   const link = document.createElement("a");

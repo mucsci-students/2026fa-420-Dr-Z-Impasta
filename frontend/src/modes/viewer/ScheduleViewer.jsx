@@ -49,6 +49,7 @@ const VIEW_OPTIONS = [
 const QUICK_GENERATE = import.meta.env.DEV;
 const QUICK_GENERATE_LIMIT = 5;
 
+/** Render labeled options and report the selected value through onChange. */
 function Segmented({ label, value, options, onChange }) {
   return (
     <div className="segmented">
@@ -72,6 +73,7 @@ function Segmented({ label, value, options, onChange }) {
   );
 }
 
+/** Display session schedules with grouping, navigation, import, export, and clearing. */
 export default function ScheduleViewer() {
   const { state, loading } = useAppState();
 
@@ -102,6 +104,7 @@ export default function ScheduleViewer() {
   const currentGroup = groups.find((group) => group.key === selectedKey) ?? groups[0] ?? null;
 
   // --- Server actions ---
+  /** Run a server action with busy/error state and reload schedules on success. */
   async function run(action) {
     setBusy(true);
     setActionError(null);
@@ -115,6 +118,7 @@ export default function ScheduleViewer() {
     }
   }
 
+  /** Import the selected JSON file and reset schedule and group selection on success. */
   function handleLoadJson(event) {
     const file = event.target.files?.[0];
     event.target.value = "";
@@ -126,6 +130,7 @@ export default function ScheduleViewer() {
     });
   }
 
+  /** Open the hidden JSON file input when it is mounted. */
   const openFilePicker = () => fileInputRef.current?.click();
   const fileInput = (
     <input
@@ -195,21 +200,25 @@ export default function ScheduleViewer() {
   }
 
   // --- Handlers ---
+  /** Select a zero-based schedule index, wrapping at either end of the list. */
   function goToSchedule(nextIndex) {
     setScheduleIndex((nextIndex + scheduleCount) % scheduleCount);
   }
 
+  /** Change the grouping mode and reset the selected resource or faculty card. */
   function changeGroupBy(value) {
     setGroupBy(value);
     setSelectedKey(null);
   }
 
+  /** Export the current schedule or all schedules in the selected JSON or CSV format. */
   function handleExport(event) {
     const [which, format] = event.target.value.split(":");
     if (!format) return;
     run(() => exportSchedules({ which: which === "all" ? "all" : index + 1, format }));
   }
 
+  /** Confirm clearing all session schedules, then reset selection on success. */
   function clearResults() {
     if (!window.confirm("Clear all generated and loaded schedules?")) return;
     run(async () => {
