@@ -121,7 +121,6 @@ export default function Timetable({ events, groupBy }) {
 
                   return (
                     <div
-                    <div
                       key={event.id}
                       className={`timetable__event${event.isLab ? " timetable__event--lab" : ""}`}
                       style={eventStyle(item)}
