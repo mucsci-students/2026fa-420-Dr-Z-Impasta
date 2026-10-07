@@ -86,7 +86,7 @@ export default function DayBlocksDialog({ day, times, busy, error, onSave, onCan
   }
 
 	/** A function to assign the input field the 'input-error' class if it contains invalid data */
-	function classNameFunc(field, index) {
+	function classNameFunc(field) {
 		if(localError.some((err) => err.field.split(".")[3] === field)) {
 			return "input-error";
 		} else {

@@ -118,7 +118,7 @@ const Download = async(content, filename) => {
 	const url = URL.createObjectURL(blob);
 	const link = document.createElement("a");
         link.href = url;
-	link.download = exported["filename"];
+	link.download = content;
 
 	document.body.appendChild(link);
 	link.click();
@@ -144,7 +144,7 @@ export const ValidateAndSaveItem = async(editing, draft, setEditing, setLocalErr
 		try {
 			res = await replaceItem(area, index, draft);
 		} catch(err) {
-
+			return err;
 		}
 	}
 
@@ -181,7 +181,7 @@ export const DeleteItem = async(deleting, setDeleting, setEditing) => {
 	const index = deleting.index;
 
 	try {
-		const res = await deleteItem(area, index);
+		await deleteItem(area, index);
 		setDeleting(null);
 		setEditing(null);
 
