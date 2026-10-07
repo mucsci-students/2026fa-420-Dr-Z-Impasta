@@ -454,3 +454,7 @@
   gap: var(--space-1);
   cursor: pointer;
 }
+
+.input-error {
+	border: 2px solid red;
+}

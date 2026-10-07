@@ -1,4 +1,4 @@
-import { loadConfiguration, loadEmptyConfig, validateConfig, saveConfig, addItem, replaceItem } from "../components/APICommunication";
+import { loadConfiguration, loadEmptyConfig, validateConfig, saveConfig, addItem, replaceItem, deleteItem, updateTimeSlot } from "../components/APICommunication";
 
 const ConfigStatusObj = Object.freeze({
 	NONE: "none",
@@ -119,41 +119,78 @@ const Download = async(content, filename) => {
 };
 
 // TODO: add a UI for errors
-export const ValidateAndSaveItem = async(editing, draft, setEditing) => {
+export const ValidateAndSaveItem = async(editing, draft, setEditing, setLocalError) => {
 	const area = editing.area;
 	const index = editing.index;
+	let res = null;
+
 	if(index == null) {
 
 		try {
-			const res = await addItem(area, draft);
-
-			if(!res.ok) {
-				console.log(res.json());
-			} else {
-				setEditing(null);
-			}
-
-			return res;
-
+			res = await addItem(area, draft);
 		} catch(err) {
-
+			return err;
 		}
 
 	} else {
+
 		try {
-			const res = await replaceItem(area, index, draft);
-			
-			if(!res.ok) {
-				console.log(res.json());
-			} else {
-				setEditing(null);
-			}
-
-			return res;
-
+			res = await replaceItem(area, index, draft);
 		} catch(err) {
 
 		}
 	}
+
+	handleItem(res, setEditing, setLocalError);
 };
 
+const handleItem = async (res, setEditing, setLocalError) => {
+
+	if(!res.ok) {
+		const resJSON = await res.json();
+		setErrors(setLocalError, resJSON);
+
+	} else {
+		setEditing(null);
+		setLocalError([]);
+	}
+
+	return res;
+};
+
+
+const setErrors = (setLocalError, resJSON) => {
+	const errorFields = [];
+	for(const [key,value] of Object.entries(resJSON.error.issues)) {
+		errorFields.push({"field" : value.field, "message" : value.message});
+	}
+
+	setLocalError(errorFields);
+};
+
+export const DeleteItem = async(deleting, setDeleting, setEditing) => {
+	
+	const area = deleting.area;
+	const index = deleting.index;
+
+	try {
+		const res = await deleteItem(area, index);
+		setDeleting(null);
+		setEditing(null);
+
+	} catch(err) {
+		//console.log(err);
+		return;
+	}
+};
+
+//TODO: fix
+export const UpdateTimeSlot = async(vals) => {
+
+	try {
+		const res = await updateTimeSlot(vals);
+		const resJSON = await res.json();
+		console.log(resJSON);
+	} catch(err) {
+	}
+};

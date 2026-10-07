@@ -69,3 +69,26 @@ export const replaceItem = async(area, index, item) => {
 
 	return response;
 };
+
+export const deleteItem = async(area, index) => {
+	
+	const response = await fetch(`/api/config/${area}/${index}`, {
+		method: "DELETE",
+		headers: {
+			"Content-Type": "application/json",
+		},
+	});
+	return response;
+};
+
+export const updateTimeSlot = async(values) => {
+
+	const response = await fetch("/api/config/time-slots", {
+		method: "PUT",
+		headers: {
+			"Content-Type": "application/json",
+		},
+		body: JSON.stringify(values),
+	});
+	return response;
+};

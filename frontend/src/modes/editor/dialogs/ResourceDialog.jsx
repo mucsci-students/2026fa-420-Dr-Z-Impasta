@@ -27,7 +27,7 @@ const WORKDAY = [{ start: "08:00", end: "17:00" }];
  * Add or edit a room or lab. Edits a draft; nothing changes until Save succeeds.
  * `options` is the reply from api.config.options(); fallbacks are used until it arrives.
  */
-export default function ResourceDialog({ area, index, resource, suggestions, options, busy, error, onSave, onCancel, onDelete }) {
+export default function ResourceDialog({ area, index, resource, suggestions, options, busy, error, onSave, onCancel, onDelete, localError }) {
   const isNew = index === null;
   const kind = area === "rooms" ? "room" : "lab";
   const original = { ...NEW_RESOURCE, ...resource };   // fill defaults the document may omit
@@ -65,6 +65,16 @@ export default function ResourceDialog({ area, index, resource, suggestions, opt
     return found.length > 0 ? found.map((issue) => issue.message).join(" ") : undefined;
   }
 
+	/** A function to assign the input field the 'input-error' class if it contains invalid data */
+	function classNameFunc(field) {
+	        if(localError.some((err) => err.field === field)) {
+			return "input-error";
+		} else {
+			return "";
+		}
+	}
+
+
   // The prompts are siblings of the Dialog, not children: React bubbles a nested <dialog>'s
   // Escape (cancel event) up the component tree, which would also close this one.
   return (
@@ -88,15 +98,15 @@ export default function ResourceDialog({ area, index, resource, suggestions, opt
         <ErrorMessage error={error} title="Not saved." />
 
         <Field label="Name" required error={errorFor("name")}>
-          <input value={draft.name} onChange={(e) => set("name", e.target.value)} data-autofocus />
+          <input className={classNameFunc("name")} value={draft.name} onChange={(e) => set("name", e.target.value)} data-autofocus />
         </Field>
 
         <Field label="Capacity" required help={`Maximum students the ${kind} can hold.`} error={errorFor("capacity")}>
-          <input type="number" min={1} value={draft.capacity ?? ""} onChange={(e) => set("capacity", e.target.value === "" ? null : Number(e.target.value))} />
+          <input className={classNameFunc("capacity")} type="number" min={1} value={draft.capacity ?? ""} onChange={(e) => set("capacity", e.target.value === "" ? null : Number(e.target.value))} />
         </Field>
 
         <Field label="Features" help="Tags such as projector. Courses can require them." error={errorFor("features")}>
-          <TagInput value={draft.features} onChange={(tags) => set("features", tags)} suggestions={suggestions} />
+          <TagInput className={classNameFunc("features")} value={draft.features} onChange={(tags) => set("features", tags)} suggestions={suggestions} />
         </Field>
 
         <label className="checkbox">

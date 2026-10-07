@@ -23,6 +23,7 @@ import { issuesFor } from "../../../components/issues.js";
 import AvailabilityEditor from "../AvailabilityEditor.jsx";
 import CheckboxList from "../CheckboxList.jsx";
 import PreferenceEditor from "../PreferenceEditor.jsx";
+//import { InvalidField }  from "../../../state/EventHandlers.jsx"; 
 
 const WEEKDAYS = ["MON", "TUE", "WED", "THU", "FRI"];
 
@@ -59,6 +60,7 @@ export default function FacultyDialog({
   onSave,
   onCancel,
   onDelete,
+	localError
 }) {
   const isNew = index === null;
   const original = { ...NEW_FACULTY, ...faculty }; // fill defaults the document may omit
@@ -81,8 +83,16 @@ export default function FacultyDialog({
   /** The library's message for one field, if the last Save was rejected. */
   function errorFor(field) {
     const found = issuesFor(error?.issues, { area: "faculty", index: index ?? undefined, field });
-    return found.length > 0 ? found.map((issue) => issue.message).join(" ") : undefined;
+	  return found.length > 0 ? found.map((issue) => issue.message).join(" ") : undefined;
   }
+	/** A function to assign the input field the 'input-error' class if it contains invalid data */
+	function classNameFunc(field) {
+		if(localError.some((err) => err.field === field)) {
+			return "input-error";
+		} else {
+			return "";
+		}
+	}
 
   // The prompts are siblings of the Dialog, not children; see ResourceDialog.
   return (
@@ -111,12 +121,13 @@ export default function FacultyDialog({
         <ErrorMessage error={error} title="Not saved." />
 
         <Field label="Name" required error={errorFor("name")}>
-          <input value={draft.name} onChange={(e) => set("name", e.target.value)} data-autofocus />
+          <input className={classNameFunc("name")} value={draft.name} onChange={(e) => set("name", e.target.value)} data-autofocus />
         </Field>
 
         <div className="form-grid">
           <Field label="Minimum credits" required error={errorFor("minimum_credits")}>
             <input
+	  className={classNameFunc("minimum_credits")}
               type="number"
               min={0}
               value={draft.minimum_credits ?? ""}
@@ -125,6 +136,7 @@ export default function FacultyDialog({
           </Field>
           <Field label="Maximum credits" required error={errorFor("maximum_credits")}>
             <input
+	  className={classNameFunc("maximum_credits")}
               type="number"
               min={0}
               value={draft.maximum_credits ?? ""}
@@ -138,6 +150,7 @@ export default function FacultyDialog({
             error={errorFor("unique_course_limit")}
           >
             <input
+	  className={classNameFunc("unique_course_limit")}
               type="number"
               min={1}
               value={draft.unique_course_limit ?? ""}
@@ -146,6 +159,7 @@ export default function FacultyDialog({
           </Field>
           <Field label="Teaching days" help="The most days a week they teach, 0 to 5." error={errorFor("maximum_days")}>
             <input
+	  className={classNameFunc("maximum_days")}
               type="number"
               min={0}
               max={5}

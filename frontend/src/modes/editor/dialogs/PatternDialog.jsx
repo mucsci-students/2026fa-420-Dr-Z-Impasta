@@ -37,7 +37,7 @@ const newMeetingKeys = (count) => Array.from({ length: count }, () => nextMeetin
  * Add or edit a class pattern and its meetings. Edits a draft; nothing changes until Save succeeds.
  * `options` is the reply from api.config.options(); fallbacks are used until it arrives.
  */
-export default function PatternDialog({ index, pattern, options, busy, error, onSave, onCancel, onDelete }) {
+export default function PatternDialog({ index, pattern, options, busy, error, onSave, onCancel, onDelete, localError }) {
   const isNew = index === null;
   const original = pattern ?? NEW_PATTERN;
   const [draft, setDraft] = useState(original);
@@ -93,6 +93,16 @@ export default function PatternDialog({ index, pattern, options, busy, error, on
     return found.length > 0 ? found.map((issue) => issue.message).join(" ") : undefined;
   }
 
+
+	/** A function to assign the input field the 'input-error' class if it contains invalid data */
+	function classNameFunc(field) {
+		if(localError.some((err) => err.field === field)) {
+			return "input-error";
+		} else {
+			return "";
+		}
+	}
+
   /** The library's message for the meeting row with this key, from where it was at the last Save. */
   function meetingError(key) {
     const position = savedKeys.indexOf(key);
@@ -121,11 +131,11 @@ export default function PatternDialog({ index, pattern, options, busy, error, on
 
         <div className="form-grid">
           <Field label="Credits" required error={errorFor("credits")}>
-            <input type="number" min={1} value={draft.credits ?? ""}
+            <input className={classNameFunc("credits")} type="number" min={1} value={draft.credits ?? ""}
               onChange={(e) => set("credits", toNumber(e.target.value))} data-autofocus />
           </Field>
           <Field label="Start time" help="Optional. Meetings without their own start time begin here." error={errorFor("start_time")}>
-            <input type="time" value={draft.start_time ?? ""}
+            <input className={classNameFunc("start_time")} type="time" value={draft.start_time ?? ""}
               onChange={(e) => set("start_time", toTime(e.target.value))} />
           </Field>
         </div>
@@ -149,7 +159,7 @@ export default function PatternDialog({ index, pattern, options, busy, error, on
                   onChange={(e) => setMeeting(i, "day", e.target.value)}>
                   {weekdays.map((d) => <option key={d} value={d}>{d}</option>)}
                 </select>
-                <input type="number" min={1} aria-label={`Meeting ${i + 1} minutes`} value={m.duration ?? ""}
+                <input className={classNameFunc("duration")} type="number" min={1} aria-label={`Meeting ${i + 1} minutes`} value={m.duration ?? ""}
                   onChange={(e) => setMeeting(i, "duration", toNumber(e.target.value))} />
                 <input type="checkbox" aria-label={`Meeting ${i + 1} is the lab`} checked={m.lab}
                   onChange={(e) => setMeeting(i, "lab", e.target.checked)} />
