@@ -1,7 +1,5 @@
 /** Pick any number of names from `options`. `value` is the list of picked names. */
-export default function CheckboxList({ legend, options, value, onChange, empty = "None to choose from", error, fieldName = "", localErr = "" }) {
-
-	console.log(localErr);
+export default function CheckboxList({ legend, options, value, onChange, empty = "None to choose from", error, localErr = "" }) {
 
   function toggle(name) {
     if (value.includes(name)) {
@@ -10,15 +8,6 @@ export default function CheckboxList({ legend, options, value, onChange, empty =
       onChange([...value, name]);
     }
   }
-
-	/** A function to assign the input field the 'input-error' class if it contains invalid data */
-	function classNameFunc(field) {
-	        if(localError.some((err) => err.field === field)) {
-			return "input-error";
-		} else {
-			return "";
-		}
-	}
 
   return (
     <fieldset className="checkbox-list">
