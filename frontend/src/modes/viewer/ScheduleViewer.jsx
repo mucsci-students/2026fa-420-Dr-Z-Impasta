@@ -13,6 +13,7 @@ import { api } from "../../api/client.js";
 import Badge from "../../components/Badge.jsx";
 import Card from "../../components/Card.jsx";
 import EmptyState from "../../components/EmptyState.jsx";
+import ErrorMessage from "../../components/ErrorMessage.jsx";
 import PageHeader from "../../components/PageHeader.jsx";
 import { Lasagna } from "../../components/PastaMarks.jsx";
 import Spinner from "../../components/Spinner.jsx";
@@ -21,7 +22,7 @@ import { useAppState } from "../../state/appStateContext.js";
 import { useToast } from "../../state/toastContext.js";
 
 import { exportSchedules } from "./exportSchedule.js";
-import { toGroups } from "./scheduleData.js";
+import { describeSchedulePath, toGroups } from "./scheduleData.js";
 import ScheduleTable from "./ScheduleTable.jsx";
 import Timetable from "./Timetable.jsx";
 import { useSchedules } from "./useSchedules.js";
@@ -114,7 +115,7 @@ export default function ScheduleViewer() {
       await action();
       reload();
     } catch (error) {
-      setActionError(error.message);
+      setActionError(error);
     } finally {
       setBusy(false);
     }
@@ -143,11 +144,21 @@ export default function ScheduleViewer() {
       onChange={handleLoadJson}
     />
   );
-  const errorText = actionError || loadError;
-  const errorMessage = errorText && (
-    <p className="viewer-error" role="alert">
-      {errorText}
-    </p>
+  // The server's message plus every problem it found, each with where it is in the file.
+  const shownError = actionError
+    ? {
+        message: actionError.message,
+        issues: actionError.issues?.map((issue) => ({
+          ...issue,
+          field: issue.area ? issue.field : describeSchedulePath(issue.path),
+        })),
+      }
+    : loadError && { message: loadError };
+  const errorMessage = (
+    <ErrorMessage
+      error={shownError}
+      onDismiss={actionError ? () => setActionError(null) : undefined}
+    />
   );
 
   // --- Early returns ---

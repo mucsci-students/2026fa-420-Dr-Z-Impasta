@@ -61,6 +61,28 @@ export function toGroups(view) {
   }));
 }
 
+const PATH_WORDS = { times: "meeting" };
+
+/**
+ * Where a problem in a schedule file is, in words. The server locates each problem by its
+ * position in the file: "0.1.times.0.day" in a file of several schedules, "1.times.0.day"
+ * in a file of one schedule (a list of sections). Either way this gives
+ * "Schedule 1 · section 2 · meeting 1 · day" or "Section 2 · meeting 1 · day".
+ */
+export function describeSchedulePath(path) {
+  const parts = String(path ?? "").split(".").filter(Boolean);
+  const isIndex = (part) => /^\d+$/.test(part);
+  const words = [];
+  if (parts.length === 1 || isIndex(parts[1])) words.push(`Schedule ${Number(parts.shift()) + 1}`);
+  if (isIndex(parts[0] ?? "")) words.push(`section ${Number(parts.shift()) + 1}`);
+  for (const part of parts) {
+    if (isIndex(part) && words.length) words[words.length - 1] += ` ${Number(part) + 1}`;
+    else words.push(PATH_WORDS[part] ?? part);
+  }
+  const text = words.join(" · ");
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
 /** Sort order for tables and exports: by day, then start time, then course. */
 export function compareEvents(a, b) {
   const dayA = a.day ? DAYS.indexOf(a.day) : Infinity;
