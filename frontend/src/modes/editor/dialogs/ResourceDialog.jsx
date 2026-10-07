@@ -20,7 +20,7 @@ import TagInput from "../TagInput.jsx";
 
 const NEW_RESOURCE = { name: "", capacity: null, features: [], times: null };
 const WEEKDAYS = ["MON", "TUE", "WED", "THU", "FRI"];
-/** Where set hours start when "Always available" is unticked, so the room isn't left unusable. */
+/** Where set hours start when "Unrestricted availability" is unticked, so the room isn't left unusable. */
 const WORKDAY = [{ start: "08:00", end: "17:00" }];
 
 /**
@@ -35,12 +35,12 @@ export default function ResourceDialog({ area, index, resource, suggestions, opt
   const isDirty = JSON.stringify(draft) !== JSON.stringify(original);
   const [confirmingDiscard, setConfirmingDiscard] = useState(false);
   const weekdays = options?.weekdays?.length ? options.weekdays : WEEKDAYS;
-  // The hours to bring back when "Always available" is unticked: the last ones set in this dialog
+  // The hours to bring back when "Unrestricted availability" is unticked
   const [lastHours, setLastHours] = useState(original.times);
 
-  /** Tick: remember the hours, then clear them. Untick: bring back the remembered or default hours. */
-  function setAlwaysAvailable(always) {
-    if (always) {
+  /** Tick: remember the hours, then clear them. Untick: bring back the remembered or default hours. "Unrestricted availability" means the resource is always available. */
+  function setUnrestrictedAvailability(unrestricted) {
+    if (unrestricted) {
       setLastHours(draft.times);
       set("times", null);
     } else {
@@ -113,9 +113,9 @@ export default function ResourceDialog({ area, index, resource, suggestions, opt
           <input
             type="checkbox"
             checked={draft.times === null}
-            onChange={(e) => setAlwaysAvailable(e.target.checked)}
+            onChange={(e) => setUnrestrictedAvailability(e.target.checked)}
           />
-          Always available
+          Unrestricted availability
         </label>
         {draft.times !== null && (
           <AvailabilityEditor
