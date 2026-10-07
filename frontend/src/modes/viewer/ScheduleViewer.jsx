@@ -18,6 +18,7 @@ import { Lasagna } from "../../components/PastaMarks.jsx";
 import Spinner from "../../components/Spinner.jsx";
 import { plural } from "../../format.js";
 import { useAppState } from "../../state/appStateContext.js";
+import { useToast } from "../../state/toastContext.js";
 
 import { exportSchedules } from "./exportSchedule.js";
 import { toGroups } from "./scheduleData.js";
@@ -76,6 +77,7 @@ function Segmented({ label, value, options, onChange }) {
 /** Display session schedules with grouping, navigation, import, export, and clearing. */
 export default function ScheduleViewer() {
   const { state, loading } = useAppState();
+  const notify = useToast();
 
   // --- All hooks first, before any early return (Rules of Hooks). ---
   const [scheduleIndex, setScheduleIndex] = useState(0);
@@ -236,7 +238,17 @@ export default function ScheduleViewer() {
   function handleExport(event) {
     const [which, format] = event.target.value.split(":");
     if (!format) return;
-    run(() => exportSchedules({ which: which === "all" ? "all" : index + 1, format }));
+    run(async () => {
+      const saved = await exportSchedules({ which: which === "all" ? "all" : index + 1, format });
+      if (!saved) return; // The user cancelled the Save As dialog.
+      notify({
+        title: "Exported.",
+        message:
+          saved.method === "picker"
+            ? `Saved ${saved.name}.`
+            : `${saved.name} is in your browser's downloads folder.`,
+      });
+    });
   }
 
   /** Confirm clearing all session schedules, then reset selection on success. */
