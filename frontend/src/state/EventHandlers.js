@@ -165,7 +165,7 @@ const handleItem = async (res, setEditing, setLocalError) => {
 
 const setErrors = (setLocalError, resJSON) => {
 	const errorFields = [];
-	for(const [key,value] of Object.entries(resJSON.error.issues)) {
+	for(const [,value] of Object.entries(resJSON.error.issues)) {
 		errorFields.push({"field" : value.field, "message" : value.message});
 	}
 
