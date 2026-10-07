@@ -33,7 +33,7 @@ import DayBlocksDialog from "./dialogs/DayBlocksDialog.jsx";
 import TimeSlotsDialog from "./dialogs/TimeSlotsDialog.jsx";
 
 import ErrorMessage from "../../components/ErrorMessage.jsx";
-import { Load, Empty_Click, Validate, Save, ValidateAndSaveItem, DeleteItem, UpdateTimeSlot, UpdateSettings } from "../../state/EventHandlers.jsx";
+import { Load, Empty_Click, Validate, Save, ValidateAndSaveItem, DeleteItem, UpdateTimeSlot, UpdateSettings } from "../../state/EventHandlers";
 
 export default function ConfigEditor() {
   const { state, loading, refresh } = useAppState();
