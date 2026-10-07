@@ -61,6 +61,36 @@ your browser: no install, one session per tab, at most 5 schedules per run, and 
 solving. Each pull request into `develop` gets its own preview there.
 [docs/cloudflare-pages.md](docs/cloudflare-pages.md) explains how it works.
 
+### Schedule Viewer
+
+![The Schedule Viewer showing schedule 1 of 3 by room and lab, as a weekly timetable](docs/screenshots/schedule-viewer.png)
+
+Schedules appear here as soon as the Generator finishes, or after **Load JSON…**. The
+header shows how many there are (*3 schedules*).
+
+- **Move between schedules** with **‹** and **›** (they wrap around), or pick one from the
+  *Schedule N* list; *of N* shows the total. The card you selected stays selected as you
+  page.
+- **Group by** switches between **Room & lab** and **Faculty**. *Room & lab* has a card for
+  every room and lab, plus *Online* for online meetings. A lab meeting is shown under its
+  lab, and also under the section's room when that room stays reserved during the lab.
+  *Faculty* has a card for each faculty member, and each meeting shows where it meets.
+- **Show as** switches the selected card between a **Timetable** (Monday to Friday,
+  08:00–20:00, lab meetings marked *Lab*) and a **Table** of course, section, type,
+  faculty, room or lab, day, and time.
+- **Load JSON…** opens a file in the [schedule JSON format](#schedule-json-format). It
+  replaces the current schedules only if the whole file is valid. Otherwise every problem
+  is listed with where it is in the file (for example *Schedule 1 · section 2 · meeting 1 ·
+  day*), and the current schedules stay.
+- **Export…** saves *This schedule* or *All schedules* as JSON or CSV. Saving works as
+  described under **Files** above, and a message confirms the file name. JSON exports load
+  back with **Load JSON…**; CSV is the same format the shell writes.
+- **Clear results…** removes every generated and loaded schedule after you confirm. The
+  configuration is not affected.
+
+If the schedules can't be read from the server, the page says so and offers **Retry**.
+Nothing is deleted.
+
 ## The shell
 
 ```bash
@@ -323,6 +353,8 @@ new server-side workflow as an `AppController` method with pytest tests.
   edit that completes it (see *Editing rules*).
 - The browser version generates at most 5 schedules per run, solves about 3× slower, answers
   nothing else while a schedule is being solved, and loses its session when the tab closes.
+- The Viewer's timetable covers 08:00–20:00. A meeting outside those hours is cut off or
+  left off the grid; the Table view lists every meeting.
 
 ## Conventions
 
