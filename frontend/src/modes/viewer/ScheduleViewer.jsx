@@ -20,7 +20,7 @@ import { plural } from "../../format.js";
 import { useAppState } from "../../state/appStateContext.js";
 
 import { exportSchedules } from "./exportSchedule.js";
-import { buildEvents, getAssignments, groupEvents } from "./scheduleData.js";
+import { toGroups } from "./scheduleData.js";
 import ScheduleTable from "./ScheduleTable.jsx";
 import Timetable from "./Timetable.jsx";
 import { useSchedules } from "./useSchedules.js";
@@ -77,15 +77,6 @@ function Segmented({ label, value, options, onChange }) {
 export default function ScheduleViewer() {
   const { state, loading } = useAppState();
 
-  // Refetch whenever the polled state says the schedules or the generation changed.
-  const refreshKey = JSON.stringify([state?.schedules ?? null, state?.generation?.state ?? null]);
-  const {
-    loading: schedulesLoading,
-    items: scheduleList,
-    error: loadError,
-    reload,
-  } = useSchedules(refreshKey);
-
   // --- All hooks first, before any early return (Rules of Hooks). ---
   const [scheduleIndex, setScheduleIndex] = useState(0);
   const [groupBy, setGroupBy] = useState("room");
@@ -95,12 +86,21 @@ export default function ScheduleViewer() {
   const [actionError, setActionError] = useState(null);
   const fileInputRef = useRef(null);
 
-  const scheduleCount = scheduleList.length;
-  const index = Math.min(scheduleIndex, Math.max(scheduleCount - 1, 0));
-  const schedule = scheduleList[index] ?? null;
+  // Keep the selected schedule within the number the server has.
+  const available = state?.schedules?.count ?? 0;
+  const index = Math.min(scheduleIndex, Math.max(available - 1, 0));
 
-  const events = useMemo(() => buildEvents(schedule), [schedule]);
-  const groups = useMemo(() => groupEvents(events, groupBy), [events, groupBy]);
+  // Refetch whenever the polled state says the schedules or the generation changed.
+  const refreshKey = JSON.stringify([state?.schedules ?? null, state?.generation?.state ?? null]);
+  const {
+    loading: schedulesLoading,
+    view: scheduleView,
+    error: loadError,
+    reload,
+  } = useSchedules({ number: index + 1, group: groupBy, refreshKey });
+
+  const scheduleCount = scheduleView?.count ?? 0;
+  const groups = useMemo(() => toGroups(scheduleView), [scheduleView]);
   const currentGroup = groups.find((group) => group.key === selectedKey) ?? groups[0] ?? null;
 
   // --- Server actions ---
@@ -299,7 +299,7 @@ export default function ScheduleViewer() {
               onChange={(event) => setScheduleIndex(Number(event.target.value))}
               aria-label="Schedule"
             >
-              {scheduleList.map((_, i) => (
+              {Array.from({ length: scheduleCount }, (_, i) => (
                 <option key={i} value={i}>
                   Schedule {i + 1}
                 </option>
@@ -325,7 +325,7 @@ export default function ScheduleViewer() {
           <Segmented label="Show as" value={view} options={VIEW_OPTIONS} onChange={setView} />
 
           <span className="schedule-toolbar__summary muted">
-            {plural(getAssignments(schedule).length, "section")} ·{" "}
+            {plural(scheduleView.totals.sections, "section")} ·{" "}
             {groupBy === "faculty"
               ? plural(groups.length, "faculty member")
               : plural(groups.length, "room & lab", "rooms & labs")}
