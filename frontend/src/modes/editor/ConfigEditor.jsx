@@ -33,7 +33,7 @@ import DayBlocksDialog from "./dialogs/DayBlocksDialog.jsx";
 import TimeSlotsDialog from "./dialogs/TimeSlotsDialog.jsx";
 
 import ErrorMessage from "../../components/ErrorMessage.jsx";
-import { Load, Empty_Click, Validate, Save, ValidateAndSaveItem } from "../../state/EventHandlers.jsx";
+import { Load, Empty_Click, Validate, Save, ValidateAndSaveItem, DeleteItem, UpdateTimeSlot } from "../../state/EventHandlers.jsx";
 
 export default function ConfigEditor() {
   const { state, loading } = useAppState();
@@ -48,6 +48,7 @@ export default function ConfigEditor() {
   const [deleting, setDeleting] = useState(null);  // the item being deleted, e.g. { area: "rooms", index: 0 }
   const [impact, setImpact] = useState(null);      // its delete preview, from api.config.deleteImpact
 	const[error, setError] = useState(null); //
+	const[localError, setLocalError] = useState([]);
 
   useEffect(() => {
     if (!hasConfig) return;
@@ -278,7 +279,8 @@ export default function ConfigEditor() {
               options={options}
               onCancel={() => setEditing(null)}
               onDelete={() => setDeleting(editing)}
-              onSave={(draft) => ValidateAndSaveItem(editing, draft, setEditing) }   /* For testing, Eman replaces this */
+              onSave={(draft) => ValidateAndSaveItem(editing, draft, setEditing, setLocalError)}
+	      localError={localError}   /* For testing, Eman replaces this */
             />
           )}
           {!deleting && editing?.area === "courses" && (
@@ -296,7 +298,8 @@ export default function ConfigEditor() {
               options={options}
               onCancel={() => setEditing(null)}
               onDelete={() => setDeleting(editing)}
-              onSave={(draft) => ValidateAndSaveItem(editing, draft, setEditing) }   /* For testing, Eman replaces this */
+              onSave={(draft) => ValidateAndSaveItem(editing, draft, setEditing, setLocalError)}
+		  localError={localError}/* For testing, Eman replaces this */
             />
           )}
           {!deleting && (editing?.area === "rooms" || editing?.area === "labs") && (
@@ -309,7 +312,8 @@ export default function ConfigEditor() {
               options={options}
               onCancel={() => setEditing(null)}
               onDelete={() => setDeleting(editing)}
-              onSave={(draft) => ValidateAndSaveItem(editing, draft, setEditing) }   /* For testing, Eman replaces this */
+              onSave={(draft) => ValidateAndSaveItem(editing, draft, setEditing, setLocalError)}
+		  localError={localError}/* For testing, Eman replaces this */
             />
           )}
           {!deleting && editing?.area === "patterns" && (
@@ -320,7 +324,8 @@ export default function ConfigEditor() {
               options={options}
               onCancel={() => setEditing(null)}
               onDelete={() => setDeleting(editing)}
-              onSave={(draft) => ValidateAndSaveItem(editing, draft, setEditing) }   /* For testing, Eman replaces this */
+              onSave={(draft) => ValidateAndSaveItem(editing, draft, setEditing, setLocalError) }
+		  localError={localError}/* For testing, Eman replaces this */
             />
           )}
           {editing?.area === "time_slots" && (
@@ -329,14 +334,14 @@ export default function ConfigEditor() {
               day={editing.day}
               times={timeSlots.times}
               onCancel={() => setEditing(null)}
-              onSave={(times) => console.log("save time slots", { times })}   /* Eman: api.config.updateTimeSlots({ times }) */
+              onSave={(times) => UpdateTimeSlot(times)}   /* Eman: api.config.updateTimeSlots({ times }) */
             />
           )}
           {editing?.area === "timing" && (
             <TimeSlotsDialog
               timeSlots={timeSlots}
               onCancel={() => setEditing(null)}
-              onSave={(values) => console.log("save time slots", values)}   /* Eman: api.config.updateTimeSlots(values) */
+              onSave={(values) => UpdateTimeSlot(values)}   /* Eman: api.config.updateTimeSlots(values) */
             />
           )}
           {deleting && (
@@ -345,7 +350,7 @@ export default function ConfigEditor() {
               impact={shownImpact?.reply ?? null}
               loadError={shownImpact?.error}
               onCancel={() => setDeleting(null)}   /* back to the edit dialog */
-              onConfirm={() => console.log("delete", deleting)}   /* For testing, Eman replaces this */
+              onConfirm={() => DeleteItem(deleting, setDeleting, setEditing)} 
             />
           )}
         </>
