@@ -1,4 +1,4 @@
-import { loadConfiguration, loadEmptyConfig, validateConfig, saveConfig, addItem, replaceItem, deleteItem, updateTimeSlot } from "../components/APICommunication";
+import { loadConfiguration, loadEmptyConfig, validateConfig, saveConfig, exportConfig, addItem, replaceItem, deleteItem, updateTimeSlot, updateSettings } from "../components/APICommunication";
 
 const ConfigStatusObj = Object.freeze({
 	NONE: "none",
@@ -30,7 +30,6 @@ export const Load = async(event, setLoadingFile, setError) => {
 		return err;
 	} finally {
 		await new Promise(resolve => setTimeout(resolve, 2000));
-		//config.status = "valid";
 		setLoadingFile(false);
 	}
 };
@@ -49,7 +48,6 @@ export const Empty_Click = async(setLoadingFile) => {
 		}
 };
 
-// TODO: add UI error handling
 export const Validate = async() => {
 
 	try {
@@ -61,14 +59,24 @@ export const Validate = async() => {
 	}
 };
 
-// TODO: change status on GUI to the green Saved/Valid when the file is saved
+const saveConfigInternally = async(request) => {
+	try {
+		const res = await saveConfig(request);
+		return res;
+	} catch(err) {
+		return err;
+	}
+};
+
 export const Save = async() => {
 
 	const report = await Validate();
 	if(report["status"] == ConfigStatusObj.VALID) {
+
 		try {
-			const {content, filename} = await saveConfig();
+			const {content, filename, revision} = await exportConfig();
 			Download(content, filename);
+			saveConfigInternally({revision : revision, filename : filename});
 			return content;
 
 		} catch(err) {
@@ -118,7 +126,6 @@ const Download = async(content, filename) => {
 	URL.revokeObjectURL(url);
 };
 
-// TODO: add a UI for errors
 export const ValidateAndSaveItem = async(editing, draft, setEditing, setLocalError) => {
 	const area = editing.area;
 	const index = editing.index;
@@ -179,18 +186,33 @@ export const DeleteItem = async(deleting, setDeleting, setEditing) => {
 		setEditing(null);
 
 	} catch(err) {
-		//console.log(err);
-		return;
+		return err;
 	}
 };
 
-//TODO: fix
-export const UpdateTimeSlot = async(vals) => {
+//TODO: fix UI for invalid data in DayBlocksDialog.jsx
+export const UpdateTimeSlot = async(vals, setEditing) => {
 
 	try {
 		const res = await updateTimeSlot(vals);
-		const resJSON = await res.json();
-		console.log(resJSON);
+		
+		if(res.state.status == ConfigStatusObj.VALID) {
+			setEditing(null);
+			return res;
+		} 
+
 	} catch(err) {
+		return err;
 	}
+};
+
+export const UpdateSettings = async(vals) => {
+	
+	try {
+		const res = await updateSettings(vals);
+		return res;
+	} catch(err) {
+		return err;
+	}
+
 };

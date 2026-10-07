@@ -35,14 +35,28 @@ export const validateConfig = async() => {
 	return response.json();
 };
 
-export const saveConfig = async() => {
+export const saveConfig = async(request) => {
+	const response = await fetch("/api/config/saved", {
+		method: "POST",
+		headers: {
+			"Content-Type": "application/json",
+		},
+		body: JSON.stringify(request),
+	});
+	return response.json()
+};
+
+export const exportConfig = async() => {
+
 	const response = await fetch("/api/config/export", {
 		method: "GET",
 	});
 
 	const filename = response.headers.get("Content-Disposition").split("=")[1];
 	const resJSON = await response.json();
-	return { "content": resJSON, "filename" : filename.replace(".json", "") };
+	const revision = response.headers.get("X-Config-Revision");
+
+	return { "content": resJSON, "filename" : filename.replace(".json", ""), "revision" : revision };
 };
 
 export const addItem = async(area, object) => {
@@ -83,12 +97,26 @@ export const deleteItem = async(area, index) => {
 
 export const updateTimeSlot = async(values) => {
 
+	const timesJSON = { times : values };
+
 	const response = await fetch("/api/config/time-slots", {
+		method: "PUT",
+		headers: {
+			"Content-Type": "application/json",
+		},
+		body: JSON.stringify(timesJSON),
+	});
+	return response.json();
+};
+
+export const updateSettings = async(values) => {
+
+	const response = await fetch("/api/config/settings", {
 		method: "PUT",
 		headers: {
 			"Content-Type": "application/json",
 		},
 		body: JSON.stringify(values),
 	});
-	return response;
+	return response.json();
 };

@@ -38,7 +38,7 @@ const newBlockKeys = (count) => Array.from({ length: count }, () => nextBlockKey
  * Save hands back the whole object with this day's blocks swapped in, ready for
  * api.config.updateTimeSlots({ times }).
  */
-export default function DayBlocksDialog({ day, times, busy, error, onSave, onCancel }) {
+export default function DayBlocksDialog({ day, times, busy, error, onSave, onCancel, localError }) {
   const name = DAY_NAMES[day] ?? day;
   const original = times[day] ?? [];
   const [blocks, setBlocks] = useState(original);
@@ -58,7 +58,7 @@ export default function DayBlocksDialog({ day, times, busy, error, onSave, onCan
 
   function save() {
     setSavedKeys(blockKeys);
-    onSave?.({ ...times, [day]: blocks });
+    onSave?.({ ...times, [day]: blocks});
   }
 
   /** Change one field of block number i. */
@@ -84,6 +84,16 @@ export default function DayBlocksDialog({ day, times, busy, error, onSave, onCan
     );
     return found.length > 0 ? found.map((issue) => issue.message).join(" ") : undefined;
   }
+
+	/** A function to assign the input field the 'input-error' class if it contains invalid data */
+	function classNameFunc(field, index) {
+		if(localError.some((err) => err.field.split(".")[3] === field)) {
+			return "input-error";
+		} else {
+			return "";
+		}
+	}
+
 
   /** The library's message for the block row with this key, from where it was at the last Save. */
   function blockError(key) {
@@ -120,11 +130,11 @@ export default function DayBlocksDialog({ day, times, busy, error, onSave, onCan
             const rowError = blockError(blockKeys[i]);
             return (
               <div key={blockKeys[i]} className="blocks-editor__row">
-                <input type="time" aria-label={`Block ${i + 1} start`} value={block.start ?? ""}
+                <input className={classNameFunc("start")} type="time" aria-label={`Block ${i + 1} start`} value={block.start ?? ""}
                   onChange={(e) => setBlock(i, "start", e.target.value)} data-autofocus={i === 0 || undefined} />
-                <input type="time" aria-label={`Block ${i + 1} end`} value={block.end ?? ""}
+                <input className={classNameFunc("end")} type="time" aria-label={`Block ${i + 1} end`} value={block.end ?? ""}
                   onChange={(e) => setBlock(i, "end", e.target.value)} />
-                <input type="number" min={1} aria-label={`Block ${i + 1} spacing in minutes`} value={block.spacing ?? ""}
+                <input className={classNameFunc("spacing")} type="number" min={1} aria-label={`Block ${i + 1} spacing in minutes`} value={block.spacing ?? ""}
                   onChange={(e) => setBlock(i, "spacing", toNumber(e.target.value))} />
                 <button type="button" className="blocks-editor__remove" aria-label={`Remove block ${i + 1}`}
                   onClick={() => removeBlock(i)}>

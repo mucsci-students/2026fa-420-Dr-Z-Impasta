@@ -33,10 +33,10 @@ import DayBlocksDialog from "./dialogs/DayBlocksDialog.jsx";
 import TimeSlotsDialog from "./dialogs/TimeSlotsDialog.jsx";
 
 import ErrorMessage from "../../components/ErrorMessage.jsx";
-import { Load, Empty_Click, Validate, Save, ValidateAndSaveItem, DeleteItem, UpdateTimeSlot } from "../../state/EventHandlers.jsx";
+import { Load, Empty_Click, Validate, Save, ValidateAndSaveItem, DeleteItem, UpdateTimeSlot, UpdateSettings } from "../../state/EventHandlers.jsx";
 
 export default function ConfigEditor() {
-  const { state, loading } = useAppState();
+  const { state, loading, refresh } = useAppState();
   const config = state?.config;
   const [doc, setDoc] = useState(null);
   const revision = config?.revision;
@@ -160,7 +160,7 @@ export default function ConfigEditor() {
             />
 
 
-            <Button onClick={ () => Save() }>Save JSON...</Button>
+            <Button onClick={ async () => { const res = await Save(); if(res) { await refresh(); } }}>Save JSON...</Button>
             <Button variant="primary" onClick={ () =>  Validate() }>Validate</Button>
           </>
         }
@@ -265,7 +265,7 @@ export default function ConfigEditor() {
             <SettingsCard
               settings={settings}
               flags={options?.optimizer_flags}
-              onApply={(values) => console.log("save settings", values)}   /* Eman: api.config.updateSettings(values) */
+              onApply={(values) => UpdateSettings(values)}   /* Eman: api.config.updateSettings(values) */
             />
           </div>
           {!deleting && editing?.area === "faculty" && (
@@ -334,14 +334,16 @@ export default function ConfigEditor() {
               day={editing.day}
               times={timeSlots.times}
               onCancel={() => setEditing(null)}
-              onSave={(times) => UpdateTimeSlot(times)}   /* Eman: api.config.updateTimeSlots({ times }) */
+              onSave={(times) => UpdateTimeSlot(times, setEditing)}
+	      localError={localError}  /* Eman: api.config.updateTimeSlots({ times }) */
+
             />
           )}
           {editing?.area === "timing" && (
             <TimeSlotsDialog
               timeSlots={timeSlots}
               onCancel={() => setEditing(null)}
-              onSave={(values) => UpdateTimeSlot(values)}   /* Eman: api.config.updateTimeSlots(values) */
+              onSave={(values) => UpdateTimeSlot(values, setEditing)}   /* Eman: api.config.updateTimeSlots(values) */
             />
           )}
           {deleting && (
