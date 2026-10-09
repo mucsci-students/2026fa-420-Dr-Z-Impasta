@@ -99,6 +99,11 @@ class AppController:
         self.workspace.load_file(path)
         return self.configuration()
 
+    def load_empty(self) -> dict:
+        """Loads an empty version of the config file, keys but no values."""
+        self.workspace.load_empty()
+        return self.configuration()
+
     def validate_configuration(self) -> dict:
         report = self.workspace.validate()
         return {"report": report.to_dict(), "state": self.workspace.snapshot()}

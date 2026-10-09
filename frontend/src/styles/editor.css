@@ -1,0 +1,460 @@
+/* Description: Styles for the editor mode. */
+
+.editor-row__header {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+
+.editor-row__items {
+  display: flex;
+  gap: var(--space-4);
+  overflow-x: auto;              /* scrolls sideways when there are many cards */
+}
+
+.editor-row__add {
+    border: 1px dashed var(--line-strong);
+    border-radius: var(--radius-lg);
+    color: var(--accent);
+    min-width: 100px;
+    cursor: pointer;
+}
+
+.editor-row {
+  margin-top: var(--space-4);
+}
+
+.editor-row__title {
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.editor-pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;   /* two equal columns */
+  gap: var(--space-5);
+}
+
+.item-card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+  max-width: 285px;         /* May change so that each card has their own fixed width */
+  min-width: 190px;
+  flex: 0 0 auto;            /* keep its width inside the row instead of squashing */
+  cursor: pointer;
+}
+
+.item-card__title {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.item-card__facts {
+  display: grid;
+  grid-template-columns: auto 1fr;   /* labels in one column, values in the other */
+  gap: var(--space-1) var(--space-3);
+  margin: var(--space-3) 0;
+}
+
+.item-card__facts dt {
+  color: var(--muted);
+}
+
+.item-card__facts dd {
+  margin: 0;                 /* browsers indent <dd> by default */
+}
+
+.item-card__header {
+  display: flex;
+  justify-content: space-between;   /* title on the left, credits on the right */
+  align-items: baseline;
+  gap: var(--space-3);
+}
+
+.item-card__section {
+  color: var(--muted);
+  font-weight: 400;
+}
+
+.item-card__credits {
+  color: var(--muted);
+  font-weight: 400;
+}
+
+.avail {
+  display: flex;
+  gap: var(--space-1);
+  list-style: none;        /* <ul> has bullets and indentation by default */
+  padding: 0;
+  margin: var(--space-3) 0;
+}
+
+.avail__day {
+  display: flex;           /* May change so that each chip has a fixed width */
+  flex-direction: column;  /* day label on top, ranges stacked below */
+  align-items: center;
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+  border-radius: var(--radius-sm);
+  padding: var(--space-1) var(--space-2);
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+
+.avail__day--off {
+  background: transparent;
+  border: 1px dashed var(--line);
+  color: var(--faint);
+}
+
+.item-card:hover {
+  border-color: var(--accent);
+}
+
+.pattern-meetings {
+  list-style: none;
+  padding: 0;
+  margin: var(--space-3) 0;
+  display: grid;
+  gap: var(--space-1);
+}
+
+.pattern-meetings li {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.pattern-meetings__day {
+  font-family: var(--font-mono);
+  font-weight: 500;
+  width: 36px;
+}
+
+.item-card__note {
+  color: var(--muted);
+  font-size: 13px;
+  margin: 0;
+}
+
+.item-card--disabled .pattern-meetings {
+  color: var(--faint);    /* gray out the meetings of patterns that are off */
+}
+
+.toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: 12px;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.toggle input {
+  appearance: none;
+  position: relative;
+  width: 36px;
+  height: 20px;
+  min-height: 0;
+  padding: 0;
+  border: none;
+  margin: 0;
+  border-radius: 999px;
+  background: var(--line);
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.toggle input::after {           /* the round thumb */
+  content: "";
+  position: absolute;
+  top: 2.1px;
+  left: 1.5px;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2), 0 0 1px rgba(0, 0, 0, 0.15);
+  transition: transform 0.2s;
+}
+
+.toggle input:checked {
+  background: var(--accent);
+}
+
+.toggle input:checked::after {
+  transform: translateX(18px);
+}
+
+.toggle input:focus-visible {
+  outline: none;
+  box-shadow: var(--focus);
+}
+
+.tag-input {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  align-items: center;
+}
+
+.tag-input__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 2px var(--space-2);
+  border-radius: 999px;
+  background: var(--surface-3);
+  font-size: 12px;
+}
+
+.tag-input__chip button {
+  border: none;
+  background: none;
+  padding: 0;
+  cursor: pointer;
+  color: var(--muted);
+  font: inherit;
+}
+
+.tag-input input {
+  flex: 1;
+  min-width: 140px;
+}
+
+.checkbox {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.checkbox input {
+  min-height: 0;     /* undo base.css's 32px input height, as with the toggle */
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;   /* the short fields two per row */
+  gap: var(--space-3);
+}
+
+.checkbox-list {
+  border: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
+}
+
+.checkbox-list legend {
+  font-weight: 500;
+  padding: 0;
+  margin-bottom: var(--space-2);
+  width: 100%;
+}
+
+.checkbox-list .field__error {
+  flex-basis: 100%;                 /* its own row under the checkboxes */
+}
+
+/* The fieldsets of the list editors: no box, rows stacked */
+.meetings-editor,
+.pref-editor,
+.avail-editor,
+.blocks-editor {
+  border: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: var(--space-2);
+}
+
+.meetings-editor legend,
+.pref-editor legend,
+.avail-editor legend,
+.blocks-editor legend,
+.flag-list legend {
+  font-weight: 500;
+  padding: 0;
+  margin-bottom: var(--space-2);
+}
+
+.meetings-editor__head,
+.meetings-editor__row {
+  display: grid;
+  grid-template-columns: 90px 80px 40px 120px 110px 24px;   /* one column per field, the same in every row */
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.meetings-editor__head,
+.blocks-editor__head {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.meetings-editor__row input[type="checkbox"] {
+  min-height: 0;          /* undo base.css's input height */
+}
+
+.meetings-editor__remove,
+.pref-editor__remove,
+.avail-editor__remove,
+.blocks-editor__remove {
+  border: none;
+  background: none;
+  padding: 0;
+  color: var(--muted);
+  cursor: pointer;
+  font: inherit;
+}
+
+.meetings-editor__error,
+.blocks-editor__error {
+  grid-column: 1 / -1;    /* a row's error spans the whole row, under its fields */
+  margin: 0;
+}
+
+.pref-editor__row {
+  display: grid;
+  grid-template-columns: 1fr 72px 24px;   /* name, score, remove */
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.avail-editor__day {
+  display: grid;
+  grid-template-columns: 84px 1fr;   /* day name, then its hours */
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.avail-editor__ranges {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.avail-editor__range {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.avail-editor__error {
+  grid-column: 2;         /* under the day's hours, not its name */
+  margin: 0;
+}
+
+.editor-row__actions {
+  margin-left: auto;      /* push the header's buttons to the right */
+}
+
+.day-tile {
+  min-width: 150px;
+}
+
+.day-tile__blocks {
+  list-style: none;
+  padding: 0;
+  margin: var(--space-3) 0 0;
+  display: grid;
+  gap: var(--space-1);
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+.day-tile__blocks li {
+  display: flex;
+  justify-content: space-between;   /* times on the left, spacing on the right */
+  gap: var(--space-3);
+}
+
+.blocks-editor__head,
+.blocks-editor__row {
+  display: grid;
+  grid-template-columns: 1fr 1fr 110px 24px;   /* start, end, spacing, remove */
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.editor-pair > * {
+  min-width: 0;           /* let a row scroll inside its half instead of widening the page */
+}
+
+.settings-card {
+  flex: 1;                /* fill its row, like a full-width card */
+}
+
+.settings-card__limit {
+  max-width: 140px;
+}
+
+.settings-card .field--inline {
+  justify-content: space-between;   /* label on the left, box at the far right */
+  flex-wrap: wrap;                  /* the limit's error goes under the label and box */
+}
+
+/* The limit's label matches the "Optimizer flags" legend */
+.settings-card .field__label,
+.settings-card .flag-list legend {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ink);
+}
+
+.settings-card .field--inline .field__error {
+  flex-basis: 100%;
+}
+
+.flag-list {
+  border: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.flag-list .field__error {
+  flex-basis: 100%;
+}
+
+.flag-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 2px var(--space-2) 2px var(--space-1);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  font-size: 12px;
+}
+
+.flag-chip:has(input:checked) {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--accent-strong);
+}
+
+.flag-chip input[type="checkbox"] {
+  min-height: 0;          /* undo base.css's input height and padding */
+  height: 12px;
+  padding: 0;
+  margin: 20;
+}
+
+.flag-chip label {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  cursor: pointer;
+}
+
+.input-error {
+	border: 2px solid red;
+}
