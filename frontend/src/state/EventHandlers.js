@@ -11,9 +11,11 @@ const Error = (error, title, labels, onDismiss) => {
 };
 
 export const Load = async(event, setLoadingFile, setError) => {
-	setLoadingFile(true);
+
 	const file = event.target.files[0];
 	if(!file) return;
+
+	setLoadingFile(true);
 	try {
 		const res = await loadConfiguration(file);
 
@@ -75,8 +77,8 @@ export const Save = async() => {
 
 		try {
 			const {content, filename, revision} = await exportConfig();
-			Download(content, filename);
-			saveConfigInternally({revision : revision, filename : filename});
+			await Download(content, filename);
+			await saveConfigInternally({revision : revision, filename : filename});
 			return content;
 
 		} catch(err) {
@@ -118,7 +120,7 @@ const Download = async(content, filename) => {
 	const url = URL.createObjectURL(blob);
 	const link = document.createElement("a");
         link.href = url;
-	link.download = content;
+	link.download = filename;
 
 	document.body.appendChild(link);
 	link.click();
@@ -133,7 +135,8 @@ export const ValidateAndSaveItem = async(editing, draft, setEditing, setLocalErr
 	if(index == null) {
 
 		try {
-			handleItem(await addItem(area, draft), setEditing, setLocalError);
+			const res = await handleItem(await addItem(area, draft), setEditing, setLocalError);
+			return res;
 		} catch(err) {
 			return err;
 		}
@@ -141,7 +144,8 @@ export const ValidateAndSaveItem = async(editing, draft, setEditing, setLocalErr
 	} else {
 
 		try {
-			handleItem(await replaceItem(area, index, draft), setEditing, setLocalError);
+			const res = await handleItem(await replaceItem(area, index, draft), setEditing, setLocalError);
+			return res;
 		} catch(err) {
 			return err;
 		}
@@ -187,7 +191,6 @@ export const DeleteItem = async(deleting, setDeleting, setEditing) => {
 	}
 };
 
-//TODO: fix UI for invalid data in DayBlocksDialog.jsx
 export const UpdateTimeSlot = async(vals, setEditing) => {
 
 	try {

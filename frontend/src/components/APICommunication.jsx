@@ -1,8 +1,9 @@
+import {send} from "../api/backend.js";
 
 export const loadConfiguration = async(file) => {
 	const content = await file.text();
 
-	const response = await fetch("/api/config/load", {
+	const response = await send("/api/config/load", {
 		method: "POST",
 		headers: {
 			"Content-Type": "application/json",
@@ -18,7 +19,7 @@ export const loadConfiguration = async(file) => {
 };
 
 export const loadEmptyConfig = async() => {
-	const response = await fetch("/api/config/load_empty", {
+	const response = await send("/api/config/load_empty", {
 		method: "POST",
 		headers: {
 			"Content-Type": "application/json",
@@ -29,14 +30,14 @@ export const loadEmptyConfig = async() => {
 };
 
 export const validateConfig = async() => {
-	const response = await fetch("/api/config/validate", {
+	const response = await send("/api/config/validate", {
 		method: "POST",
 	});
 	return response.json();
 };
 
 export const saveConfig = async(request) => {
-	const response = await fetch("/api/config/saved", {
+	const response = await send("/api/config/saved", {
 		method: "POST",
 		headers: {
 			"Content-Type": "application/json",
@@ -48,7 +49,7 @@ export const saveConfig = async(request) => {
 
 export const exportConfig = async() => {
 
-	const response = await fetch("/api/config/export", {
+	const response = await send("/api/config/export", {
 		method: "GET",
 	});
 
@@ -61,7 +62,7 @@ export const exportConfig = async() => {
 
 export const addItem = async(area, object) => {
 
-	const response = await fetch(`/api/config/${area}`, {
+	const response = await send(`/api/config/${area}`, {
 		method: "POST",
 		headers: {
 			"Content-Type": "application/json",
@@ -73,7 +74,7 @@ export const addItem = async(area, object) => {
 
 export const replaceItem = async(area, index, item) => {
 
-	const response = await fetch(`/api/config/${area}/${index}`, {
+	const response = await send(`/api/config/${area}/${index}`, {
 		method: "PUT",
 		headers: {
 			"Content-Type": "application/json",
@@ -86,7 +87,7 @@ export const replaceItem = async(area, index, item) => {
 
 export const deleteItem = async(area, index) => {
 	
-	const response = await fetch(`/api/config/${area}/${index}`, {
+	const response = await send(`/api/config/${area}/${index}`, {
 		method: "DELETE",
 		headers: {
 			"Content-Type": "application/json",
@@ -99,7 +100,7 @@ export const updateTimeSlot = async(values) => {
 
 	const timesJSON = { times : values };
 
-	const response = await fetch("/api/config/time-slots", {
+	const response = await send("/api/config/time-slots", {
 		method: "PUT",
 		headers: {
 			"Content-Type": "application/json",
@@ -111,7 +112,7 @@ export const updateTimeSlot = async(values) => {
 
 export const updateSettings = async(values) => {
 
-	const response = await fetch("/api/config/settings", {
+	const response = await send("/api/config/settings", {
 		method: "PUT",
 		headers: {
 			"Content-Type": "application/json",

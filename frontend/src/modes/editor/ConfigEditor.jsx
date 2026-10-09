@@ -114,7 +114,7 @@ export default function ConfigEditor() {
                 ref={fileInputRef}
                 type="file"
                 style={{ display: "none" }}
-                onChange={(event) => Load (event, setLoadingFile, setError) }
+                onChange={ async(event) => { await Load (event, setLoadingFile, setError); await refresh(); }}
               />
 
             </>
@@ -149,19 +149,19 @@ export default function ConfigEditor() {
         actions={
           <>
             <Button variant="ghost">Raw JSON</Button>
-            <Button onClick={() => Empty_Click(setLoadingFile)}>New</Button>
+            <Button onClick={ async() => { await Empty_Click(setLoadingFile); await refresh(); }}>New</Button>
 
             <Button onClick={() => fileInputRef.current.click()}>Load JSON...</Button>
             <input
               ref={fileInputRef}
               type="file"
               style={{ display: "none" }}
-              onChange= {(event) => Load(event, setLoadingFile, setError) }
+              onChange= { async(event) => { await Load(event, setLoadingFile, setError); await refresh();  }}
             />
 
 
-            <Button onClick={ async () => { const res = await Save(); if(res) { await refresh(); } }}>Save JSON...</Button>
-            <Button variant="primary" onClick={ () =>  Validate() }>Validate</Button>
+            <Button onClick={ async() => { const res = await Save(); if(res) { await refresh(); } }}>Save JSON...</Button>
+            <Button variant="primary" onClick={ async() =>  { await Validate(); await refresh(); }}>Validate</Button>
           </>
         }
       />
@@ -249,8 +249,8 @@ export default function ConfigEditor() {
                 key={i}
                 pattern={p}
                 onEdit={() => setEditing({ area: "patterns", index: i })}
-                onToggle={() =>
-                  ValidateAndSaveItem({ area: "patterns", index: i }, { ...p, disabled: !p.disabled }, () => {})
+                onToggle={ async() => {
+                  await ValidateAndSaveItem({ area: "patterns", index: i }, { ...p, disabled: !p.disabled }, setEditing, setLocalError); await refresh(); }
                 }
               />
             ))}
@@ -265,7 +265,7 @@ export default function ConfigEditor() {
             <SettingsCard
               settings={settings}
               flags={options?.optimizer_flags}
-              onApply={(values) => UpdateSettings(values)}   /* Eman: api.config.updateSettings(values) */
+              onApply={(values) => UpdateSettings(values)}  
             />
           </div>
           {!deleting && editing?.area === "faculty" && (
@@ -279,8 +279,8 @@ export default function ConfigEditor() {
               options={options}
               onCancel={() => setEditing(null)}
               onDelete={() => setDeleting(editing)}
-              onSave={(draft) => ValidateAndSaveItem(editing, draft, setEditing, setLocalError)}
-	      localError={localError}   /* For testing, Eman replaces this */
+              onSave={ async(draft) => { await ValidateAndSaveItem(editing, draft, setEditing, setLocalError); await refresh(); }}
+	      localError={localError}  
             />
           )}
           {!deleting && editing?.area === "courses" && (
@@ -298,8 +298,8 @@ export default function ConfigEditor() {
               options={options}
               onCancel={() => setEditing(null)}
               onDelete={() => setDeleting(editing)}
-              onSave={(draft) => ValidateAndSaveItem(editing, draft, setEditing, setLocalError)}
-		  localError={localError}/* For testing, Eman replaces this */
+              onSave={ async(draft) => { await ValidateAndSaveItem(editing, draft, setEditing, setLocalError); await refresh(); }}
+		  localError={localError}
             />
           )}
           {!deleting && (editing?.area === "rooms" || editing?.area === "labs") && (
@@ -312,8 +312,8 @@ export default function ConfigEditor() {
               options={options}
               onCancel={() => setEditing(null)}
               onDelete={() => setDeleting(editing)}
-              onSave={(draft) => ValidateAndSaveItem(editing, draft, setEditing, setLocalError)}
-		  localError={localError}/* For testing, Eman replaces this */
+              onSave={ async(draft) => { await ValidateAndSaveItem(editing, draft, setEditing, setLocalError); await refresh(); }}
+		  localError={localError}
             />
           )}
           {!deleting && editing?.area === "patterns" && (
@@ -324,8 +324,8 @@ export default function ConfigEditor() {
               options={options}
               onCancel={() => setEditing(null)}
               onDelete={() => setDeleting(editing)}
-              onSave={(draft) => ValidateAndSaveItem(editing, draft, setEditing, setLocalError) }
-		  localError={localError}/* For testing, Eman replaces this */
+              onSave={ async(draft) => { await ValidateAndSaveItem(editing, draft, setEditing, setLocalError); await refresh(); }}
+		  localError={localError}
             />
           )}
           {editing?.area === "time_slots" && (
@@ -334,8 +334,8 @@ export default function ConfigEditor() {
               day={editing.day}
               times={timeSlots.times}
               onCancel={() => setEditing(null)}
-              onSave={(times) => UpdateTimeSlot(times, setEditing)}
-	      localError={localError}  /* Eman: api.config.updateTimeSlots({ times }) */
+              onSave={ async(times) => { await UpdateTimeSlot(times, setEditing); await refresh(); }}
+	      localError={localError}  
 
             />
           )}
@@ -343,7 +343,7 @@ export default function ConfigEditor() {
             <TimeSlotsDialog
               timeSlots={timeSlots}
               onCancel={() => setEditing(null)}
-              onSave={(values) => UpdateTimeSlot(values, setEditing)}   /* Eman: api.config.updateTimeSlots(values) */
+              onSave={ async(values) => { await UpdateTimeSlot(values, setEditing); await refresh(); }}  
             />
           )}
           {deleting && (
