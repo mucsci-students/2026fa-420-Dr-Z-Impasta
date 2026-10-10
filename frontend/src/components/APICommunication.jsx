@@ -117,5 +117,5 @@ export const updateSettings = async(values) => {
 		},
 		body: JSON.stringify(values),
 	});
-	return response.json();
+	return response;
 };

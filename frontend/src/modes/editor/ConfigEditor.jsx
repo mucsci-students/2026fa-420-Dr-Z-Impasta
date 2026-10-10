@@ -51,6 +51,7 @@ export default function ConfigEditor() {
   const [error, setError] = useState(null); //
   const [localError, setLocalError] = useState(null);   // the error from a failed edit, e.g. { message, issues: [{ area, index, field, message }] }
   const [pendingLoad, setPendingLoad] = useState(null);   // a load waiting for "discard changes?"
+  const [settingsError, setSettingsError] = useState(null);
 
   useEffect(() => {
     if (!hasConfig) return;
@@ -255,7 +256,8 @@ export default function ConfigEditor() {
             <SettingsCard
               settings={settings}
               flags={options?.optimizer_flags}
-              onApply={(values) => UpdateSettings(values)}
+              error={settingsError}
+              onApply={async (values) => { if (await UpdateSettings(values, setSettingsError)) await refresh(); }}
             />
           </div>
           {!deleting && editing?.area === "faculty" && (
@@ -342,8 +344,9 @@ export default function ConfigEditor() {
               key={`delete-${deleting.area}-${deleting.index}`}
               impact={shownImpact?.reply ?? null}
               loadError={shownImpact?.error}
-              onCancel={() => setDeleting(null)}   /* back to the edit dialog */
-              onConfirm={() => DeleteItem(deleting, setDeleting, setEditing)}
+              error={localError}
+              onCancel={() => { setLocalError(null); setDeleting(null); }}   /* back to the edit dialog */
+              onConfirm={async () => { if (await DeleteItem(deleting, setDeleting, setEditing, setLocalError)) await refresh(); }}
             />
           )}
           <ConfirmDialog

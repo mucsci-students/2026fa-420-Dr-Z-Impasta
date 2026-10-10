@@ -66,11 +66,20 @@ export default function SettingsCard({ settings, flags, busy, error, onApply }) 
 
   const flagsError = errorFor("optimizer_flags");
 
+  // Problems with nowhere to appear on this card; the banner lists them instead
+  const FIELDS = ["limit", "optimizer_flags"];
+  const unplaced = (error?.issues ?? []).filter((issue) =>
+    issue.area !== "settings" ||
+    !FIELDS.some((f) => issue.field === f || issue.field?.startsWith(`${f}.`)),
+  );
+
   return (
     <CardRow title="Global Settings">
       <Card className="settings-card">
-        <ErrorMessage error={error} title="Not saved." />
-
+        <ErrorMessage
+          error={error && { message: error.issues?.length ? "The change was not applied." : error.message, issues: unplaced }}
+          title="Not saved."
+        />
         <Field
           label="Generation limit"
           inline
