@@ -106,7 +106,7 @@ const Download = async(content, filename) => {
 	});
 
 	const writable = await fileHandle.createWritable();
-	await writable.write(JSON.stringify(content));
+	await writable.write(content);
 	await writable.close();
 
 	return;

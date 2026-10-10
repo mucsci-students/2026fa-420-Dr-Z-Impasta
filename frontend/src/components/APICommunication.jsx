@@ -53,11 +53,13 @@ export const exportConfig = async() => {
 		method: "GET",
 	});
 
-	const filename = response.headers.get("Content-Disposition").split("=")[1];
-	const resJSON = await response.json();
+	// The server sends: attachment; filename="sample.json"
+	const disposition = response.headers.get("Content-Disposition") ?? "";
+	const filename = /filename="?([^"]+)"?/.exec(disposition)?.[1] ?? "configuration.json";
+	const content = await response.text();   // the library's JSON, exactly as it should be saved
 	const revision = response.headers.get("X-Config-Revision");
 
-	return { "content": resJSON, "filename" : filename.replace(".json", ""), "revision" : revision };
+	return { "content": content, "filename" : filename, "revision" : revision };
 };
 
 export const addItem = async(area, object) => {
