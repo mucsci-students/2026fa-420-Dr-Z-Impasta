@@ -10,28 +10,51 @@ const Error = (error, title, labels, onDismiss) => {
 	return { "error" : error, "title" : title, "labels" : labels, "onDismiss" : onDismiss };
 };
 
-export const Load = async(event, setLoadingFile, setError) => {
+/** Send a file's text to the server, then show what happened. */
+const sendLoad = async(filename, content, discardChanges, setError, setPendingLoad) => {
+	const res = await loadConfiguration(filename, content, discardChanges);
+	if(res.ok) {
+		setError(null);
+		return true;
+	}
 
+	const { error } = await res.json();
+	if(error?.code === "unsaved_changes") {
+		// Ask first; ConfirmLoad sends it again if the user agrees
+		setPendingLoad({ filename, content, changes: error.changes ?? [] });
+		return false;
+	}
+	setError(Error({ message: error?.message, issues: error?.issues }, `Couldn't load ${filename}`, undefined, () => setError(null)));
+	return false;
+};
+
+export const Load = async(event, setLoadingFile, setError, setPendingLoad) => {
 	const file = event.target.files[0];
-	if(!file) return;
+	event.target.value = "";   // so choosing the same file again still triggers onChange
+	if(!file) return false;
 
 	setLoadingFile(true);
 	try {
-		const res = await loadConfiguration(file);
-
-		if (!res.ok) {	
-			const component = Error(res, "Invalid configuration file", res.issues, () => setError(null));
-			setError(component);
-			return;
+		let content;
+		try {
+			content = await file.text();
+		} catch {
+			setError(Error({ message: `${file.name} couldn't be read. Check that the file still exists and you can open it.` }, `Couldn't load ${file.name}`, undefined, () => setError(null)));
+			return false;
 		}
-
-		else {
-			return res.json();
-		}
-	} catch(err) {
-		return err;
+		return await sendLoad(file.name, content, false, setError, setPendingLoad);
 	} finally {
-		await new Promise(resolve => setTimeout(resolve, 2000));
+		setLoadingFile(false);
+	}
+};
+
+/** The user agreed to discard their unsaved changes: load the same file again. */
+export const ConfirmLoad = async(pending, setPendingLoad, setLoadingFile, setError) => {
+	setPendingLoad(null);
+	setLoadingFile(true);
+	try {
+		return await sendLoad(pending.filename, pending.content, true, setError, setPendingLoad);
+	} finally {
 		setLoadingFile(false);
 	}
 };

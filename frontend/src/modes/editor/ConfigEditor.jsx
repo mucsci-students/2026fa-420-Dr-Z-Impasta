@@ -31,9 +31,10 @@ import FacultyDialog from "./dialogs/FacultyDialog.jsx";
 import DeleteDialog from "./dialogs/DeleteDialog.jsx";
 import DayBlocksDialog from "./dialogs/DayBlocksDialog.jsx";
 import TimeSlotsDialog from "./dialogs/TimeSlotsDialog.jsx";
+import ConfirmDialog from "../../components/ConfirmDialog.jsx";
 
 import ErrorMessage from "../../components/ErrorMessage.jsx";
-import { Load, Empty_Click, Validate, Save, ValidateAndSaveItem, DeleteItem, UpdateTimeSlot, UpdateSettings } from "../../state/EventHandlers";
+import { Load, ConfirmLoad, Empty_Click, Validate, Save, ValidateAndSaveItem, DeleteItem, UpdateTimeSlot, UpdateSettings } from "../../state/EventHandlers";
 
 export default function ConfigEditor() {
   const { state, loading, refresh } = useAppState();
@@ -49,6 +50,7 @@ export default function ConfigEditor() {
   const [impact, setImpact] = useState(null);      // its delete preview, from api.config.deleteImpact
   const [error, setError] = useState(null); //
   const [localError, setLocalError] = useState(null);   // the error from a failed edit, e.g. { message, issues: [{ area, index, field, message }] }
+  const [pendingLoad, setPendingLoad] = useState(null);   // a load waiting for "discard changes?"
 
   useEffect(() => {
     if (!hasConfig) return;
@@ -86,23 +88,11 @@ export default function ConfigEditor() {
     );
   }
 
-  if (error) {
-    return (
-      <div>
-        <ErrorMessage
-          error={error.error}
-          title={error.title}
-          labels={error.labels}
-          onDismiss={error.onDismiss}
-        />
-      </div>
-    );
-  }
-
   if (!config || config.status === "none") {
     return (
       <>
         <PageHeader title="Configuration" subtitle="Start a new configuration or load one from a JSON file." />
+        <ErrorMessage error={error?.error} title={error?.title} onDismiss={error?.onDismiss} />
         <EmptyState
           title="No configuration loaded"
           mark={<Penne size={40} />}
@@ -114,9 +104,7 @@ export default function ConfigEditor() {
                 ref={fileInputRef}
                 type="file"
                 style={{ display: "none" }}
-                onChange={async (event) => { await Load(event, setLoadingFile, setError); await refresh(); }}
-              />
-
+                onChange={async (event) => { if (await Load(event, setLoadingFile, setError, setPendingLoad)) await refresh(); }} />
             </>
           }
         >
@@ -156,7 +144,7 @@ export default function ConfigEditor() {
               ref={fileInputRef}
               type="file"
               style={{ display: "none" }}
-              onChange={async (event) => { await Load(event, setLoadingFile, setError); await refresh(); }}
+              onChange={async (event) => { if (await Load(event, setLoadingFile, setError, setPendingLoad)) await refresh(); }}
             />
 
 
@@ -165,6 +153,7 @@ export default function ConfigEditor() {
           </>
         }
       />
+      <ErrorMessage error={error?.error} title={error?.title} onDismiss={error?.onDismiss} />
       <Banner tone={bannerTone} title={status.label}>
         {describeCounts(config.counts)}.
         {config.status === "incomplete" && <IssueList issues={config.issues} />}
@@ -357,6 +346,20 @@ export default function ConfigEditor() {
               onConfirm={() => DeleteItem(deleting, setDeleting, setEditing)}
             />
           )}
+          <ConfirmDialog
+            open={pendingLoad !== null}
+            title={`Discard changes and load ${pendingLoad?.filename}?`}
+            destructive
+            confirmLabel="Discard and load"
+            cancelLabel="Keep my changes"
+            onConfirm={async () => { if (await ConfirmLoad(pendingLoad, setPendingLoad, setLoadingFile, setError)) await refresh(); }}
+            onCancel={() => setPendingLoad(null)}
+          >
+            <p>These changes haven't been saved and will be lost:</p>
+            <ul>
+              {pendingLoad?.changes.map((change) => <li key={change.revision}>{change.summary}</li>)}
+            </ul>
+          </ConfirmDialog>
         </>
       )}
     </div>

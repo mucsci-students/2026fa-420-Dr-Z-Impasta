@@ -1,17 +1,15 @@
 import {send} from "../api/backend.js";
 
-export const loadConfiguration = async(file) => {
-	const content = await file.text();
-
+export const loadConfiguration = async(filename, content, discardChanges = false) => {
 	const response = await send("/api/config/load", {
 		method: "POST",
 		headers: {
 			"Content-Type": "application/json",
 		},
 		body: JSON.stringify({
-			filename: file.name,
+			filename: filename,
 			content: content,
-			discard_changes: false,
+			discard_changes: discardChanges,
 		}),
 	});
 	return response;
