@@ -59,8 +59,7 @@ export default function FacultyDialog({
   error,
   onSave,
   onCancel,
-  onDelete,
-	localError
+  onDelete
 }) {
   const isNew = index === null;
   const original = { ...NEW_FACULTY, ...faculty }; // fill defaults the document may omit
@@ -68,6 +67,13 @@ export default function FacultyDialog({
   const isDirty = JSON.stringify(draft) !== JSON.stringify(original);
   const [confirmingDiscard, setConfirmingDiscard] = useState(false);
   const weekdays = options?.weekdays?.length ? options.weekdays : WEEKDAYS;
+  // Problems that have no field in this dialog to appear under; the banner lists them instead
+  const FIELDS = [ "name", "minimum_credits", "maximum_credits", "unique_course_limit", "maximum_days", "mandatory_days", "times", "course_preferences", "room_preferences", "lab_preferences" ];
+  const unplaced = (error?.issues ?? []).filter((issue) =>
+    issue.area !== "faculty" ||
+    (index !== null && issue.index !== index) ||
+    !FIELDS.some((f) => issue.field === f || issue.field?.startsWith(`${f}.`)),
+  );
 
   /** Cancel, Escape, or ×: ask first if there are unsaved edits. */
   function requestClose() {
@@ -83,16 +89,16 @@ export default function FacultyDialog({
   /** The library's message for one field, if the last Save was rejected. */
   function errorFor(field) {
     const found = issuesFor(error?.issues, { area: "faculty", index: index ?? undefined, field });
-	  return found.length > 0 ? found.map((issue) => issue.message).join(" ") : undefined;
+    return found.length > 0 ? found.map((issue) => issue.message).join(" ") : undefined;
   }
-	/** A function to assign the input field the 'input-error' class if it contains invalid data */
-	function classNameFunc(field) {
-		if(localError.some((err) => err.field === field)) {
-			return "input-error";
-		} else {
-			return "";
-		}
-	}
+  /** A function to assign the input field the 'input-error' class if it contains invalid data */
+  function classNameFunc(field) {
+    if ((error?.issues ?? []).some((issue) => issue.field === field)) {
+      return "input-error";
+    } else {
+      return "";
+    }
+  }
 
   // The prompts are siblings of the Dialog, not children; see ResourceDialog.
   return (
@@ -118,7 +124,7 @@ export default function FacultyDialog({
           </>
         }
       >
-        <ErrorMessage error={error} title="Not saved." />
+        <ErrorMessage error={error && { message: "The change was not applied.", issues: unplaced }} title="Not saved." />
 
         <Field label="Name" required error={errorFor("name")}>
           <input className={classNameFunc("name")} value={draft.name} onChange={(e) => set("name", e.target.value)} data-autofocus />
@@ -127,7 +133,7 @@ export default function FacultyDialog({
         <div className="form-grid">
           <Field label="Minimum credits" required error={errorFor("minimum_credits")}>
             <input
-	  className={classNameFunc("minimum_credits")}
+              className={classNameFunc("minimum_credits")}
               type="number"
               min={0}
               value={draft.minimum_credits ?? ""}
@@ -136,7 +142,7 @@ export default function FacultyDialog({
           </Field>
           <Field label="Maximum credits" required error={errorFor("maximum_credits")}>
             <input
-	  className={classNameFunc("maximum_credits")}
+              className={classNameFunc("maximum_credits")}
               type="number"
               min={0}
               value={draft.maximum_credits ?? ""}
@@ -150,7 +156,7 @@ export default function FacultyDialog({
             error={errorFor("unique_course_limit")}
           >
             <input
-	  className={classNameFunc("unique_course_limit")}
+              className={classNameFunc("unique_course_limit")}
               type="number"
               min={1}
               value={draft.unique_course_limit ?? ""}
@@ -159,7 +165,7 @@ export default function FacultyDialog({
           </Field>
           <Field label="Teaching days" help="The most days a week they teach, 0 to 5." error={errorFor("maximum_days")}>
             <input
-	  className={classNameFunc("maximum_days")}
+              className={classNameFunc("maximum_days")}
               type="number"
               min={0}
               max={5}

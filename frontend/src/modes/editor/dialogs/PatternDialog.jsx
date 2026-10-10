@@ -37,7 +37,7 @@ const newMeetingKeys = (count) => Array.from({ length: count }, () => nextMeetin
  * Add or edit a class pattern and its meetings. Edits a draft; nothing changes until Save succeeds.
  * `options` is the reply from api.config.options(); fallbacks are used until it arrives.
  */
-export default function PatternDialog({ index, pattern, options, busy, error, onSave, onCancel, onDelete, localError }) {
+export default function PatternDialog({ index, pattern, options, busy, error, onSave, onCancel, onDelete }) {
   const isNew = index === null;
   const original = pattern ?? NEW_PATTERN;
   const [draft, setDraft] = useState(original);
@@ -51,6 +51,14 @@ export default function PatternDialog({ index, pattern, options, busy, error, on
 
   const weekdays = options?.weekdays?.length ? options.weekdays : WEEKDAYS;
   const deliveryModes = options?.delivery_modes?.length ? options.delivery_modes : Object.keys(DELIVERY_NAMES);
+
+  // Problems that have no field in this dialog to appear under; the banner lists them instead
+  const FIELDS = [ "credits", "start_time", "disabled", "meetings" ];
+  const unplaced = (error?.issues ?? []).filter((issue) =>
+    issue.area !== "patterns" ||
+    (index !== null && issue.index !== index) ||
+    !FIELDS.some((f) => issue.field === f || issue.field?.startsWith(`${f}.`)),
+  );
 
   /** Cancel, Escape, or ×: ask first if there are unsaved edits. */
   function requestClose() {
@@ -94,14 +102,14 @@ export default function PatternDialog({ index, pattern, options, busy, error, on
   }
 
 
-	/** A function to assign the input field the 'input-error' class if it contains invalid data */
-	function classNameFunc(field) {
-		if(localError.some((err) => err.field === field)) {
-			return "input-error";
-		} else {
-			return "";
-		}
-	}
+  /** A function to assign the input field the 'input-error' class if it contains invalid data */
+  function classNameFunc(field) {
+    if ((error?.issues ?? []).some((issue) => issue.field === field)) {
+      return "input-error";
+    } else {
+      return "";
+    }
+  }
 
   /** The library's message for the meeting row with this key, from where it was at the last Save. */
   function meetingError(key) {
@@ -127,7 +135,7 @@ export default function PatternDialog({ index, pattern, options, busy, error, on
           </>
         }
       >
-        <ErrorMessage error={error} title="Not saved." />
+        <ErrorMessage error={error && { message: "The change was not applied.", issues: unplaced }} title="Not saved." />
 
         <div className="form-grid">
           <Field label="Credits" required error={errorFor("credits")}>

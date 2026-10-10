@@ -72,8 +72,7 @@ export default function CourseDialog({
   error,
   onSave,
   onCancel,
-  onDelete,
-	localError
+  onDelete
 }) {
 
   const isNew = index === null;
@@ -82,6 +81,13 @@ export default function CourseDialog({
   const isDirty = JSON.stringify(draft) !== JSON.stringify(original);
   const [confirmingDiscard, setConfirmingDiscard] = useState(false);
   const modalities = options?.modalities?.length ? options.modalities : Object.keys(MODALITY_NAMES);
+  // Problems that have no field in this dialog to appear under; the banner lists them instead
+  const FIELDS = [ "course_id", "section_id", "credits", "capacity", "modality", "room", "required_room_features", "lab", "required_lab_features", "reserve_room_during_lab", "faculty", "conflicts" ];
+  const unplaced = (error?.issues ?? []).filter((issue) =>
+    issue.area !== "courses" ||
+    (index !== null && issue.index !== index) ||
+    !FIELDS.some((f) => issue.field === f || issue.field?.startsWith(`${f}.`)),
+  );
 
   /** Cancel, Escape, or ×: ask first if there are unsaved edits. */
   function requestClose() {
@@ -101,14 +107,14 @@ export default function CourseDialog({
   }
 
 
-	/** A function to assign the input field the 'input-error' class if it contains invalid data */
-	function classNameFunc(field) {
-		if(localError.some((err) => err.field === field)) {
-			return "input-error";
-		} else {
-			return "";
-		}
-	}
+  /** A function to assign the input field the 'input-error' class if it contains invalid data */
+  function classNameFunc(field) {
+    if ((error?.issues ?? []).some((issue) => issue.field === field)) {
+      return "input-error";
+    } else {
+      return "";
+    }
+  }
 
   // A course can't conflict with itself; keep any saved IDs even if no course has them now.
   const conflictOptions = [...new Set([...courseIds, ...draft.conflicts])].filter((id) => id !== draft.course_id);
@@ -132,7 +138,7 @@ export default function CourseDialog({
           </>
         }
       >
-        <ErrorMessage error={error} title="Not saved." />
+        <ErrorMessage error={error && { message: "The change was not applied.", issues: unplaced }} title="Not saved." />
 
         <div className="form-grid">
           <Field label="Course ID" required help="Repeating an ID adds another section." error={errorFor("course_id")}>
@@ -157,12 +163,12 @@ export default function CourseDialog({
           </select>
         </Field>
 
-        <CheckboxList legend="Rooms" options={rooms} value={draft.room} onChange={(v) => set("room", v)} empty="No rooms yet" error={errorFor("room")} fieldName="room" localErr={localError[0]?.field === "room" ? localError[0]?.message : ""} />
+        <CheckboxList legend="Rooms" options={rooms} value={draft.room} onChange={(v) => set("room", v)} empty="No rooms yet" error={errorFor("room")} fieldName="room" />
         <Field label="Required room features" help="Only rooms with every tag can hold this course." error={errorFor("required_room_features")}>
           <TagInput value={draft.required_room_features} onChange={(tags) => set("required_room_features", tags)} suggestions={roomFeatures} />
         </Field>
 
-        <CheckboxList legend="Labs" className={classNameFunc("lab")} options={labs} value={draft.lab} onChange={(v) => set("lab", v)} empty="No labs yet" error={errorFor("lab")} fieldName="lab" localErr={localError[0]?.field === "lab" ? localError[0]?.message : ""} />
+        <CheckboxList legend="Labs" className={classNameFunc("lab")} options={labs} value={draft.lab} onChange={(v) => set("lab", v)} empty="No labs yet" error={errorFor("lab")} fieldName="lab" />
         {draft.lab.length > 0 && (
           <>
             <Field label="Required lab features" help="Only labs with every tag can hold the lab meeting." error={errorFor("required_lab_features")}>
@@ -187,7 +193,7 @@ export default function CourseDialog({
           </label>
         </fieldset>
         {draft.faculty !== null && (
-          <CheckboxList legend="Who can teach it" options={faculty} value={draft.faculty} onChange={(v) => set("faculty", v)} empty="No faculty yet" error={errorFor("faculty")} fieldName="faculty" localErr={localError[0]?.field === "faculty" ? localError[0]?.message : ""} />
+          <CheckboxList legend="Who can teach it" options={faculty} value={draft.faculty} onChange={(v) => set("faculty", v)} empty="No faculty yet" error={errorFor("faculty")} fieldName="faculty" />
         )}
 
         <CheckboxList legend="Conflicts" options={conflictOptions} value={draft.conflicts} onChange={(v) => set("conflicts", v)} empty="No other courses" error={errorFor("conflicts")} />

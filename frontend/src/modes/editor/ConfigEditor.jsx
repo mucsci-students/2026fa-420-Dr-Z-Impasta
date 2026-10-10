@@ -42,13 +42,13 @@ export default function ConfigEditor() {
   const revision = config?.revision;
   const hasConfig = Boolean(config) && config.status !== "none";
   const fileInputRef = useRef(null); //
-	const [loadingFile, setLoadingFile] = useState(false); //
+  const [loadingFile, setLoadingFile] = useState(false); //
   const [editing, setEditing] = useState(null);   // the item being edited
   const [options, setOptions] = useState(null);   // library choices for the dialogs; they have fallbacks
   const [deleting, setDeleting] = useState(null);  // the item being deleted, e.g. { area: "rooms", index: 0 }
   const [impact, setImpact] = useState(null);      // its delete preview, from api.config.deleteImpact
-	const[error, setError] = useState(null); //
-	const[localError, setLocalError] = useState([]);
+  const [error, setError] = useState(null); //
+  const [localError, setLocalError] = useState(null);   // the error from a failed edit, e.g. { message, issues: [{ area, index, field, message }] }
 
   useEffect(() => {
     if (!hasConfig) return;
@@ -86,18 +86,18 @@ export default function ConfigEditor() {
     );
   }
 
-	if(error) {
-		return (
-			<div>
-				<ErrorMessage 
-					error={error.error}
-					title={error.title}
-					labels={error.labels}
-					onDismiss={error.onDismiss}
-				/>
-			</div>
-		);
-	}
+  if (error) {
+    return (
+      <div>
+        <ErrorMessage
+          error={error.error}
+          title={error.title}
+          labels={error.labels}
+          onDismiss={error.onDismiss}
+        />
+      </div>
+    );
+  }
 
   if (!config || config.status === "none") {
     return (
@@ -114,7 +114,7 @@ export default function ConfigEditor() {
                 ref={fileInputRef}
                 type="file"
                 style={{ display: "none" }}
-                onChange={ async(event) => { await Load (event, setLoadingFile, setError); await refresh(); }}
+                onChange={async (event) => { await Load(event, setLoadingFile, setError); await refresh(); }}
               />
 
             </>
@@ -149,19 +149,19 @@ export default function ConfigEditor() {
         actions={
           <>
             <Button variant="ghost">Raw JSON</Button>
-            <Button onClick={ async() => { await Empty_Click(setLoadingFile); await refresh(); }}>New</Button>
+            <Button onClick={async () => { await Empty_Click(setLoadingFile); await refresh(); }}>New</Button>
 
             <Button onClick={() => fileInputRef.current.click()}>Load JSON...</Button>
             <input
               ref={fileInputRef}
               type="file"
               style={{ display: "none" }}
-              onChange= { async(event) => { await Load(event, setLoadingFile, setError); await refresh();  }}
+              onChange={async (event) => { await Load(event, setLoadingFile, setError); await refresh(); }}
             />
 
 
-            <Button onClick={ async() => { const res = await Save(); if(res) { await refresh(); } }}>Save JSON...</Button>
-            <Button variant="primary" onClick={ async() =>  { await Validate(); await refresh(); }}>Validate</Button>
+            <Button onClick={async () => { const res = await Save(); if (res) { await refresh(); } }}>Save JSON...</Button>
+            <Button variant="primary" onClick={async () => { await Validate(); await refresh(); }}>Validate</Button>
           </>
         }
       />
@@ -249,8 +249,9 @@ export default function ConfigEditor() {
                 key={i}
                 pattern={p}
                 onEdit={() => setEditing({ area: "patterns", index: i })}
-                onToggle={ async() => {
-                  await ValidateAndSaveItem({ area: "patterns", index: i }, { ...p, disabled: !p.disabled }, setEditing, setLocalError); await refresh(); }
+                onToggle={async () => {
+                  await ValidateAndSaveItem({ area: "patterns", index: i }, { ...p, disabled: !p.disabled }, setEditing, setLocalError); await refresh();
+                }
                 }
               />
             ))}
@@ -265,7 +266,7 @@ export default function ConfigEditor() {
             <SettingsCard
               settings={settings}
               flags={options?.optimizer_flags}
-              onApply={(values) => UpdateSettings(values)}  
+              onApply={(values) => UpdateSettings(values)}
             />
           </div>
           {!deleting && editing?.area === "faculty" && (
@@ -277,10 +278,10 @@ export default function ConfigEditor() {
               rooms={items.rooms.map((r) => r.name)}
               labs={items.labs.map((l) => l.name)}
               options={options}
-              onCancel={() => setEditing(null)}
-              onDelete={() => setDeleting(editing)}
-              onSave={ async(draft) => { await ValidateAndSaveItem(editing, draft, setEditing, setLocalError); await refresh(); }}
-	      localError={localError}  
+              onCancel={() => { setLocalError(null); setEditing(null); }}
+              onDelete={() => { setLocalError(null); setDeleting(editing); }}
+              onSave={async (draft) => { await ValidateAndSaveItem(editing, draft, setEditing, setLocalError); await refresh(); }}
+              error={localError}
             />
           )}
           {!deleting && editing?.area === "courses" && (
@@ -296,10 +297,10 @@ export default function ConfigEditor() {
               roomFeatures={[...new Set(items.rooms.flatMap((r) => r.features ?? []))]}
               labFeatures={[...new Set(items.labs.flatMap((l) => l.features ?? []))]}
               options={options}
-              onCancel={() => setEditing(null)}
-              onDelete={() => setDeleting(editing)}
-              onSave={ async(draft) => { await ValidateAndSaveItem(editing, draft, setEditing, setLocalError); await refresh(); }}
-		  localError={localError}
+              onCancel={() => { setLocalError(null); setEditing(null); }}
+              onDelete={() => { setLocalError(null); setDeleting(editing); }}
+              onSave={async (draft) => { await ValidateAndSaveItem(editing, draft, setEditing, setLocalError); await refresh(); }}
+              error={localError}
             />
           )}
           {!deleting && (editing?.area === "rooms" || editing?.area === "labs") && (
@@ -310,10 +311,10 @@ export default function ConfigEditor() {
               resource={editing.index === null ? null : items[editing.area][editing.index]}
               suggestions={[...new Set(items[editing.area].flatMap((r) => r.features ?? []))]}
               options={options}
-              onCancel={() => setEditing(null)}
-              onDelete={() => setDeleting(editing)}
-              onSave={ async(draft) => { await ValidateAndSaveItem(editing, draft, setEditing, setLocalError); await refresh(); }}
-		  localError={localError}
+              onCancel={() => { setLocalError(null); setEditing(null); }}
+              onDelete={() => { setLocalError(null); setDeleting(editing); }}
+              onSave={async (draft) => { await ValidateAndSaveItem(editing, draft, setEditing, setLocalError); await refresh(); }}
+              error={localError}
             />
           )}
           {!deleting && editing?.area === "patterns" && (
@@ -322,10 +323,10 @@ export default function ConfigEditor() {
               index={editing.index}
               pattern={editing.index === null ? null : patterns[editing.index]}
               options={options}
-              onCancel={() => setEditing(null)}
-              onDelete={() => setDeleting(editing)}
-              onSave={ async(draft) => { await ValidateAndSaveItem(editing, draft, setEditing, setLocalError); await refresh(); }}
-		  localError={localError}
+              onCancel={() => { setLocalError(null); setEditing(null); }}
+              onDelete={() => { setLocalError(null); setDeleting(editing); }}
+              onSave={async (draft) => { await ValidateAndSaveItem(editing, draft, setEditing, setLocalError); await refresh(); }}
+              error={localError}
             />
           )}
           {editing?.area === "time_slots" && (
@@ -333,17 +334,18 @@ export default function ConfigEditor() {
               key={`time_slots-${editing.day}`}
               day={editing.day}
               times={timeSlots.times}
-              onCancel={() => setEditing(null)}
-              onSave={ async(times) => { await UpdateTimeSlot(times, setEditing); await refresh(); }}
-	      localError={localError}  
+              onCancel={() => { setLocalError(null); setEditing(null); }}
+              onSave={async (times) => { await UpdateTimeSlot({ times }, setEditing, setLocalError); await refresh(); }}
+              error={localError}
 
             />
           )}
           {editing?.area === "timing" && (
             <TimeSlotsDialog
               timeSlots={timeSlots}
-              onCancel={() => setEditing(null)}
-              onSave={ async(values) => { await UpdateTimeSlot(values, setEditing); await refresh(); }}  
+              onCancel={() => { setLocalError(null); setEditing(null); }}
+              onSave={async (values) => { await UpdateTimeSlot(values, setEditing, setLocalError); await refresh(); }}
+              error={localError}
             />
           )}
           {deleting && (
@@ -352,7 +354,7 @@ export default function ConfigEditor() {
               impact={shownImpact?.reply ?? null}
               loadError={shownImpact?.error}
               onCancel={() => setDeleting(null)}   /* back to the edit dialog */
-              onConfirm={() => DeleteItem(deleting, setDeleting, setEditing)} 
+              onConfirm={() => DeleteItem(deleting, setDeleting, setEditing)}
             />
           )}
         </>

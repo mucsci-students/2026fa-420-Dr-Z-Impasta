@@ -160,7 +160,7 @@ const handleItem = async (res, setEditing, setLocalError) => {
 
 	} else {
 		setEditing(null);
-		setLocalError([]);
+		setLocalError(null);
 	}
 
 	return res;
@@ -168,12 +168,7 @@ const handleItem = async (res, setEditing, setLocalError) => {
 
 
 const setErrors = (setLocalError, resJSON) => {
-	const errorFields = [];
-	for(const [,value] of Object.entries(resJSON.error.issues)) {
-		errorFields.push({"field" : value.field, "message" : value.message});
-	}
-
-	setLocalError(errorFields);
+  setLocalError(resJSON.error ?? { message: "The change was not applied." });   // { message, issues: [{ area, index, field, message }] }
 };
 
 export const DeleteItem = async(deleting, setDeleting, setEditing) => {
@@ -191,16 +186,10 @@ export const DeleteItem = async(deleting, setDeleting, setEditing) => {
 	}
 };
 
-export const UpdateTimeSlot = async(vals, setEditing) => {
+export const UpdateTimeSlot = async(vals, setEditing, setLocalError) => {
 
 	try {
-		const res = await updateTimeSlot(vals);
-		
-		if(res.state.status == ConfigStatusObj.VALID) {
-			setEditing(null);
-			return res;
-		} 
-
+    return await handleItem(await updateTimeSlot(vals), setEditing, setLocalError);
 	} catch(err) {
 		return err;
 	}

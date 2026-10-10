@@ -38,7 +38,7 @@ const newBlockKeys = (count) => Array.from({ length: count }, () => nextBlockKey
  * Save hands back the whole object with this day's blocks swapped in, ready for
  * api.config.updateTimeSlots({ times }).
  */
-export default function DayBlocksDialog({ day, times, busy, error, onSave, onCancel, localError }) {
+export default function DayBlocksDialog({ day, times, busy, error, onSave, onCancel }) {
   const name = DAY_NAMES[day] ?? day;
   const original = times[day] ?? [];
   const [blocks, setBlocks] = useState(original);
@@ -50,6 +50,13 @@ export default function DayBlocksDialog({ day, times, busy, error, onSave, onCan
   // The row keys when Save was last pressed; the server's `times.DAY.N` errors refer to these positions
   const [savedKeys, setSavedKeys] = useState(blockKeys);
 
+  // Problems with nowhere to appear in this dialog; the banner lists them instead
+  const FIELDS = [`times.${day}`];
+  const unplaced = (error?.issues ?? []).filter((issue) =>
+    issue.area !== "time_slots" ||
+    !FIELDS.some((f) => issue.field === f || issue.field?.startsWith(`${f}.`)),
+  );
+
   /** Cancel, Escape, or ×: ask first if there are unsaved edits. */
   function requestClose() {
     if (isDirty) setConfirmingDiscard(true);
@@ -58,7 +65,7 @@ export default function DayBlocksDialog({ day, times, busy, error, onSave, onCan
 
   function save() {
     setSavedKeys(blockKeys);
-    onSave?.({ ...times, [day]: blocks});
+    onSave?.({ ...times, [day]: blocks });
   }
 
   /** Change one field of block number i. */
@@ -85,14 +92,14 @@ export default function DayBlocksDialog({ day, times, busy, error, onSave, onCan
     return found.length > 0 ? found.map((issue) => issue.message).join(" ") : undefined;
   }
 
-	/** A function to assign the input field the 'input-error' class if it contains invalid data */
-	function classNameFunc(field) {
-		if(localError.some((err) => err.field.split(".")[3] === field)) {
-			return "input-error";
-		} else {
-			return "";
-		}
-	}
+  /** A function to assign the input field the 'input-error' class if it contains invalid data */
+  function classNameFunc(field) {
+    if ((error?.issues ?? []).some((issue) => issue.field?.split(".")[3] === field)) {
+      return "input-error";
+    } else {
+      return "";
+    }
+  }
 
 
   /** The library's message for the block row with this key, from where it was at the last Save. */
@@ -118,7 +125,7 @@ export default function DayBlocksDialog({ day, times, busy, error, onSave, onCan
           </>
         }
       >
-        <ErrorMessage error={error} title="Not saved." />
+        <ErrorMessage error={error && { message: "The change was not applied.", issues: unplaced }} title="Not saved." />
 
         <fieldset className="blocks-editor">
           <legend>Blocks on {name}</legend>

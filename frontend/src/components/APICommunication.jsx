@@ -100,16 +100,14 @@ export const deleteItem = async(area, index) => {
 
 export const updateTimeSlot = async(values) => {
 
-	const timesJSON = { times : values };
-
 	const response = await send("/api/config/time-slots", {
 		method: "PUT",
 		headers: {
 			"Content-Type": "application/json",
 		},
-		body: JSON.stringify(timesJSON),
+		body: JSON.stringify(values),
 	});
-	return response.json();
+	return response;
 };
 
 export const updateSettings = async(values) => {
