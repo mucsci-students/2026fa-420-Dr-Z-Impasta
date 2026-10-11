@@ -100,7 +100,7 @@ class AppController:
         return self.configuration()
 
     def load_empty(self, content: str, filename: str) -> dict:
-        """Loads the a minimial version of the config file
+        """Loads the a minimial version of the config file 
         that is acceptable by CombinedConfig.model_validate"""
         self.workspace.load_empty(content, filename)
         return self.configuration()
