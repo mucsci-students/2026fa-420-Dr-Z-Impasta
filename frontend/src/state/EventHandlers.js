@@ -1,4 +1,4 @@
-import { loadConfiguration, loadEmptyConfig, validateConfig, saveConfig, exportConfig, addItem, replaceItem, deleteItem, updateTimeSlot, updateSettings } from "../components/APICommunication";
+import { loadConfiguration, validateConfig, saveConfig, exportConfig, addItem, replaceItem, deleteItem, updateTimeSlot, updateSettings } from "../components/APICommunication";
 
 const ConfigStatusObj = Object.freeze({
 	NONE: "none",
