@@ -6,6 +6,7 @@ import pytest
 from playwright.sync_api import Page, expect
 
 from tests.helpers import EXAMPLE_CONFIG
+
 HOSTED_URL = "https://dr-zimpasta.pages.dev/editor"
 
 LOCAL_URL = "http://localhost:8000"
