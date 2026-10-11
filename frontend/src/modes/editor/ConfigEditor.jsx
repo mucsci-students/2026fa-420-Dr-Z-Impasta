@@ -137,7 +137,7 @@ export default function ConfigEditor() {
         }
         actions={
           <>
-            <Button variant="ghost">Raw JSON</Button>
+           {/* <Button variant="ghost">Raw JSON</Button>*/}
             <Button onClick={async () => { await Empty_Click(setLoadingFile, setError, setPendingLoad); await refresh(); }}>New</Button>
 
             <Button onClick={() => fileInputRef.current.click()}>Load JSON...</Button>
