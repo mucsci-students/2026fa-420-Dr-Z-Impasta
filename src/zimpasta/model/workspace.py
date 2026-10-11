@@ -370,22 +370,11 @@ class ConfigWorkspace:
             raise InvalidFile("unreadable_file", f"Can't read {path.name}: {reason}.") from None
         self.load_text(text, filename=path.name, discard_changes=discard_changes)
 
-    def load_empty(self, discard_changes: bool = False) -> None:
+    def load_empty(self, content: str, filename: str, discard_changes: bool = False) -> None:
         """Loads an "empty" config file,
         "empty" is not completely empty but rather defined as
-        the minimum number of entries per key that is allowed by CombinedConfig.model_validate"""
-        empty_config_path = Path(__file__).parent / "new_config.json"
-        with open(empty_config_path) as f:
-            empty_data_str = f.read()
-
-        empty_data = json.loads(empty_data_str)
-
-        filename = "unnamed.json"
-        evaluation = self._evaluate(empty_data)
-
-        with self._lock:
-            self._guard_unsaved(discard_changes)
-            self._reset(evaluation, name=filename)
+        a minimumal number of entries per key that is allowed by CombinedConfig.model_validate"""
+        self.load_text(content, filename=filename, discard_changes=False)
 
     def validate(self) -> ValidationReport:
         """Validate the whole configuration with the library now."""

@@ -18,6 +18,7 @@ zimpasta = "zimpasta.cli:main"
 dev = [
     "httpx2>=2.13",
     "pytest>=8.0",
+    "pytest-playwright>=0.10.0",
     "ruff>=0.6",
 ]
 

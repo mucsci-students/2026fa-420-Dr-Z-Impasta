@@ -16,15 +16,18 @@ export const loadConfiguration = async(filename, content, discardChanges = false
 	
 };
 
-export const loadEmptyConfig = async() => {
+export const loadEmptyConfig = async(content, filename) => {
 	const response = await send("/api/config/load_empty", {
 		method: "POST",
 		headers: {
 			"Content-Type": "application/json",
 		},
-		body: JSON.stringify({}),
+		body: JSON.stringify({
+			filename: filename,
+			content: content,
+		}),
 	});
-	return response.json();
+	return response;
 };
 
 export const validateConfig = async() => {

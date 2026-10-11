@@ -99,7 +99,7 @@ export default function ConfigEditor() {
           mark={<Penne size={40} />}
           actions={
             <>
-              <Button variant="primary" onClick={() => Empty_Click(setLoadingFile)}>New</Button>
+              <Button variant="primary" onClick={() => Empty_Click(setLoadingFile, setError, setPendingLoad)}>New</Button>
               <Button onClick={() => { fileInputRef.current.click(); }}>Load JSON...</Button>
               <input
                 ref={fileInputRef}
@@ -138,7 +138,7 @@ export default function ConfigEditor() {
         actions={
           <>
             <Button variant="ghost">Raw JSON</Button>
-            <Button onClick={async () => { await Empty_Click(setLoadingFile); await refresh(); }}>New</Button>
+            <Button onClick={async () => { await Empty_Click(setLoadingFile, setError, setPendingLoad); await refresh(); }}>New</Button>
 
             <Button onClick={() => fileInputRef.current.click()}>Load JSON...</Button>
             <input

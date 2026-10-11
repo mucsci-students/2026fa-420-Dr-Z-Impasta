@@ -99,9 +99,10 @@ class AppController:
         self.workspace.load_file(path)
         return self.configuration()
 
-    def load_empty(self) -> dict:
-        """Loads an empty version of the config file, keys but no values."""
-        self.workspace.load_empty()
+    def load_empty(self, content: str, filename: str) -> dict:
+        """Loads the a minimial version of the config file 
+        that is acceptable by CombinedConfig.model_validate"""
+        self.workspace.load_empty(content, filename)
         return self.configuration()
 
     def validate_configuration(self) -> dict:

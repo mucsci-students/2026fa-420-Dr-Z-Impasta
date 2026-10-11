@@ -59,18 +59,23 @@ export const ConfirmLoad = async(pending, setPendingLoad, setLoadingFile, setErr
 	}
 };
 
-export const Empty_Click = async(setLoadingFile) => {
+export const Empty_Click = async(setLoadingFile, setError, setPendingLoad) => {
 	setLoadingFile(true);
-	try {
-		const res = await loadEmptyConfig();
-		return res;
 
-		} catch(error) {
-			return error;
-		} finally {
-			await new Promise(resolve => setTimeout(resolve, 2000));
-			setLoadingFile(false);
-		}
+	const content = await fetch('/new_config.json')
+		.then(response => {
+			if (!response.ok) throw new Error('Failed to load config');
+			return response.text();
+		});
+
+	const filename = "unnamed.json"
+	try {
+		return await sendLoad(filename, content, false, setError, setPendingLoad);
+	} 
+	finally {
+		await new Promise(resolve => setTimeout(resolve, 2000));
+		setLoadingFile(false);
+	}
 };
 
 export const Validate = async() => {
