@@ -6,8 +6,9 @@ import pytest
 from playwright.sync_api import Page, expect
 
 from tests.helpers import EXAMPLE_CONFIG
+HOSTED_URL = "https://dr-zimpasta.pages.dev/editor"
 
-SERVER_URL = "http://localhost:8000"
+LOCAL_URL = "http://localhost:8000"
 
 # commands to start up server from here, rather than manually doing it
 RUN_SERVER = ["uv", "run", "zimpasta", "--gui"]
@@ -16,6 +17,9 @@ RUN_SERVER = ["uv", "run", "zimpasta", "--gui"]
 @pytest.fixture(scope="session", autouse=True)
 def start_website():
     # runs 'uv run zimpasta --gui' upon the running of this file
+
+    subprocess.run(["npm", "ci"], cwd="frontend", check=True)
+    subprocess.run(["npm", "run", "build"], cwd="frontend", check=True)
 
     # start website in the background
     server = subprocess.Popen(
@@ -33,12 +37,12 @@ def start_website():
                 raise RuntimeError("Server stopped before it became ready.")
 
             try:
-                with urllib.request.urlopen(SERVER_URL, timeout=1):
+                with urllib.request.urlopen(LOCAL_URL, timeout=1):
                     break
             except Exception:
                 time.sleep(0.5)
         else:
-            raise RuntimeError(f"Website did not start within 30 seconds: {SERVER_URL}")
+            raise RuntimeError(f"Website did not start within 30 seconds: {LOCAL_URL}")
 
         # run pytests while the server is running
         yield
