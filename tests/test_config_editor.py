@@ -20,8 +20,8 @@ def start_website():
     # start website in the background
     server = subprocess.Popen(
         RUN_SERVER,
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
+        #stdout=subprocess.DEVNULL,
+        #stderr=subprocess.DEVNULL,
     )
 
     try:
