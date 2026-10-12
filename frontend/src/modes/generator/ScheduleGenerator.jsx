@@ -46,14 +46,15 @@ export default function ScheduleGenerator() {
   const [options, setOptions] = useState(null);
   const [optionsError, setOptionsError] = useState(null);
   const [limit, setLimit] = useState("");
-  const [optimizerFlags, setOptimizerFlags] = useState([]);
+  const [optimizerFlags, setOptimizerFlags] = useState(null);   // null = use the configuration's flags
+  const [configured, setConfigured] = useState(null);           // { limit, optimizer_flags } from the configuration
 
   const startGeneration = useAction(async () => {
     const parsedLimit = limit === "" ? undefined : Number(limit);
 
     return api.generation.start({
       limit: parsedLimit,
-      optimizerFlags,
+      optimizerFlags: optimizerFlags ?? undefined,   // no override: the server uses the configured flags
     });
   });
 
@@ -64,11 +65,12 @@ export default function ScheduleGenerator() {
 
     async function loadOptions() {
       try {
-        const result = await api.config.options();
+        const [result, current] = await Promise.all([api.config.options(), api.config.get()]);
 
         if (cancelled) return;
 
         setOptions(result);
+        setConfigured({ limit: current.document.limit, optimizer_flags: current.document.optimizer_flags });
       } catch (error) {
         if (!cancelled) setOptionsError(error);
       }
@@ -81,7 +83,7 @@ export default function ScheduleGenerator() {
     return () => {
       cancelled = true;
     };
-  }, [state?.config?.status]);
+  }, [state?.config?.status, state?.config?.revision]);
 
   if (loading) {
     return (
@@ -122,12 +124,12 @@ export default function ScheduleGenerator() {
   const maxLimit = options?.generation?.max_schedules ?? null;
   const optimizerOptions = options?.optimizer_flags ?? [];
 
+  const shownFlags = optimizerFlags ?? configured?.optimizer_flags ?? [];
+  const overriding = optimizerFlags !== null;
+
   function toggleOptimizer(flag) {
-    setOptimizerFlags((current) =>
-      current.includes(flag)
-        ? current.filter((item) => item !== flag)
-        : [...current, flag],
-    );
+    // The first click starts an override from the configured flags
+    setOptimizerFlags(shownFlags.includes(flag) ? shownFlags.filter((f) => f !== flag) : [...shownFlags, flag]);
   }
 
   async function handleGenerate() {
@@ -169,20 +171,28 @@ export default function ScheduleGenerator() {
                   value={limit}
                   disabled={running || startGeneration.busy}
                   onChange={(event) => setLimit(event.target.value)}
-                  placeholder="Use configured limit"
+                  placeholder={configured ? `Configured: ${configured.limit}` : "Use configured limit"}
                 />
               </Field>
 
               {optimizerOptions.length > 0 && (
                 <fieldset className="flag-list">
-                  <legend>Optimizer options</legend>
+                  <legend>
+                    Optimizer options{" "}
+                    <span className="muted">{overriding ? "(override for this run)" : "(from the configuration)"}</span>
+                  </legend>
+                  {overriding && (
+                    <Button size="sm" variant="ghost" onClick={() => setOptimizerFlags(null)}>
+                      Use configured flags
+                    </Button>
+                  )}
 
                   {optimizerOptions.map(({ value, description }) => (
                     <span key={value} className="flag-chip">
                       <label>
                         <input
                           type="checkbox"
-                          checked={optimizerFlags.includes(value)}
+                          checked={shownFlags.includes(value)}
                           disabled={running || startGeneration.busy}
                           onChange={() => toggleOptimizer(value)}
                         />
