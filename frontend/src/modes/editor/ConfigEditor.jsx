@@ -31,9 +31,10 @@ import FacultyDialog from "./dialogs/FacultyDialog.jsx";
 import DeleteDialog from "./dialogs/DeleteDialog.jsx";
 import DayBlocksDialog from "./dialogs/DayBlocksDialog.jsx";
 import TimeSlotsDialog from "./dialogs/TimeSlotsDialog.jsx";
+import ConfirmDialog from "../../components/ConfirmDialog.jsx";
 
 import ErrorMessage from "../../components/ErrorMessage.jsx";
-import { Load, Empty_Click, Validate, Save, ValidateAndSaveItem, DeleteItem, UpdateTimeSlot, UpdateSettings } from "../../state/EventHandlers";
+import { Load, ConfirmLoad, Empty_Click, Validate, Save, ValidateAndSaveItem, DeleteItem, UpdateTimeSlot, UpdateSettings } from "../../state/EventHandlers";
 
 export default function ConfigEditor() {
   const { state, loading, refresh } = useAppState();
@@ -42,13 +43,15 @@ export default function ConfigEditor() {
   const revision = config?.revision;
   const hasConfig = Boolean(config) && config.status !== "none";
   const fileInputRef = useRef(null); //
-	const [loadingFile, setLoadingFile] = useState(false); //
+  const [loadingFile, setLoadingFile] = useState(false); //
   const [editing, setEditing] = useState(null);   // the item being edited
   const [options, setOptions] = useState(null);   // library choices for the dialogs; they have fallbacks
   const [deleting, setDeleting] = useState(null);  // the item being deleted, e.g. { area: "rooms", index: 0 }
   const [impact, setImpact] = useState(null);      // its delete preview, from api.config.deleteImpact
-	const[error, setError] = useState(null); //
-	const[localError, setLocalError] = useState([]);
+  const [error, setError] = useState(null); //
+  const [localError, setLocalError] = useState(null);   // the error from a failed edit, e.g. { message, issues: [{ area, index, field, message }] }
+  const [pendingLoad, setPendingLoad] = useState(null);   // a load waiting for "discard changes?"
+  const [settingsError, setSettingsError] = useState(null);
 
   useEffect(() => {
     if (!hasConfig) return;
@@ -86,37 +89,23 @@ export default function ConfigEditor() {
     );
   }
 
-	if(error) {
-		return (
-			<div>
-				<ErrorMessage 
-					error={error.error}
-					title={error.title}
-					labels={error.labels}
-					onDismiss={error.onDismiss}
-				/>
-			</div>
-		);
-	}
-
   if (!config || config.status === "none") {
     return (
       <>
         <PageHeader title="Configuration" subtitle="Start a new configuration or load one from a JSON file." />
+        <ErrorMessage error={error?.error} title={error?.title} onDismiss={error?.onDismiss} />
         <EmptyState
           title="No configuration loaded"
           mark={<Penne size={40} />}
           actions={
             <>
-              <Button variant="primary" onClick={() => Empty_Click(setLoadingFile)}>New</Button>
+              <Button variant="primary" onClick={() => Empty_Click(setLoadingFile, setError, setPendingLoad)}>New</Button>
               <Button onClick={() => { fileInputRef.current.click(); }}>Load JSON...</Button>
               <input
                 ref={fileInputRef}
                 type="file"
                 style={{ display: "none" }}
-                onChange={ async(event) => { await Load (event, setLoadingFile, setError); await refresh(); }}
-              />
-
+                onChange={async (event) => { if (await Load(event, setLoadingFile, setError, setPendingLoad)) await refresh(); }} />
             </>
           }
         >
@@ -148,23 +137,24 @@ export default function ConfigEditor() {
         }
         actions={
           <>
-            <Button variant="ghost">Raw JSON</Button>
-            <Button onClick={ async() => { await Empty_Click(setLoadingFile); await refresh(); }}>New</Button>
+           {/* <Button variant="ghost">Raw JSON</Button>*/}
+            <Button onClick={async () => { await Empty_Click(setLoadingFile, setError, setPendingLoad); await refresh(); }}>New</Button>
 
             <Button onClick={() => fileInputRef.current.click()}>Load JSON...</Button>
             <input
               ref={fileInputRef}
               type="file"
               style={{ display: "none" }}
-              onChange= { async(event) => { await Load(event, setLoadingFile, setError); await refresh();  }}
+              onChange={async (event) => { if (await Load(event, setLoadingFile, setError, setPendingLoad)) await refresh(); }}
             />
 
 
-            <Button onClick={ async() => { const res = await Save(); if(res) { await refresh(); } }}>Save JSON...</Button>
-            <Button variant="primary" onClick={ async() =>  { await Validate(); await refresh(); }}>Validate</Button>
+            <Button onClick={async () => { const res = await Save(); if (res) { await refresh(); } }}>Save JSON...</Button>
+            <Button variant="primary" onClick={async () => { await Validate(); await refresh(); }}>Validate</Button>
           </>
         }
       />
+      <ErrorMessage error={error?.error} title={error?.title} onDismiss={error?.onDismiss} />
       <Banner tone={bannerTone} title={status.label}>
         {describeCounts(config.counts)}.
         {config.status === "incomplete" && <IssueList issues={config.issues} />}
@@ -249,8 +239,9 @@ export default function ConfigEditor() {
                 key={i}
                 pattern={p}
                 onEdit={() => setEditing({ area: "patterns", index: i })}
-                onToggle={ async() => {
-                  await ValidateAndSaveItem({ area: "patterns", index: i }, { ...p, disabled: !p.disabled }, setEditing, setLocalError); await refresh(); }
+                onToggle={async () => {
+                  await ValidateAndSaveItem({ area: "patterns", index: i }, { ...p, disabled: !p.disabled }, setEditing, setLocalError); await refresh();
+                }
                 }
               />
             ))}
@@ -265,7 +256,8 @@ export default function ConfigEditor() {
             <SettingsCard
               settings={settings}
               flags={options?.optimizer_flags}
-              onApply={(values) => UpdateSettings(values)}  
+              error={settingsError}
+              onApply={async (values) => { if (await UpdateSettings(values, setSettingsError)) await refresh(); }}
             />
           </div>
           {!deleting && editing?.area === "faculty" && (
@@ -277,10 +269,10 @@ export default function ConfigEditor() {
               rooms={items.rooms.map((r) => r.name)}
               labs={items.labs.map((l) => l.name)}
               options={options}
-              onCancel={() => setEditing(null)}
-              onDelete={() => setDeleting(editing)}
-              onSave={ async(draft) => { await ValidateAndSaveItem(editing, draft, setEditing, setLocalError); await refresh(); }}
-	      localError={localError}  
+              onCancel={() => { setLocalError(null); setEditing(null); }}
+              onDelete={() => { setLocalError(null); setDeleting(editing); }}
+              onSave={async (draft) => { await ValidateAndSaveItem(editing, draft, setEditing, setLocalError); await refresh(); }}
+              error={localError}
             />
           )}
           {!deleting && editing?.area === "courses" && (
@@ -296,10 +288,10 @@ export default function ConfigEditor() {
               roomFeatures={[...new Set(items.rooms.flatMap((r) => r.features ?? []))]}
               labFeatures={[...new Set(items.labs.flatMap((l) => l.features ?? []))]}
               options={options}
-              onCancel={() => setEditing(null)}
-              onDelete={() => setDeleting(editing)}
-              onSave={ async(draft) => { await ValidateAndSaveItem(editing, draft, setEditing, setLocalError); await refresh(); }}
-		  localError={localError}
+              onCancel={() => { setLocalError(null); setEditing(null); }}
+              onDelete={() => { setLocalError(null); setDeleting(editing); }}
+              onSave={async (draft) => { await ValidateAndSaveItem(editing, draft, setEditing, setLocalError); await refresh(); }}
+              error={localError}
             />
           )}
           {!deleting && (editing?.area === "rooms" || editing?.area === "labs") && (
@@ -310,10 +302,10 @@ export default function ConfigEditor() {
               resource={editing.index === null ? null : items[editing.area][editing.index]}
               suggestions={[...new Set(items[editing.area].flatMap((r) => r.features ?? []))]}
               options={options}
-              onCancel={() => setEditing(null)}
-              onDelete={() => setDeleting(editing)}
-              onSave={ async(draft) => { await ValidateAndSaveItem(editing, draft, setEditing, setLocalError); await refresh(); }}
-		  localError={localError}
+              onCancel={() => { setLocalError(null); setEditing(null); }}
+              onDelete={() => { setLocalError(null); setDeleting(editing); }}
+              onSave={async (draft) => { await ValidateAndSaveItem(editing, draft, setEditing, setLocalError); await refresh(); }}
+              error={localError}
             />
           )}
           {!deleting && editing?.area === "patterns" && (
@@ -322,10 +314,10 @@ export default function ConfigEditor() {
               index={editing.index}
               pattern={editing.index === null ? null : patterns[editing.index]}
               options={options}
-              onCancel={() => setEditing(null)}
-              onDelete={() => setDeleting(editing)}
-              onSave={ async(draft) => { await ValidateAndSaveItem(editing, draft, setEditing, setLocalError); await refresh(); }}
-		  localError={localError}
+              onCancel={() => { setLocalError(null); setEditing(null); }}
+              onDelete={() => { setLocalError(null); setDeleting(editing); }}
+              onSave={async (draft) => { await ValidateAndSaveItem(editing, draft, setEditing, setLocalError); await refresh(); }}
+              error={localError}
             />
           )}
           {editing?.area === "time_slots" && (
@@ -333,17 +325,18 @@ export default function ConfigEditor() {
               key={`time_slots-${editing.day}`}
               day={editing.day}
               times={timeSlots.times}
-              onCancel={() => setEditing(null)}
-              onSave={ async(times) => { await UpdateTimeSlot(times, setEditing); await refresh(); }}
-	      localError={localError}  
+              onCancel={() => { setLocalError(null); setEditing(null); }}
+              onSave={async (times) => { await UpdateTimeSlot({ times }, setEditing, setLocalError); await refresh(); }}
+              error={localError}
 
             />
           )}
           {editing?.area === "timing" && (
             <TimeSlotsDialog
               timeSlots={timeSlots}
-              onCancel={() => setEditing(null)}
-              onSave={ async(values) => { await UpdateTimeSlot(values, setEditing); await refresh(); }}  
+              onCancel={() => { setLocalError(null); setEditing(null); }}
+              onSave={async (values) => { await UpdateTimeSlot(values, setEditing, setLocalError); await refresh(); }}
+              error={localError}
             />
           )}
           {deleting && (
@@ -351,10 +344,25 @@ export default function ConfigEditor() {
               key={`delete-${deleting.area}-${deleting.index}`}
               impact={shownImpact?.reply ?? null}
               loadError={shownImpact?.error}
-              onCancel={() => setDeleting(null)}   /* back to the edit dialog */
-              onConfirm={() => DeleteItem(deleting, setDeleting, setEditing)} 
+              error={localError}
+              onCancel={() => { setLocalError(null); setDeleting(null); }}   /* back to the edit dialog */
+              onConfirm={async () => { if (await DeleteItem(deleting, setDeleting, setEditing, setLocalError)) await refresh(); }}
             />
           )}
+          <ConfirmDialog
+            open={pendingLoad !== null}
+            title={`Discard changes and load ${pendingLoad?.filename}?`}
+            destructive
+            confirmLabel="Discard and load"
+            cancelLabel="Keep my changes"
+            onConfirm={async () => { if (await ConfirmLoad(pendingLoad, setPendingLoad, setLoadingFile, setError)) await refresh(); }}
+            onCancel={() => setPendingLoad(null)}
+          >
+            <p>These changes haven't been saved and will be lost:</p>
+            <ul>
+              {pendingLoad?.changes.map((change) => <li key={change.revision}>{change.summary}</li>)}
+            </ul>
+          </ConfirmDialog>
         </>
       )}
     </div>

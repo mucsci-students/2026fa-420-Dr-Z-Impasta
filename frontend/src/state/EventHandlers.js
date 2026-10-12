@@ -1,4 +1,4 @@
-import { loadConfiguration, loadEmptyConfig, validateConfig, saveConfig, exportConfig, addItem, replaceItem, deleteItem, updateTimeSlot, updateSettings } from "../components/APICommunication";
+import { loadConfiguration, validateConfig, saveConfig, exportConfig, addItem, replaceItem, deleteItem, updateTimeSlot, updateSettings } from "../components/APICommunication";
 
 const ConfigStatusObj = Object.freeze({
 	NONE: "none",
@@ -10,44 +10,72 @@ const Error = (error, title, labels, onDismiss) => {
 	return { "error" : error, "title" : title, "labels" : labels, "onDismiss" : onDismiss };
 };
 
-export const Load = async(event, setLoadingFile, setError) => {
+/** Send a file's text to the server, then show what happened. */
+const sendLoad = async(filename, content, discardChanges, setError, setPendingLoad) => {
+	const res = await loadConfiguration(filename, content, discardChanges);
+	if(res.ok) {
+		setError(null);
+		return true;
+	}
 
+	const { error } = await res.json();
+	if(error?.code === "unsaved_changes") {
+		// Ask first; ConfirmLoad sends it again if the user agrees
+		setPendingLoad({ filename, content, changes: error.changes ?? [] });
+		return false;
+	}
+	setError(Error({ message: error?.message, issues: error?.issues }, `Couldn't load ${filename}`, undefined, () => setError(null)));
+	return false;
+};
+
+export const Load = async(event, setLoadingFile, setError, setPendingLoad) => {
 	const file = event.target.files[0];
-	if(!file) return;
+	event.target.value = "";   // so choosing the same file again still triggers onChange
+	if(!file) return false;
 
 	setLoadingFile(true);
 	try {
-		const res = await loadConfiguration(file);
-
-		if (!res.ok) {	
-			const component = Error(res, "Invalid configuration file", res.issues, () => setError(null));
-			setError(component);
-			return;
+		let content;
+		try {
+			content = await file.text();
+		} catch {
+			setError(Error({ message: `${file.name} couldn't be read. Check that the file still exists and you can open it.` }, `Couldn't load ${file.name}`, undefined, () => setError(null)));
+			return false;
 		}
-
-		else {
-			return res.json();
-		}
-	} catch(err) {
-		return err;
+		return await sendLoad(file.name, content, false, setError, setPendingLoad);
 	} finally {
-		await new Promise(resolve => setTimeout(resolve, 2000));
 		setLoadingFile(false);
 	}
 };
 
-export const Empty_Click = async(setLoadingFile) => {
+/** The user agreed to discard their unsaved changes: load the same file again. */
+export const ConfirmLoad = async(pending, setPendingLoad, setLoadingFile, setError) => {
+	setPendingLoad(null);
 	setLoadingFile(true);
 	try {
-		const res = await loadEmptyConfig();
-		return res;
+		return await sendLoad(pending.filename, pending.content, true, setError, setPendingLoad);
+	} finally {
+		setLoadingFile(false);
+	}
+};
 
-		} catch(error) {
-			return error;
-		} finally {
-			await new Promise(resolve => setTimeout(resolve, 2000));
-			setLoadingFile(false);
-		}
+export const Empty_Click = async(setLoadingFile, setError, setPendingLoad) => {
+	setLoadingFile(true);
+
+	const content = await fetch('/new_config.json')
+		.then(response => {
+			if (!response.ok) throw new Error('Failed to load config');
+			return response.text();
+		});
+
+	const filename = "unnamed.json"
+	try {
+		return await sendLoad(filename, content, false, setError, setPendingLoad);
+	} 
+	finally {
+		await new Promise(resolve => setTimeout(resolve, 2000));
+		setLoadingFile(false);
+	}
 };
 
 export const Validate = async() => {
@@ -106,7 +134,7 @@ const Download = async(content, filename) => {
 	});
 
 	const writable = await fileHandle.createWritable();
-	await writable.write(JSON.stringify(content));
+	await writable.write(content);
 	await writable.close();
 
 	return;
@@ -160,7 +188,7 @@ const handleItem = async (res, setEditing, setLocalError) => {
 
 	} else {
 		setEditing(null);
-		setLocalError([]);
+		setLocalError(null);
 	}
 
 	return res;
@@ -168,51 +196,48 @@ const handleItem = async (res, setEditing, setLocalError) => {
 
 
 const setErrors = (setLocalError, resJSON) => {
-	const errorFields = [];
-	for(const [,value] of Object.entries(resJSON.error.issues)) {
-		errorFields.push({"field" : value.field, "message" : value.message});
-	}
-
-	setLocalError(errorFields);
+  setLocalError(resJSON.error ?? { message: "The change was not applied." });   // { message, issues: [{ area, index, field, message }] }
 };
 
-export const DeleteItem = async(deleting, setDeleting, setEditing) => {
-	
-	const area = deleting.area;
-	const index = deleting.index;
-
+export const DeleteItem = async(deleting, setDeleting, setEditing, setLocalError) => {
 	try {
-		await deleteItem(area, index);
+		const res = await deleteItem(deleting.area, deleting.index);
+		if(!res.ok) {
+			const { error } = await res.json();
+			setLocalError(error ?? { message: "Nothing was deleted." });
+			return false;   // keep the dialog open so the reason stays visible
+		}
+		setLocalError(null);
 		setDeleting(null);
 		setEditing(null);
-
-	} catch(err) {
-		return err;
+		return true;
+	} catch {
+		setLocalError({ message: "The server couldn't be reached. Nothing was deleted." });
+		return false;
 	}
 };
 
-export const UpdateTimeSlot = async(vals, setEditing) => {
+export const UpdateTimeSlot = async(vals, setEditing, setLocalError) => {
 
 	try {
-		const res = await updateTimeSlot(vals);
-		
-		if(res.state.status == ConfigStatusObj.VALID) {
-			setEditing(null);
-			return res;
-		} 
-
+    return await handleItem(await updateTimeSlot(vals), setEditing, setLocalError);
 	} catch(err) {
 		return err;
 	}
 };
 
-export const UpdateSettings = async(vals) => {
-	
+export const UpdateSettings = async(vals, setSettingsError) => {
 	try {
 		const res = await updateSettings(vals);
-		return res;
-	} catch(err) {
-		return err;
+		if(!res.ok) {
+			const { error } = await res.json();
+			setSettingsError(error ?? { message: "The change was not applied." });
+			return false;
+		}
+		setSettingsError(null);
+		return true;
+	} catch {
+		setSettingsError({ message: "The server couldn't be reached. The change was not applied." });
+		return false;
 	}
-
 };

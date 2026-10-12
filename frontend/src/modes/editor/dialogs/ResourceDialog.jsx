@@ -27,7 +27,7 @@ const WORKDAY = [{ start: "08:00", end: "17:00" }];
  * Add or edit a room or lab. Edits a draft; nothing changes until Save succeeds.
  * `options` is the reply from api.config.options(); fallbacks are used until it arrives.
  */
-export default function ResourceDialog({ area, index, resource, suggestions, options, busy, error, onSave, onCancel, onDelete, localError }) {
+export default function ResourceDialog({ area, index, resource, suggestions, options, busy, error, onSave, onCancel, onDelete }) {
   const isNew = index === null;
   const kind = area === "rooms" ? "room" : "lab";
   const original = { ...NEW_RESOURCE, ...resource };   // fill defaults the document may omit
@@ -37,6 +37,13 @@ export default function ResourceDialog({ area, index, resource, suggestions, opt
   const weekdays = options?.weekdays?.length ? options.weekdays : WEEKDAYS;
   // The hours to bring back when "Unrestricted availability" is unticked
   const [lastHours, setLastHours] = useState(original.times);
+  // Problems that have no field in this dialog to appear under; the banner lists them instead
+  const FIELDS = ["name", "capacity", "features", "times"];
+  const unplaced = (error?.issues ?? []).filter((issue) =>
+    issue.area !== area ||
+    (index !== null && issue.index !== index) ||
+    !FIELDS.some((f) => issue.field === f || issue.field?.startsWith(`${f}.`)),
+  );
 
   /** Tick: remember the hours, then clear them. Untick: bring back the remembered or default hours. "Unrestricted availability" means the resource is always available. */
   function setUnrestrictedAvailability(unrestricted) {
@@ -65,15 +72,14 @@ export default function ResourceDialog({ area, index, resource, suggestions, opt
     return found.length > 0 ? found.map((issue) => issue.message).join(" ") : undefined;
   }
 
-	/** A function to assign the input field the 'input-error' class if it contains invalid data */
-	function classNameFunc(field) {
-	        if(localError.some((err) => err.field === field)) {
-			return "input-error";
-		} else {
-			return "";
-		}
-	}
-
+  /** A function to assign the input field the 'input-error' class if it contains invalid data */
+  function classNameFunc(field) {
+    if ((error?.issues ?? []).some((issue) => issue.field === field)) {
+      return "input-error";
+    } else {
+      return "";
+    }
+  }
 
   // The prompts are siblings of the Dialog, not children: React bubbles a nested <dialog>'s
   // Escape (cancel event) up the component tree, which would also close this one.
@@ -95,7 +101,7 @@ export default function ResourceDialog({ area, index, resource, suggestions, opt
           </>
         }
       >
-        <ErrorMessage error={error} title="Not saved." />
+        <ErrorMessage error={error && { message: "The change was not applied.", issues: unplaced }} title="Not saved." />
 
         <Field label="Name" required error={errorFor("name")}>
           <input className={classNameFunc("name")} value={draft.name} onChange={(e) => set("name", e.target.value)} data-autofocus />

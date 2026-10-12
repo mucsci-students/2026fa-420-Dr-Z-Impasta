@@ -111,8 +111,8 @@ def load_configuration(app: App, request: LoadRequest) -> dict:
 
 
 @router.post("/config/load_empty")
-def load_empty(app: App) -> dict:
-    return app.load_empty()
+def load_empty(app: App, request: LoadRequest) -> dict:
+    return app.load_empty(request.content, request.filename)
 
 
 @router.post("/config/validate")

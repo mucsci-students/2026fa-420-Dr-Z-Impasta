@@ -26,6 +26,13 @@ export default function TimeSlotsDialog({ timeSlots, busy, error, onSave, onCanc
   const isDirty = JSON.stringify(draft) !== JSON.stringify(original);
   const [confirmingDiscard, setConfirmingDiscard] = useState(false);
 
+  // Problems with nowhere to appear in this dialog; the banner lists them instead
+  const FIELDS = ["max_time_gap", "min_time_overlap"];
+  const unplaced = (error?.issues ?? []).filter((issue) =>
+    issue.area !== "time_slots" ||
+    !FIELDS.some((f) => issue.field === f || issue.field?.startsWith(`${f}.`)),
+  );
+
   /** Cancel, Escape, or ×: ask first if there are unsaved edits. */
   function requestClose() {
     if (isDirty) setConfirmingDiscard(true);
@@ -57,7 +64,7 @@ export default function TimeSlotsDialog({ timeSlots, busy, error, onSave, onCanc
           </>
         }
       >
-        <ErrorMessage error={error} title="Not saved." />
+        <ErrorMessage error={error && { message: "The change was not applied.", issues: unplaced }} title="Not saved." />
 
         <div className="form-grid">
           <Field
