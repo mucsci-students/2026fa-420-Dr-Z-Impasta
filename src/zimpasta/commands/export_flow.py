@@ -1,8 +1,8 @@
 """The interactive export step shared by the run and results commands."""
 
 from zimpasta.console import Console
-from zimpasta.export import ExportFormat, ExportResult, export_schedules
-from zimpasta.generate import Schedule
+from zimpasta.model.export import ExportFormat, ExportResult, export_schedules
+from zimpasta.model.generate import Schedule
 from zimpasta.prompts import (
     UNWRITABLE_FILENAME,
     VALID_FILENAME_PROMPT,

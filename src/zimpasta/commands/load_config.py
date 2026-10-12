@@ -13,8 +13,8 @@ from pathlib import Path
 from pydantic import ValidationError
 
 from zimpasta.command import CommandError, CommandSpec, Invocation, Positional
-from zimpasta.config_loader import load_config as read_config
 from zimpasta.console import Console
+from zimpasta.model.config_loader import load_config as read_config
 from zimpasta.session import Session
 
 PATH_PROMPT = "Enter configuration file path: "

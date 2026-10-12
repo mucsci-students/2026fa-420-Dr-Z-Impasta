@@ -1,0 +1,469 @@
+{
+  "times": {
+    "MON": [
+      {
+        "start": "08:00",
+        "spacing": 60,
+        "end": "19:00"
+      }
+    ],
+    "TUE": [
+      {
+        "start": "08:00",
+        "spacing": 60,
+        "end": "12:00"
+      },
+      {
+        "start": "13:10",
+        "spacing": 60,
+        "end": "17:10"
+      },
+      {
+        "start": "17:10",
+        "spacing": 30,
+        "end": "19:40"
+      }
+    ],
+    "WED": [
+      {
+        "start": "08:00",
+        "spacing": 60,
+        "end": "19:00"
+      }
+    ],
+    "THU": [
+      {
+        "start": "08:00",
+        "spacing": 60,
+        "end": "12:00"
+      },
+      {
+        "start": "13:10",
+        "spacing": 60,
+        "end": "17:10"
+      },
+      {
+        "start": "17:10",
+        "spacing": 30,
+        "end": "19:40"
+      }
+    ],
+    "FRI": [
+      {
+        "start": "08:00",
+        "spacing": 60,
+        "end": "17:00"
+      }
+    ]
+  },
+  "classes": [
+    {
+      "credits": 3,
+      "meetings": [
+        {
+          "day": "MON",
+          "start_time": null,
+          "duration": 50,
+          "lab": false,
+          "delivery": "in_person"
+        },
+        {
+          "day": "WED",
+          "start_time": null,
+          "duration": 50,
+          "lab": false,
+          "delivery": "in_person"
+        },
+        {
+          "day": "FRI",
+          "start_time": null,
+          "duration": 50,
+          "lab": false,
+          "delivery": "in_person"
+        }
+      ],
+      "disabled": false,
+      "start_time": null
+    },
+    {
+      "credits": 3,
+      "meetings": [
+        {
+          "day": "TUE",
+          "start_time": null,
+          "duration": 75,
+          "lab": false,
+          "delivery": "in_person"
+        },
+        {
+          "day": "THU",
+          "start_time": null,
+          "duration": 75,
+          "lab": false,
+          "delivery": "in_person"
+        }
+      ],
+      "disabled": false,
+      "start_time": null
+    },
+    {
+      "credits": 4,
+      "meetings": [
+        {
+          "day": "MON",
+          "start_time": null,
+          "duration": 110,
+          "lab": false,
+          "delivery": "in_person"
+        },
+        {
+          "day": "WED",
+          "start_time": null,
+          "duration": 110,
+          "lab": false,
+          "delivery": "in_person"
+        }
+      ],
+      "disabled": false,
+      "start_time": null
+    },
+    {
+      "credits": 4,
+      "meetings": [
+        {
+          "day": "MON",
+          "start_time": null,
+          "duration": 110,
+          "lab": true,
+          "delivery": "in_person"
+        },
+        {
+          "day": "WED",
+          "start_time": null,
+          "duration": 110,
+          "lab": false,
+          "delivery": "in_person"
+        }
+      ],
+      "disabled": false,
+      "start_time": "16:00"
+    },
+    {
+      "credits": 4,
+      "meetings": [
+        {
+          "day": "MON",
+          "start_time": null,
+          "duration": 110,
+          "lab": true,
+          "delivery": "in_person"
+        },
+        {
+          "day": "FRI",
+          "start_time": null,
+          "duration": 110,
+          "lab": false,
+          "delivery": "in_person"
+        }
+      ],
+      "disabled": true,
+      "start_time": null
+    },
+    {
+      "credits": 4,
+      "meetings": [
+        {
+          "day": "TUE",
+          "start_time": null,
+          "duration": 110,
+          "lab": true,
+          "delivery": "in_person"
+        },
+        {
+          "day": "THU",
+          "start_time": null,
+          "duration": 110,
+          "lab": false,
+          "delivery": "in_person"
+        }
+      ],
+      "disabled": false,
+      "start_time": null
+    },
+    {
+      "credits": 4,
+      "meetings": [
+        {
+          "day": "TUE",
+          "start_time": null,
+          "duration": 110,
+          "lab": false,
+          "delivery": "in_person"
+        },
+        {
+          "day": "THU",
+          "start_time": null,
+          "duration": 110,
+          "lab": true,
+          "delivery": "in_person"
+        }
+      ],
+      "disabled": false,
+      "start_time": null
+    },
+    {
+      "credits": 4,
+      "meetings": [
+        {
+          "day": "MON",
+          "start_time": null,
+          "duration": 50,
+          "lab": false,
+          "delivery": "in_person"
+        },
+        {
+          "day": "TUE",
+          "start_time": null,
+          "duration": 110,
+          "lab": true,
+          "delivery": "in_person"
+        },
+        {
+          "day": "FRI",
+          "start_time": null,
+          "duration": 50,
+          "lab": false,
+          "delivery": "in_person"
+        }
+      ],
+      "disabled": false,
+      "start_time": null
+    },
+    {
+      "credits": 4,
+      "meetings": [
+        {
+          "day": "MON",
+          "start_time": null,
+          "duration": 50,
+          "lab": false,
+          "delivery": "in_person"
+        },
+        {
+          "day": "WED",
+          "start_time": null,
+          "duration": 110,
+          "lab": true,
+          "delivery": "in_person"
+        },
+        {
+          "day": "FRI",
+          "start_time": null,
+          "duration": 50,
+          "lab": false,
+          "delivery": "in_person"
+        }
+      ],
+      "disabled": false,
+      "start_time": null
+    },
+    {
+      "credits": 4,
+      "meetings": [
+        {
+          "day": "MON",
+          "start_time": null,
+          "duration": 50,
+          "lab": false,
+          "delivery": "in_person"
+        },
+        {
+          "day": "THU",
+          "start_time": null,
+          "duration": 110,
+          "lab": true,
+          "delivery": "in_person"
+        },
+        {
+          "day": "FRI",
+          "start_time": null,
+          "duration": 50,
+          "lab": false,
+          "delivery": "in_person"
+        }
+      ],
+      "disabled": false,
+      "start_time": null
+    },
+    {
+      "credits": 4,
+      "meetings": [
+        {
+          "day": "MON",
+          "start_time": null,
+          "duration": 110,
+          "lab": true,
+          "delivery": "in_person"
+        },
+        {
+          "day": "TUE",
+          "start_time": null,
+          "duration": 50,
+          "lab": false,
+          "delivery": "in_person"
+        },
+        {
+          "day": "FRI",
+          "start_time": null,
+          "duration": 50,
+          "lab": false,
+          "delivery": "in_person"
+        }
+      ],
+      "disabled": true,
+      "start_time": null
+    },
+    {
+      "credits": 4,
+      "meetings": [
+        {
+          "day": "MON",
+          "start_time": null,
+          "duration": 110,
+          "lab": true,
+          "delivery": "in_person"
+        },
+        {
+          "day": "WED",
+          "start_time": null,
+          "duration": 50,
+          "lab": false,
+          "delivery": "in_person"
+        },
+        {
+          "day": "FRI",
+          "start_time": null,
+          "duration": 50,
+          "lab": false,
+          "delivery": "in_person"
+        }
+      ],
+      "disabled": true,
+      "start_time": null
+    },
+    {
+      "credits": 4,
+      "meetings": [
+        {
+          "day": "MON",
+          "start_time": null,
+          "duration": 110,
+          "lab": true,
+          "delivery": "in_person"
+        },
+        {
+          "day": "THU",
+          "start_time": null,
+          "duration": 50,
+          "lab": false,
+          "delivery": "in_person"
+        },
+        {
+          "day": "FRI",
+          "start_time": null,
+          "duration": 50,
+          "lab": false,
+          "delivery": "in_person"
+        }
+      ],
+      "disabled": true,
+      "start_time": null
+    },
+    {
+      "credits": 4,
+      "meetings": [
+        {
+          "day": "MON",
+          "start_time": null,
+          "duration": 50,
+          "lab": false,
+          "delivery": "in_person"
+        },
+        {
+          "day": "TUE",
+          "start_time": null,
+          "duration": 50,
+          "lab": false,
+          "delivery": "in_person"
+        },
+        {
+          "day": "FRI",
+          "start_time": null,
+          "duration": 110,
+          "lab": true,
+          "delivery": "in_person"
+        }
+      ],
+      "disabled": true,
+      "start_time": null
+    },
+    {
+      "credits": 4,
+      "meetings": [
+        {
+          "day": "MON",
+          "start_time": null,
+          "duration": 50,
+          "lab": false,
+          "delivery": "in_person"
+        },
+        {
+          "day": "WED",
+          "start_time": null,
+          "duration": 50,
+          "lab": false,
+          "delivery": "in_person"
+        },
+        {
+          "day": "FRI",
+          "start_time": null,
+          "duration": 110,
+          "lab": true,
+          "delivery": "in_person"
+        }
+      ],
+      "disabled": true,
+      "start_time": null
+    },
+    {
+      "credits": 4,
+      "meetings": [
+        {
+          "day": "MON",
+          "start_time": null,
+          "duration": 50,
+          "lab": false,
+          "delivery": "in_person"
+        },
+        {
+          "day": "THU",
+          "start_time": null,
+          "duration": 50,
+          "lab": false,
+          "delivery": "in_person"
+        },
+        {
+          "day": "FRI",
+          "start_time": null,
+          "duration": 110,
+          "lab": true,
+          "delivery": "in_person"
+        }
+      ],
+      "disabled": true,
+      "start_time": null
+    }
+  ],
+  "max_time_gap": 30,
+  "min_time_overlap": 45
+}

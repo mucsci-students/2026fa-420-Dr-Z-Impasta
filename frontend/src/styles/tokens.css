@@ -1,0 +1,47 @@
+/* Design tokens from the Sprint 2 mockups. Use these variables, not raw colors. */
+:root {
+  --font-sans: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+
+  --ink: #1b1c1e;
+  --ink-2: #4a4c50;
+  --muted: #75777b;
+  --faint: #a3a5a8;
+
+  --page: #f5f5f3;
+  --surface: #ffffff;
+  --surface-2: #fafaf8;
+  --surface-3: #eeeeea;
+  --line: #e2e2dd;
+  --line-strong: #cfcfc8;
+
+  --accent: oklch(0.52 0.12 255);
+  --accent-strong: oklch(0.42 0.12 255);
+  --accent-soft: oklch(0.95 0.025 255);
+
+  --success: oklch(0.42 0.11 150);
+  --success-dot: oklch(0.52 0.11 150);
+  --success-soft: oklch(0.96 0.025 150);
+  --warning: oklch(0.42 0.1 75);
+  --warning-dot: oklch(0.62 0.12 75);
+  --warning-soft: oklch(0.96 0.03 85);
+  --danger: oklch(0.48 0.15 25);
+  --danger-line: oklch(0.85 0.05 25);
+  --danger-soft: oklch(0.97 0.015 25);
+
+  --radius-sm: 4px;
+  --radius: 6px;
+  --radius-lg: 8px;
+  --shadow-modal: 0 20px 50px rgba(0, 0, 0, 0.22);
+  --shadow-float: 0 12px 30px rgba(0, 0, 0, 0.12);
+  --overlay: rgba(27, 28, 30, 0.42);
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+
+  --focus: 0 0 0 3px oklch(0.52 0.12 255 / 0.35);
+}

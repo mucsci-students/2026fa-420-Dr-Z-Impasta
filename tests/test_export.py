@@ -4,7 +4,12 @@ from pathlib import Path
 
 import pytest
 
-from zimpasta.export import ExportFormat, export_schedules, resolve_output_path, unwritable_reason
+from zimpasta.model.export import (
+    ExportFormat,
+    export_schedules,
+    resolve_output_path,
+    unwritable_reason,
+)
 
 
 def test_parse_format_is_case_insensitive():
@@ -119,7 +124,7 @@ def test_failed_write_removes_the_claimed_file(tmp_path, real_schedules, monkeyp
         def __exit__(self, *args):
             return None
 
-    monkeypatch.setattr("zimpasta.export.CSVWriter", Broken)
+    monkeypatch.setattr("zimpasta.model.export.CSVWriter", Broken)
 
     with pytest.raises(RuntimeError):
         export_schedules(real_schedules, path, ExportFormat.CSV)

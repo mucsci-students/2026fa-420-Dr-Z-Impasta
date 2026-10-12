@@ -1,5 +1,5 @@
 from tests.helpers import ScriptedConsole
-from zimpasta.export import ExportFormat
+from zimpasta.model.export import ExportFormat
 from zimpasta.prompts import (
     INVALID_CHOICE,
     INVALID_YES_NO,

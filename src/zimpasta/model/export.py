@@ -18,7 +18,7 @@ from pathlib import Path
 
 from scheduler.writers import CSVWriter, JSONWriter
 
-from zimpasta.generate import Schedule
+from zimpasta.model.generate import Schedule
 
 
 class ExportFormat(StrEnum):

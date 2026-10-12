@@ -7,7 +7,7 @@ files from disk (see ``commands/display_schedules.py``).
 
 from scheduler.models import CourseInstance
 
-from zimpasta.generate import GenerationResult, Schedule, describe_reason
+from zimpasta.model.generate import GenerationResult, Schedule, describe_reason
 
 _HEADER = ("Course", "Faculty", "Room", "Lab", "Meetings")
 

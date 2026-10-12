@@ -8,9 +8,9 @@ them bare asks for the schedule number, format, and output file.
 from zimpasta.command import CommandError, CommandSpec, Invocation, Option, Positional
 from zimpasta.commands.export_flow import export_with_prompts
 from zimpasta.console import Console
-from zimpasta.export import ExportFormat, resolve_output_path
+from zimpasta.model.export import ExportFormat, resolve_output_path
+from zimpasta.model.results import ScheduleStore
 from zimpasta.prompts import OutputTarget, ask_format, ask_int, ask_output_path
-from zimpasta.results import ScheduleStore
 from zimpasta.session import Session
 from zimpasta.view import format_schedule, summarize
 

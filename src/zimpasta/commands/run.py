@@ -17,10 +17,10 @@ from scheduler import CombinedConfig
 
 from zimpasta.command import CommandError, CommandSpec, Invocation, Option
 from zimpasta.commands.export_flow import export_with_prompts
-from zimpasta.config_loader import load_config
 from zimpasta.console import Console
-from zimpasta.export import ExportFormat, resolve_output_path
-from zimpasta.generate import (
+from zimpasta.model.config_loader import load_config
+from zimpasta.model.export import ExportFormat, resolve_output_path
+from zimpasta.model.generate import (
     REASON_EXHAUSTED,
     REASON_TIMEOUT,
     REASON_UNKNOWN,

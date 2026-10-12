@@ -1,0 +1,287 @@
+/*
+ * Schedule Viewer styles.
+ * Swap the --viewer-* values for the team's tokens in src/styles if they exist,
+ * or move this file into src/styles and import it with the others.
+ */
+ .schedule-viewer {
+  --viewer-line: #e3e1dc;
+  --viewer-muted: #6b6b6b;
+  --viewer-accent: #3b5fa8;
+  --viewer-lecture-bg: #e7effb;
+  --viewer-lecture-border: #a9c1ea;
+  --viewer-lab-bg: #e6f4ea;
+  --viewer-lab-border: #a3d2b1;
+}
+
+.schedule-viewer__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* Toolbar */
+.schedule-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 20px;
+  padding: 12px;
+  border: 1px solid var(--viewer-line);
+  border-radius: 8px;
+  margin-bottom: 16px;
+}
+
+.schedule-picker {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.schedule-toolbar__summary {
+  margin-left: auto;
+  font-size: 13px;
+}
+
+.segmented {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.segmented__label {
+  font-size: 13px;
+  color: var(--viewer-muted);
+}
+
+.segmented__options {
+  display: inline-flex;
+  padding: 2px;
+  border-radius: 7px;
+  background: #ecebe7;
+}
+
+.segmented__option {
+  border: 0;
+  background: transparent;
+  padding: 5px 12px;
+  border-radius: 5px;
+  font: inherit;
+  font-size: 13px;
+  color: var(--viewer-muted);
+  cursor: pointer;
+}
+
+.segmented__option--active {
+  background: #fff;
+  color: inherit;
+  font-weight: 600;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
+}
+
+/* Resource cards */
+.resource-cards {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  margin-bottom: 16px;
+}
+
+.resource-card {
+  flex: 0 0 auto;
+  min-width: 160px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  text-align: left;
+  padding: 10px 14px;
+  border: 1px solid var(--viewer-line);
+  border-radius: 8px;
+  background: #fff;
+  font: inherit;
+  cursor: pointer;
+}
+
+.resource-card:hover {
+  border-color: #c9c6bf;
+}
+
+.resource-card--selected {
+  border: 2px solid var(--viewer-accent);
+  padding: 9px 13px;
+}
+
+.resource-card__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.resource-card__meta {
+  font-size: 12px;
+  color: var(--viewer-muted);
+}
+
+/* Result header + legend */
+.schedule-result__header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.schedule-result__header h2 {
+  font-size: 16px;
+  margin: 0;
+}
+
+.schedule-result__header h2 .muted {
+  font-size: 13px;
+  font-weight: 400;
+  margin-left: 6px;
+}
+
+.legend {
+  display: flex;
+  gap: 14px;
+  font-size: 12px;
+  color: var(--viewer-muted);
+}
+
+.legend__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.legend__swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  background: var(--viewer-lecture-bg);
+  border: 1px solid var(--viewer-lecture-border);
+}
+
+.legend__swatch--lab {
+  background: var(--viewer-lab-bg);
+  border-color: var(--viewer-lab-border);
+}
+
+/* Timetable */
+.timetable {
+  border: 1px solid var(--viewer-line);
+  border-radius: 8px;
+  overflow-x: auto;
+  background: #fff;
+}
+
+.timetable__grid {
+  min-width: 720px;
+}
+
+.timetable__head,
+.timetable__body {
+  display: grid;
+  grid-template-columns: 64px repeat(5, minmax(0, 1fr));
+}
+
+.timetable__head {
+  border-bottom: 1px solid var(--viewer-line);
+}
+
+.timetable__day-name {
+  padding: 10px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  border-left: 1px solid var(--viewer-line);
+}
+
+.timetable__time {
+  box-sizing: border-box;
+  padding: 4px 10px;
+  font-size: 12px;
+  color: var(--viewer-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.timetable__column {
+  position: relative;
+  border-left: 1px solid var(--viewer-line);
+  background-image: linear-gradient(to bottom, var(--viewer-line) 1px, transparent 1px);
+}
+
+.timetable__event {
+  position: absolute;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  padding: 4px 8px;
+  overflow: hidden;
+  font-size: 12px;
+  line-height: 1.3;
+  background: var(--viewer-lecture-bg);
+  border: 1px solid var(--viewer-lecture-border);
+  border-radius: 6px;
+}
+
+.timetable__event--lab {
+  background: var(--viewer-lab-bg);
+  border-color: var(--viewer-lab-border);
+}
+
+.timetable__section {
+  font-weight: 400;
+  color: var(--viewer-muted);
+}
+
+.timetable__detail {
+  color: #444;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Table */
+.schedule-table-wrapper {
+  overflow-x: auto;
+  border: 1px solid var(--viewer-line);
+  border-radius: 8px;
+}
+
+.schedule-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  background: #fff;
+}
+
+.schedule-table th,
+.schedule-table td {
+  padding: 8px 12px;
+  text-align: left;
+  border-bottom: 1px solid var(--viewer-line);
+  white-space: nowrap;
+}
+
+.schedule-table th {
+  font-weight: 600;
+  color: var(--viewer-muted);
+}
+
+.schedule-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+/* Errors from server actions */
+.viewer-error {
+  margin: 0 0 12px;
+  padding: 10px 14px;
+  border: 1px solid #e8b4b0;
+  border-radius: 8px;
+  background: #fdf0ef;
+  color: #8a2b22;
+  font-size: 14px;
+}
