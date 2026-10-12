@@ -61,6 +61,25 @@ your browser: no install, one session per tab, at most 5 schedules per run, and 
 solving. Each pull request into `develop` gets its own preview there.
 [docs/cloudflare-pages.md](docs/cloudflare-pages.md) explains how it works.
 
+### Configuration Editor
+
+![The Configuration Editor](docs/screenshots/configuration-editor.png)
+
+- **New** opens a starter configuration (`frontend/public/new_config.json`). **Load JSON…**
+  opens a file; if it can't be read, isn't JSON, or the library rejects it, the problems are
+  shown and the current configuration stays. With unsaved changes, both list them and ask
+  before discarding.
+- **Add** with a row's **+ Add …** tile; **edit** by clicking a card; **delete** with
+  **Delete** in its form (see [Deleting referenced items](#deleting-referenced-items)). A
+  class pattern's switch enables or disables it.
+- **Time slots:** click a weekday to edit its blocks. **Advanced timing options…** edits
+  *Max time gap* and *Min overlap*, shown in the card's header.
+- **Global settings:** the generation limit applies on Enter or leaving the field; each
+  optimizer flag applies when clicked.
+- A rejected change keeps the form open with each problem in red under its field. Closing a
+  form with edits, or switching modes, asks first.
+- **Validate** checks the whole configuration. **Save JSON…** saves only a valid one.
+
 ### Schedule Viewer
 
 ![The Schedule Viewer showing schedule 1 of 3 by room and lab, as a weekly timetable](docs/screenshots/schedule-viewer.png)
@@ -184,7 +203,9 @@ second view on the same Model.
 | View | `frontend/src/` | React pages, forms, tables, dialogs, navigation, and messages. Form drafts live here until the user applies them; everything else goes through the API. |
 
 A user action flows View → `frontend/src/api/client.js` → `/api` route → one
-`AppController` method → the Model, and the result flows back the same way. Components never
+`AppController` method → the Model, and the result flows back the same way. The
+Configuration Editor sends its actions through `frontend/src/state/EventHandlers.js` and
+`frontend/src/components/APICommunication.jsx` instead. Components never
 validate scheduler data or run workflows themselves; the library validates in the Model, and
 multi-step workflows (load with unsaved changes, generate then publish results to the viewer,
 delete with cascades) live in the Controller, where pytest covers them. The API is documented
@@ -199,12 +220,8 @@ in [docs/web-api.md](docs/web-api.md); the View in [docs/gui.md](docs/gui.md).
   invalid.
 - **Drafts stay in the view.** Forms edit a copy; *Cancel* throws the copy away and the
   Model never sees it. Schedule generation always uses the last applied configuration.
-- **New configurations start incomplete.** *New* creates default time slots and class
-  patterns (the library example's) with no rooms, labs, courses, or faculty. Until it has
-  at least one room, course, and faculty member, the only problems allowed are those
-  missing items. It can't be saved or used for generation until it is complete. The
-  library can only check names and references across items once all three exist, so
-  those checks run on the edit that completes the configuration.
+- **New starts from a template.** *New* loads `frontend/public/new_config.json`, a valid
+  configuration with one room, two labs, one course, and one faculty member.
 - **Unsaved changes are protected.** Each applied edit is listed until the configuration
   is saved. *New* and *Load* show that list and ask before discarding it.
 - **Renames carry references.** Renaming a room, lab, faculty member, or course updates
@@ -294,14 +311,16 @@ tests/
   helpers.py        ScriptedConsole and a fake scheduler for tests
   model/            Model tests
   controller/       AppController use cases and HTTP API tests
+  test_config_editor.py   the Configuration Editor in a browser (Playwright)
 frontend/           the View: React + Vite, JavaScript (see docs/gui.md)
   package.json, package-lock.json, .nvmrc, vite.config.js, eslint.config.js
+  public/new_config.json   the configuration New starts from
   src/
     main.jsx, router.jsx, App.jsx, modes.js   entry, routes, frame, the three modes
     api/client.js     every API call
     api/backend.js    the server, or Python in a Web Worker (api/browser/) for build:browser
-    state/            app state polling, useAction, toasts
-    components/       Button, Card, Dialog, ConfirmDialog, Field, Banner, ...
+    state/            app state polling, useAction, toasts, EventHandlers.js (editor actions)
+    components/       Button, Card, Dialog, ..., APICommunication.jsx (editor API calls)
     layout/           header, connection banner, error pages
     modes/editor|generator|viewer/   one folder per mode
     styles/           design tokens and component styles from the mockups
@@ -349,8 +368,6 @@ new server-side workflow as an `AppController` method with pytest tests.
 - Cancelling generation takes effect after the schedule being solved finishes, since the
   solver can't be interrupted mid-schedule.
 - One session per server: two browser tabs share the same configuration and schedules.
-- While a new configuration is incomplete, name and reference checks across items run on the
-  edit that completes it (see *Editing rules*).
 - The browser version generates at most 5 schedules per run, solves about 3× slower, answers
   nothing else while a schedule is being solved, and loses its session when the tab closes.
 - The Viewer's timetable covers 08:00–20:00. A meeting outside those hours is cut off or
