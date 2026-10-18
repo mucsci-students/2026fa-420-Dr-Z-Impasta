@@ -34,7 +34,7 @@ import TimeSlotsDialog from "./dialogs/TimeSlotsDialog.jsx";
 import ConfirmDialog from "../../components/ConfirmDialog.jsx";
 
 import ErrorMessage from "../../components/ErrorMessage.jsx";
-import { Load, ConfirmLoad, Empty_Click, Validate, Save, ValidateAndSaveItem, DeleteItem, UpdateTimeSlot, UpdateSettings } from "../../state/EventHandlers";
+import { Load, ConfirmLoad, Empty_Click, Validate, Save, ValidateAndSaveItem, DeleteItem, UpdateTimeSlot, UpdateSettings } from "../../state/eventHandlers";
 
 export default function ConfigEditor() {
   const { state, loading, refresh } = useAppState();
@@ -151,8 +151,15 @@ export default function ConfigEditor() {
 
             <Button onClick={async () => { const res = await Save(); if (res) { await refresh(); } }}>Save JSON...</Button>
             <Button variant="primary" onClick={async () => { await Validate(); await refresh(); }}>Validate</Button>
+
+		<div className="undo-redo-row">
+			<Button onClick={() => {}}>Undo</Button>
+			<Button onClick={() => {}}>Redo</Button>
+		</div>
           </>
+
         }
+
       />
       <ErrorMessage error={error?.error} title={error?.title} onDismiss={error?.onDismiss} />
       <Banner tone={bannerTone} title={status.label}>

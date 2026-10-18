@@ -7,6 +7,14 @@
   margin-bottom: var(--space-3);
 }
 
+.undo-redo-row {
+/*	flex-basis: 100%;
+	display: flex;
+	justify-content: flex-end;
+	gap: 8px;
+	*/
+}
+
 .editor-row__items {
   display: flex;
   gap: var(--space-4);
