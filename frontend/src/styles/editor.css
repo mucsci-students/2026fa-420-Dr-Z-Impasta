@@ -4,20 +4,33 @@
   display: flex;
   align-items: baseline;
   gap: var(--space-2);
-  margin-bottom: var(--space-3);
+  margin-bottom: var(--space-2);
 }
 
 .editor-row__items {
   display: flex;
-  gap: var(--space-4);
-  overflow-x: auto;              /* scrolls sideways when there are many cards */
+  gap: var(--space-3);
+  overflow-x: auto;                /* scrolls sideways when there are many cards */
+  scroll-snap-type: x mandatory;   /* stop scrolling with a card's left edge at the row's left edge */
+}
+
+/* Every tile in a row: the "+ Add" tile and each card */
+.editor-row__items > * {
+  scroll-snap-align: start;
+  transition: opacity 0.15s;       /* fade in and out instead of popping */
+}
+
+/* CardRow.jsx marks tiles that are only partly in view, so the row only shows whole cards */
+.editor-row__items > [data-partial] {
+  opacity: 0;                      /* opacity, not visibility, so Tab can still reach it and scroll it into view */
+  pointer-events: none;            /* can't click a card you can't see */
 }
 
 .editor-row__add {
     border: 1px dashed var(--line-strong);
     border-radius: var(--radius-lg);
     color: var(--accent);
-    min-width: 100px;
+    min-width: 100px;       /* narrower than a card, but never squeezed into a sliver */
     cursor: pointer;
 }
 
@@ -104,7 +117,7 @@
   font-size: 11px;
 }
 
-.avail__day--off {
+.avail__day--off {         /* a day with no hours: outlined instead of filled */
   background: transparent;
   border: 1px dashed var(--line);
   color: var(--faint);
@@ -115,7 +128,7 @@
 }
 
 .pattern-meetings {
-  list-style: none;
+  list-style: none;        /* <ul> has bullets and indentation by default */
   padding: 0;
   margin: var(--space-3) 0;
   display: grid;
@@ -131,7 +144,7 @@
 .pattern-meetings__day {
   font-family: var(--font-mono);
   font-weight: 500;
-  width: 36px;
+  width: 36px;             /* same width for every day, so the meeting rows line up */
 }
 
 .item-card__note {
@@ -154,11 +167,11 @@
 }
 
 .toggle input {
-  appearance: none;
-  position: relative;
+  appearance: none;                /* draw a switch instead of the browser's checkbox */
+  position: relative;              /* the thumb below is placed inside it */
   width: 36px;
   height: 20px;
-  min-height: 0;
+  min-height: 0;                   /* undo base.css's 32px input height */
   padding: 0;
   border: none;
   margin: 0;
@@ -186,12 +199,12 @@
 }
 
 .toggle input:checked::after {
-  transform: translateX(18px);
+  transform: translateX(18px);     /* slide the thumb to the right end */
 }
 
 .toggle input:focus-visible {
   outline: none;
-  box-shadow: var(--focus);
+  box-shadow: var(--focus);        /* the app's focus ring, which follows the rounded track */
 }
 
 .tag-input {
@@ -211,7 +224,7 @@
   font-size: 12px;
 }
 
-.tag-input__chip button {
+.tag-input__chip button {         /* the × that removes a tag: plain text, no button look */
   border: none;
   background: none;
   padding: 0;
@@ -221,8 +234,8 @@
 }
 
 .tag-input input {
-  flex: 1;
-  min-width: 140px;
+  flex: 1;                         /* the text box takes the rest of the line after the chips */
+  min-width: 140px;                /* and drops to its own line when less than this is left */
 }
 
 .checkbox {
@@ -241,7 +254,7 @@
   gap: var(--space-3);
 }
 
-.checkbox-list {
+.checkbox-list {                  /* a fieldset, without the box */
   border: none;
   padding: 0;
   margin: 0;
@@ -254,7 +267,7 @@
   font-weight: 500;
   padding: 0;
   margin-bottom: var(--space-2);
-  width: 100%;
+  width: 100%;                      /* its own line above the checkboxes */
 }
 
 .checkbox-list .field__error {
@@ -301,6 +314,7 @@
   min-height: 0;          /* undo base.css's input height */
 }
 
+/* The × that removes a row: plain text, no button look */
 .meetings-editor__remove,
 .pref-editor__remove,
 .avail-editor__remove,
@@ -356,11 +370,11 @@
 }
 
 .day-tile {
-  min-width: 150px;
+  min-width: 150px;       /* day tiles hold less than other cards, so they can be narrower */
 }
 
 .day-tile__blocks {
-  list-style: none;
+  list-style: none;       /* <ul> has bullets and indentation by default */
   padding: 0;
   margin: var(--space-3) 0 0;
   display: grid;
@@ -409,10 +423,10 @@
 }
 
 .settings-card .field--inline .field__error {
-  flex-basis: 100%;
+  flex-basis: 100%;                 /* its own line under the label and box */
 }
 
-.flag-list {
+.flag-list {                        /* a fieldset, without the box */
   border: none;
   padding: 0;
   margin: 0;
@@ -422,7 +436,7 @@
 }
 
 .flag-list .field__error {
-  flex-basis: 100%;
+  flex-basis: 100%;                 /* its own row under the chips */
 }
 
 .flag-chip {
@@ -435,7 +449,7 @@
   font-size: 12px;
 }
 
-.flag-chip:has(input:checked) {
+.flag-chip:has(input:checked) {     /* highlight the whole chip when its flag is on */
   background: var(--accent-soft);
   border-color: var(--accent);
   color: var(--accent-strong);
@@ -445,7 +459,6 @@
   min-height: 0;          /* undo base.css's input height and padding */
   height: 12px;
   padding: 0;
-  margin: 20;
 }
 
 .flag-chip label {
