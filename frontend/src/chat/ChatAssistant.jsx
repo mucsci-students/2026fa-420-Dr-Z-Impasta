@@ -8,11 +8,15 @@
  * until the slide-out ends, then "closed", which removes it), because Safari can skip a
  * plain CSS transition when an element is hidden in the same moment.
  *
+ * Its left edge can be dragged to resize it, or pushed all the way right to close it
+ * (./useResizablePanel.js).
+ *
  * This is the interface. Answers come from askDrZimpasta() in ./assistant.js.
  */
 import { useEffect, useId, useRef, useState } from "react";
 import { Farfalle } from "../components/PastaMarks.jsx";
 import { askDrZimpasta } from "./assistant.js";
+import { useResizablePanel } from "./useResizablePanel.js";
 import "./chat.css";
 
 /** Longest the slide-out can take; after this the panel is removed even if the browser
@@ -34,6 +38,7 @@ export default function ChatAssistant() {
   const [expanded, setExpanded] = useState(false); // the launcher shows its label, not just the logo
 
   const launcherRef = useRef(null);
+  const panelRef = useRef(null);
   const inputRef = useRef(null);
   const listRef = useRef(null);
   const nextId = useRef(1);
@@ -41,6 +46,7 @@ export default function ChatAssistant() {
   const titleId = useId();
 
   const open = phase === "open";
+  const resize = useResizablePanel(panelRef, closePanel);
   const launcherHidden = open; // it comes back as soon as the panel starts sliding out
 
   // Opening puts the cursor in the message box; closing gives focus back to the button.
@@ -69,6 +75,7 @@ export default function ChatAssistant() {
 
   /** Open the panel; the launcher folds back into the logo as it steps aside. */
   function openPanel() {
+    resize.settle();
     setExpanded(false);
     setPhase("open");
   }
@@ -149,11 +156,14 @@ export default function ChatAssistant() {
       {phase !== "closed" && (
         <aside
           id={panelId}
-          className={`chat-panel chat-panel--${phase}`}
+          ref={panelRef}
+          className={`chat-panel chat-panel--${phase}${resize.dragging ? " chat-panel--dragging" : ""}`}
+          style={resize.style}
           aria-labelledby={titleId}
           onKeyDown={(event) => event.key === "Escape" && closePanel()}
           onAnimationEnd={handleAnimationEnd}
         >
+          <div className="chat-panel__resize" {...resize.handleProps} />
           <header className="chat-panel__header">
             <div>
               <h2 id={titleId} className="chat-panel__title">
