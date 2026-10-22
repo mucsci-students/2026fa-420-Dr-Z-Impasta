@@ -1,0 +1,287 @@
+/*
+ * "Ask Dr. ZImpasta": the corner button and the chat panel that slides in from the right.
+ * Colors come from src/styles/tokens.css.
+ */
+
+/* ------------------------------------------------------------------ launcher */
+
+.chat-launcher {
+  position: fixed;
+  right: var(--space-5);
+  bottom: var(--space-5);
+  z-index: 30;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 12px 18px;
+  border: 0;
+  border-radius: 14px;
+  background: var(--accent);
+  color: var(--on-accent, #fff);
+  font: 500 14px var(--font-sans);
+  box-shadow: var(--shadow-float);
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    transform 0.2s ease,
+    opacity 0.2s ease,
+    visibility 0s;
+}
+
+.chat-launcher:hover {
+  background: var(--accent-strong);
+  transform: translateY(-1px);
+}
+
+/* While the panel is open the button steps aside; it comes back when the panel closes. */
+.chat-launcher--hidden {
+  opacity: 0;
+  transform: translateY(8px) scale(0.96);
+  visibility: hidden;
+  pointer-events: none;
+  transition:
+    transform 0.2s ease,
+    opacity 0.2s ease,
+    visibility 0s linear 0.2s;
+}
+
+/* Notifications sit just above the launcher instead of on top of it. */
+.toasts {
+  bottom: calc(var(--space-5) + 60px);
+}
+
+/* --------------------------------------------------------------------- panel */
+
+.chat-panel {
+  --chat-slide: 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+
+  position: fixed;
+  top: 56px; /* below the top bar (.topbar in layout.css), so the modes stay reachable */
+  right: 0;
+  bottom: 0;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  width: 50vw;
+  min-width: min(400px, 100vw);
+  background: var(--surface);
+  border-left: 1px solid var(--line);
+  box-shadow: var(--shadow-modal);
+  /* Closed: off the right edge, and hidden once it has slid out. */
+  transform: translateX(100%);
+  visibility: hidden;
+  transition:
+    transform var(--chat-slide),
+    visibility 0s linear 0.3s;
+}
+
+.chat-panel--open {
+  transform: translateX(0);
+  visibility: visible;
+  transition:
+    transform var(--chat-slide),
+    visibility 0s;
+}
+
+/* Small windows: the panel takes the whole width. */
+@media (max-width: 800px) {
+  .chat-panel {
+    width: 100vw;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chat-panel,
+  .chat-panel--open,
+  .chat-launcher,
+  .chat-launcher--hidden {
+    transition: none;
+  }
+}
+
+.chat-panel__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-4) var(--space-5);
+  border-bottom: 1px solid var(--line);
+}
+
+.chat-panel__title {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.chat-panel__subtitle {
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.chat-panel__close {
+  flex: none;
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--muted);
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.chat-panel__close:hover {
+  background: var(--surface-3);
+  color: var(--ink);
+}
+
+/* ------------------------------------------------------------------ messages */
+
+.chat-panel__messages {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-5);
+  overflow-y: auto;
+  background: var(--surface-2);
+}
+
+.chat-message {
+  max-width: 80%;
+  padding: 10px 14px;
+  font-size: 14px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.chat-message--user {
+  align-self: flex-end;
+  background: var(--accent-soft);
+  color: var(--ink);
+  border-radius: 14px 14px 4px 14px;
+}
+
+.chat-message--assistant {
+  align-self: flex-start;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 14px 14px 14px 4px;
+}
+
+.chat-message--failed {
+  background: var(--danger-soft);
+  border-color: var(--danger-line);
+  color: var(--danger);
+}
+
+/* Three dots while an answer is on its way. */
+.chat-message--typing {
+  display: inline-flex;
+  gap: 4px;
+  padding: 14px 16px;
+}
+
+.chat-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--faint);
+  animation: chat-bounce 1.2s infinite ease-in-out;
+}
+
+.chat-dot:nth-of-type(2) {
+  animation-delay: 0.15s;
+}
+
+.chat-dot:nth-of-type(3) {
+  animation-delay: 0.3s;
+}
+
+@keyframes chat-bounce {
+  0%,
+  60%,
+  100% {
+    transform: translateY(0);
+    opacity: 0.5;
+  }
+  30% {
+    transform: translateY(-4px);
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chat-dot {
+    animation: none;
+  }
+}
+
+/* The empty conversation: a hello and a few questions to start with. */
+.chat-welcome {
+  margin: auto 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-4);
+  text-align: center;
+}
+
+.chat-welcome__mark {
+  color: var(--accent);
+}
+
+.chat-welcome__text {
+  max-width: 34ch;
+  color: var(--ink-2);
+  font-size: 14px;
+}
+
+.chat-welcome__suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-2);
+}
+
+.chat-suggestion {
+  padding: 6px 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--ink-2);
+  font: 13px var(--font-sans);
+  cursor: pointer;
+}
+
+.chat-suggestion:hover {
+  border-color: var(--accent);
+  color: var(--accent-strong);
+}
+
+/* ------------------------------------------------------------------ composer */
+
+.chat-panel__composer {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-5) var(--space-4);
+  border-top: 1px solid var(--line);
+}
+
+.chat-panel__input {
+  flex: 1;
+  min-height: 38px;
+  max-height: 160px;
+  resize: none;
+  font-size: 14px;
+  line-height: 1.45;
+  field-sizing: content; /* grows with the text where supported */
+}
+
+.chat-panel__composer .btn {
+  min-height: 38px;
+}
