@@ -263,6 +263,13 @@ body.chat-resizing {
   font-size: 12px;
 }
 
+.chat-panel__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex: none;
+}
+
 .chat-panel__close {
   flex: none;
   width: 32px;

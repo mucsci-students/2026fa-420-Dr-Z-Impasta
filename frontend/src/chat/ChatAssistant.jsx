@@ -2,7 +2,7 @@
  * "Ask Dr. ZImpasta": a button in the bottom-right corner that slides a chat panel in from
  * the right, covering half the window. The rest of the app stays usable beside it, so you
  * can keep a schedule in view while you ask about it. The conversation is kept while the
- * panel is closed (until the page is reloaded).
+ * panel is closed (until the page is reloaded); "New chat" starts over.
  *
  * The panel slides with CSS keyframe animations run step by step ("open", then "closing"
  * until the slide-out ends, then "closed", which removes it), because Safari can skip a
@@ -14,6 +14,7 @@
  * This is the interface. Answers come from askDrZimpasta() in ./assistant.js.
  */
 import { useEffect, useId, useRef, useState } from "react";
+import Button from "../components/Button.jsx";
 import { Farfalle } from "../components/PastaMarks.jsx";
 import { askDrZimpasta } from "./assistant.js";
 import { useResizablePanel } from "./useResizablePanel.js";
@@ -29,6 +30,15 @@ const SUGGESTIONS = [
   "What do the optimizer options do?",
 ];
 
+/** A small "+" for the New chat button. */
+function PlusIcon() {
+  return (
+    <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true">
+      <path d="M6 1.5v9M1.5 6h9" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 /** The launcher button and the slide-in chat panel. */
 export default function ChatAssistant() {
   const [phase, setPhase] = useState("closed"); // "closed" | "open" | "closing"
@@ -42,6 +52,7 @@ export default function ChatAssistant() {
   const inputRef = useRef(null);
   const listRef = useRef(null);
   const nextId = useRef(1);
+  const conversation = useRef(0); // bumped by "New chat", so a late answer can't land in it
   const panelId = useId();
   const titleId = useId();
 
@@ -108,21 +119,30 @@ export default function ChatAssistant() {
     const question = text.trim();
     if (!question || waiting) return;
 
-    const conversation = withMessage(messages, "user", question);
-    setMessages(conversation);
+    const asked = conversation.current;
+    const history = withMessage(messages, "user", question);
+    setMessages(history);
     setDraft("");
     setWaiting(true);
+    let reply;
     try {
-      const answer = await askDrZimpasta(conversation.map(({ role, text }) => ({ role, text })));
-      setMessages((current) => withMessage(current, "assistant", answer));
+      reply = { text: await askDrZimpasta(history.map(({ role, text }) => ({ role, text }))) };
     } catch (error) {
-      setMessages((current) =>
-        withMessage(current, "assistant", `Sorry, I couldn't answer that. ${error.message}`, true),
-      );
-    } finally {
-      setWaiting(false);
-      inputRef.current?.focus();
+      reply = { text: `Sorry, I couldn't answer that. ${error.message}`, failed: true };
     }
+    if (asked !== conversation.current) return; // "New chat" was clicked while waiting
+    setMessages((current) => withMessage(current, "assistant", reply.text, reply.failed));
+    setWaiting(false);
+    inputRef.current?.focus();
+  }
+
+  /** Start over: clear the conversation and go back to the welcome screen. */
+  function newChat() {
+    conversation.current += 1;
+    setMessages([]);
+    setDraft("");
+    setWaiting(false);
+    inputRef.current?.focus();
   }
 
   /** Enter sends; Shift+Enter starts a new line. */
@@ -173,14 +193,25 @@ export default function ChatAssistant() {
                 Questions about your configuration and schedules
               </p>
             </div>
-            <button
-              type="button"
-              className="chat-panel__close"
-              aria-label="Close chat"
-              onClick={closePanel}
-            >
-              ×
-            </button>
+            <div className="chat-panel__actions">
+              <Button
+                size="sm"
+                onClick={newChat}
+                disabled={messages.length === 0 && !draft}
+                title="Clear this conversation and start a new one"
+              >
+                <PlusIcon />
+                New chat
+              </Button>
+              <button
+                type="button"
+                className="chat-panel__close"
+                aria-label="Close chat"
+                onClick={closePanel}
+              >
+                ×
+              </button>
+            </div>
           </header>
 
           <div className="chat-panel__messages" ref={listRef} aria-live="polite">
