@@ -24,6 +24,9 @@ import "./chat.css";
  * never reports the animation's end. Keep it a little above the CSS duration. */
 const CLOSE_FALLBACK_MS = 400;
 
+/** How long the launcher shows just the logo before "Ask Dr. ZImpasta" unfurls. */
+const UNFURL_DELAY_MS = 600;
+
 const SUGGESTIONS = [
   "Why is CMSC 340 on Tuesday?",
   "Which rooms are free on Friday afternoon?",
@@ -80,7 +83,7 @@ export default function ChatAssistant() {
   // appears as the logo and then unfurls into "Ask Dr. ZImpasta".
   useEffect(() => {
     if (launcherHidden) return undefined;
-    const timer = setTimeout(() => setExpanded(true), 400);
+    const timer = setTimeout(() => setExpanded(true), UNFURL_DELAY_MS);
     return () => clearTimeout(timer);
   }, [launcherHidden]);
 
