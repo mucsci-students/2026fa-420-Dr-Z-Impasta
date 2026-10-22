@@ -12,8 +12,7 @@
   z-index: 30;
   display: inline-flex;
   align-items: center;
-  gap: var(--space-2);
-  padding: 12px 18px;
+  padding: 12px;
   border: 0;
   border-radius: 14px;
   background: var(--accent);
@@ -31,6 +30,62 @@
 .chat-launcher:hover {
   background: var(--accent-strong);
   transform: translateY(-1px);
+}
+
+.chat-launcher__mark {
+  flex: none;
+}
+
+/* The label starts folded away behind the logo, then unfurls to the right of it. A grid
+   column animating from 0fr to 1fr grows to exactly the text's width. */
+.chat-launcher__label-wrap {
+  display: grid;
+  grid-template-columns: 0fr;
+  transition: grid-template-columns 0.45s cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+.chat-launcher__label {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+/* The gap between logo and text lives inside the clipped label, so it folds away too. */
+.chat-launcher__text {
+  display: block;
+  padding: 0 6px 0 8px;
+}
+
+.chat-launcher--expanded .chat-launcher__label-wrap {
+  grid-template-columns: 1fr;
+}
+
+.chat-launcher--expanded .chat-launcher__label {
+  opacity: 1;
+  transition: opacity 0.3s ease 0.12s;
+}
+
+/* As the label unfurls, the farfalle flaps its wings once. */
+.chat-launcher--expanded .chat-launcher__mark {
+  animation: chat-flap 0.5s ease-in-out;
+}
+
+@keyframes chat-flap {
+  0%,
+  100% {
+    transform: scaleX(1);
+  }
+  25% {
+    transform: scaleX(0.45);
+  }
+  50% {
+    transform: scaleX(1.1);
+  }
+  75% {
+    transform: scaleX(0.8);
+  }
 }
 
 /* While the panel is open the button steps aside; it comes back when the panel closes. */
@@ -94,8 +149,23 @@
   .chat-panel,
   .chat-panel--open,
   .chat-launcher,
-  .chat-launcher--hidden {
+  .chat-launcher--hidden,
+  .chat-launcher__label-wrap,
+  .chat-launcher__label {
     transition: none;
+  }
+
+  .chat-launcher__mark {
+    animation: none !important;
+  }
+
+  /* No unfurling: the label is simply there. */
+  .chat-launcher__label-wrap {
+    grid-template-columns: 1fr;
+  }
+
+  .chat-launcher__label {
+    opacity: 1;
   }
 }
 

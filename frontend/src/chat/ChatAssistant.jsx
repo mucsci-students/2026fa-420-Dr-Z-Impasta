@@ -23,6 +23,7 @@ export default function ChatAssistant() {
   const [messages, setMessages] = useState([]); // { id, role: "user" | "assistant", text, failed? }
   const [draft, setDraft] = useState("");
   const [waiting, setWaiting] = useState(false);
+  const [expanded, setExpanded] = useState(false); // the launcher shows its label, not just the logo
 
   const launcherRef = useRef(null);
   const inputRef = useRef(null);
@@ -38,6 +39,20 @@ export default function ChatAssistant() {
     else if (wasOpen.current) launcherRef.current?.focus();
     wasOpen.current = open;
   }, [open]);
+
+  // Whenever the launcher is showing (on page load, and each time the panel closes), it
+  // appears as the logo and then unfurls into "Ask Dr. ZImpasta".
+  useEffect(() => {
+    if (open) return undefined;
+    const timer = setTimeout(() => setExpanded(true), 400);
+    return () => clearTimeout(timer);
+  }, [open]);
+
+  /** Open the panel; the launcher folds back into the logo as it steps aside. */
+  function openPanel() {
+    setExpanded(false);
+    setOpen(true);
+  }
 
   // Keep the newest message in view.
   useEffect(() => {
@@ -85,13 +100,19 @@ export default function ChatAssistant() {
       <button
         ref={launcherRef}
         type="button"
-        className={`chat-launcher${open ? " chat-launcher--hidden" : ""}`}
+        className={`chat-launcher${expanded ? " chat-launcher--expanded" : ""}${
+          open ? " chat-launcher--hidden" : ""
+        }`}
         aria-expanded={open}
         aria-controls={panelId}
-        onClick={() => setOpen(true)}
+        onClick={openPanel}
       >
-        <Farfalle size={18} />
-        Ask Dr. ZImpasta
+        <Farfalle size={18} className="chat-launcher__mark" />
+        <span className="chat-launcher__label-wrap">
+          <span className="chat-launcher__label">
+            <span className="chat-launcher__text">Ask Dr. ZImpasta</span>
+          </span>
+        </span>
       </button>
 
       <aside
