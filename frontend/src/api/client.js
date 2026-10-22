@@ -120,6 +120,15 @@ export const api = {
     cancel: () => post("/generation/cancel"),
   },
 
+  assistant: {
+    /**
+     * One request to the AI assistant (docs/ai-assistant.md). Send `message`, or `confirm`
+     * with the token from a reply's `confirmation` to approve that pending action.
+     */
+    ask: ({ message, confirm } = {}) =>
+      post("/assistant", { message: message ?? null, confirm: confirm ?? null }),
+  },
+
   schedules: {
     summary: () => get("/schedules"),
     /** `group` is "room" (rooms and labs) or "faculty". Numbers start at 1. */
