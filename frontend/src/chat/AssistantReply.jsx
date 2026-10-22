@@ -20,7 +20,13 @@ export default function AssistantReply({ reply, onConfirm, busy }) {
   const [save, setSave] = useState(null); // { status: "saving" | "saved" | "cancelled" | "invalid" | "failed", ... }
 
   const changed = reply.config.changed;
-  const savedHere = save?.status === "saved";
+  // Saved once the app's saved revision reaches this reply's revision (by this reply's
+  // Save JSON…, the editor's button, or a later save), so the chip stays true over time.
+  const savedRevision = state?.config?.saved_revision;
+  const saved =
+    typeof reply.config.revision === "number" && typeof savedRevision === "number"
+      ? savedRevision >= reply.config.revision
+      : !reply.config.dirty;
 
   async function handleSave() {
     setSave({ status: "saving" });
@@ -63,7 +69,7 @@ export default function AssistantReply({ reply, onConfirm, busy }) {
 
       {changed && (
         <p className="assistant-reply__status">
-          {savedHere || !reply.config.dirty ? (
+          {saved ? (
             <span className="assistant-chip assistant-chip--saved">Applied and saved</span>
           ) : (
             <span className="assistant-chip assistant-chip--applied">
