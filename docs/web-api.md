@@ -169,3 +169,13 @@ and `end` (minutes), `start_time` and `end_time` (`HH:MM`), `duration`, `kind`
 (`lecture` or `lab`), `delivery`, `other` (the faculty member in the room view, the room
 or lab in the faculty view), and `room_held_for_lab` (a lab meeting shown under the room
 the section keeps reserved).
+
+## AI assistant
+
+| Route | Body | Reply |
+| --- | --- | --- |
+| `POST /api/assistant` | `{message}`, or `{confirm}` with a token from a previous reply | `{outcome, reply, actions, issues, config, generation_started, save_requested, confirmation}` |
+
+Not built yet. The full contract (request, reply, errors, tools, confirmation and save
+flows, and where the code goes) is in docs/ai-assistant.md. The chat in the GUI
+(`frontend/src/chat/`) already follows it and shows demo replies until the route exists.
