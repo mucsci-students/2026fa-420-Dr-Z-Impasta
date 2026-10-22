@@ -2,8 +2,8 @@
  * Talks to the AI assistant: `POST /api/assistant`. The request and reply are specified
  * in docs/ai-assistant.md; the backend half is built from that document.
  *
- * Until the backend route exists, the server answers 404 "There is no such API endpoint".
- * Then demo replies stand in, each marked `demo: true` so the chat labels them, and none of
+ * Until the backend route exists, the server answers 405 Method Not Allowed (the GUI's
+ * own pages are served for every other path, for GET only) or 404. Then demo replies stand in, each marked `demo: true` so the chat labels them, and none of
  * them changes anything. Once the route answers, it's used automatically.
  */
 import { api } from "../api/client.js";
@@ -30,11 +30,14 @@ export async function askDrZimpasta({ message, confirm }) {
   try {
     return withDefaults(await api.assistant.ask({ message, confirm }));
   } catch (error) {
-    if (error?.status === 404 && error?.code === "not_found") {
-      return withDefaults(await demoReply({ message, confirm }));
-    }
+    if (routeMissing(error)) return withDefaults(await demoReply({ message, confirm }));
     throw error;
   }
+}
+
+/** The server has no POST /api/assistant yet (see the comment at the top). */
+function routeMissing(error) {
+  return error?.status === 405 || (error?.status === 404 && error?.code === "not_found");
 }
 
 function withDefaults(reply) {
