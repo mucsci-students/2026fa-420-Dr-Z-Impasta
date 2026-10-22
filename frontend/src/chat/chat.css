@@ -453,3 +453,140 @@ body.chat-resizing {
 .chat-panel__composer .btn {
   min-height: 38px;
 }
+
+/* ------------------------------------------------------------- reply details */
+
+/* A reply that's waiting for the user to confirm something. */
+.chat-message--confirm {
+  background: var(--warning-soft);
+  border-color: var(--warning-dot);
+}
+
+.assistant-reply {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  white-space: normal;
+}
+
+.assistant-reply__text {
+  white-space: pre-wrap;
+}
+
+/* Marks a stand-in reply while the assistant backend isn't connected. */
+.assistant-reply__demo {
+  align-self: flex-start;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--surface-3);
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+/* What the assistant did: one line per action, ✓ done, ✗ failed, ? waiting. */
+.assistant-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 13px;
+}
+
+.assistant-actions__item {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+
+.assistant-actions__mark {
+  flex: none;
+  width: 16px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.assistant-actions__item--done .assistant-actions__mark {
+  color: var(--success);
+}
+
+.assistant-actions__item--failed .assistant-actions__mark {
+  color: var(--danger);
+}
+
+.assistant-actions__item--pending .assistant-actions__mark {
+  color: var(--warning);
+}
+
+.assistant-actions__error {
+  display: block;
+  color: var(--danger);
+}
+
+/* "Applied · not saved to a file yet" or "Applied and saved", with a link to the editor. */
+.assistant-reply__status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  font-size: 13px;
+}
+
+.assistant-chip {
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.assistant-chip--applied {
+  background: var(--warning-soft);
+  color: var(--warning);
+}
+
+.assistant-chip--saved {
+  background: var(--success-soft);
+  color: var(--success);
+}
+
+.assistant-confirm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.assistant-confirm__question {
+  font-weight: 600;
+}
+
+.assistant-confirm__details {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 13px;
+}
+
+.assistant-reply__buttons,
+.assistant-reply__follow-up {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.assistant-reply__note {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--ink-2);
+  font-size: 13px;
+}
+
+/* The issue list inside a bubble sits a little tighter. */
+.assistant-reply .issues {
+  margin: 0;
+  font-size: 13px;
+}
