@@ -108,8 +108,6 @@
 /* --------------------------------------------------------------------- panel */
 
 .chat-panel {
-  --chat-slide: 0.3s cubic-bezier(0.32, 0.72, 0, 1);
-
   position: fixed;
   top: 56px; /* below the top bar (.topbar in layout.css), so the modes stay reachable */
   right: 0;
@@ -122,20 +120,36 @@
   background: var(--surface);
   border-left: 1px solid var(--line);
   box-shadow: var(--shadow-modal);
-  /* Closed: off the right edge, and hidden once it has slid out. */
-  transform: translateX(100%);
-  visibility: hidden;
-  transition:
-    transform var(--chat-slide),
-    visibility 0s linear 0.3s;
 }
 
+/* The panel exists only while open or closing (ChatAssistant.jsx). It slides in from the
+   right edge when it appears, and slides back out before it is removed. Keyframe
+   animations rather than a transition, because Safari can skip a transition here. */
 .chat-panel--open {
-  transform: translateX(0);
-  visibility: visible;
-  transition:
-    transform var(--chat-slide),
-    visibility 0s;
+  animation: chat-slide-in 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+.chat-panel--closing {
+  animation: chat-slide-out 0.25s cubic-bezier(0.4, 0, 1, 1) forwards;
+  pointer-events: none;
+}
+
+@keyframes chat-slide-in {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@keyframes chat-slide-out {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(100%);
+  }
 }
 
 /* Small windows: the panel takes the whole width. */
@@ -146,8 +160,12 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .chat-panel,
+  /* No sliding. Kept at 1ms rather than none so the end of the slide-out still fires. */
   .chat-panel--open,
+  .chat-panel--closing {
+    animation-duration: 1ms;
+  }
+
   .chat-launcher,
   .chat-launcher--hidden,
   .chat-launcher__label-wrap,

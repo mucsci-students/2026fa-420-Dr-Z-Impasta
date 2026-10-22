@@ -4,12 +4,20 @@
  * can keep a schedule in view while you ask about it. The conversation is kept while the
  * panel is closed (until the page is reloaded).
  *
+ * The panel slides with CSS keyframe animations run step by step ("open", then "closing"
+ * until the slide-out ends, then "closed", which removes it), because Safari can skip a
+ * plain CSS transition when an element is hidden in the same moment.
+ *
  * This is the interface. Answers come from askDrZimpasta() in ./assistant.js.
  */
 import { useEffect, useId, useRef, useState } from "react";
 import { Farfalle } from "../components/PastaMarks.jsx";
 import { askDrZimpasta } from "./assistant.js";
 import "./chat.css";
+
+/** Longest the slide-out can take; after this the panel is removed even if the browser
+ * never reports the animation's end. Keep it a little above the CSS duration. */
+const CLOSE_FALLBACK_MS = 400;
 
 const SUGGESTIONS = [
   "Why is CMSC 340 on Tuesday?",
@@ -19,7 +27,7 @@ const SUGGESTIONS = [
 
 /** The launcher button and the slide-in chat panel. */
 export default function ChatAssistant() {
-  const [open, setOpen] = useState(false);
+  const [phase, setPhase] = useState("closed"); // "closed" | "open" | "closing"
   const [messages, setMessages] = useState([]); // { id, role: "user" | "assistant", text, failed? }
   const [draft, setDraft] = useState("");
   const [waiting, setWaiting] = useState(false);
@@ -29,36 +37,59 @@ export default function ChatAssistant() {
   const inputRef = useRef(null);
   const listRef = useRef(null);
   const nextId = useRef(1);
-  const wasOpen = useRef(false);
   const panelId = useId();
   const titleId = useId();
 
+  const open = phase === "open";
+  const launcherHidden = open; // it comes back as soon as the panel starts sliding out
+
   // Opening puts the cursor in the message box; closing gives focus back to the button.
   useEffect(() => {
-    if (open) inputRef.current?.focus();
-    else if (wasOpen.current) launcherRef.current?.focus();
-    wasOpen.current = open;
-  }, [open]);
+    if (phase === "open") inputRef.current?.focus();
+    if (phase === "closing") launcherRef.current?.focus();
+  }, [phase]);
+
+  // Remove the panel once it has slid out, even if the animation's end is never reported.
+  useEffect(() => {
+    if (phase !== "closing") return undefined;
+    const timer = setTimeout(
+      () => setPhase((now) => (now === "closing" ? "closed" : now)),
+      CLOSE_FALLBACK_MS,
+    );
+    return () => clearTimeout(timer);
+  }, [phase]);
 
   // Whenever the launcher is showing (on page load, and each time the panel closes), it
   // appears as the logo and then unfurls into "Ask Dr. ZImpasta".
   useEffect(() => {
-    if (open) return undefined;
+    if (launcherHidden) return undefined;
     const timer = setTimeout(() => setExpanded(true), 400);
     return () => clearTimeout(timer);
-  }, [open]);
+  }, [launcherHidden]);
 
   /** Open the panel; the launcher folds back into the logo as it steps aside. */
   function openPanel() {
     setExpanded(false);
-    setOpen(true);
+    setPhase("open");
   }
 
-  // Keep the newest message in view.
+  /** Slide the panel out; it is removed when the slide-out ends. */
+  function closePanel() {
+    setPhase((now) => (now === "open" ? "closing" : now));
+  }
+
+  /** The slide-out finished: remove the panel. */
+  function handleAnimationEnd(event) {
+    if (event.target === event.currentTarget && event.animationName === "chat-slide-out") {
+      setPhase("closed");
+    }
+  }
+
+  // Keep the newest message in view, including when the panel opens again.
   useEffect(() => {
     const list = listRef.current;
     if (list) list.scrollTop = list.scrollHeight;
-  }, [messages, waiting]);
+  }, [messages, waiting, phase]);
 
   /** Add a message to the conversation and return the new list. */
   function withMessage(list, role, text, failed = false) {
@@ -101,10 +132,10 @@ export default function ChatAssistant() {
         ref={launcherRef}
         type="button"
         className={`chat-launcher${expanded ? " chat-launcher--expanded" : ""}${
-          open ? " chat-launcher--hidden" : ""
+          launcherHidden ? " chat-launcher--hidden" : ""
         }`}
         aria-expanded={open}
-        aria-controls={panelId}
+        aria-controls={phase === "closed" ? undefined : panelId}
         onClick={openPanel}
       >
         <Farfalle size={18} className="chat-launcher__mark" />
@@ -115,99 +146,103 @@ export default function ChatAssistant() {
         </span>
       </button>
 
-      <aside
-        id={panelId}
-        className={`chat-panel${open ? " chat-panel--open" : ""}`}
-        aria-labelledby={titleId}
-        inert={!open}
-        onKeyDown={(event) => event.key === "Escape" && setOpen(false)}
-      >
-        <header className="chat-panel__header">
-          <div>
-            <h2 id={titleId} className="chat-panel__title">
-              Ask Dr. ZImpasta
-            </h2>
-            <p className="chat-panel__subtitle">Questions about your configuration and schedules</p>
-          </div>
-          <button
-            type="button"
-            className="chat-panel__close"
-            aria-label="Close chat"
-            onClick={() => setOpen(false)}
-          >
-            ×
-          </button>
-        </header>
-
-        <div className="chat-panel__messages" ref={listRef} aria-live="polite">
-          {messages.length === 0 && (
-            <div className="chat-welcome">
-              <Farfalle size={32} className="chat-welcome__mark" />
-              <p className="chat-welcome__text">
-                Hi, I'm Dr. ZImpasta. Ask me about your configuration, how a schedule was
-                built, or what to change.
-              </p>
-              <div className="chat-welcome__suggestions">
-                {SUGGESTIONS.map((suggestion) => (
-                  <button
-                    key={suggestion}
-                    type="button"
-                    className="chat-suggestion"
-                    onClick={() => send(suggestion)}
-                  >
-                    {suggestion}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {messages.map((message) => (
-            <div
-              key={message.id}
-              className={`chat-message chat-message--${message.role}${
-                message.failed ? " chat-message--failed" : ""
-              }`}
-            >
-              <span className="visually-hidden">
-                {message.role === "user" ? "You:" : "Dr. ZImpasta:"}
-              </span>
-              {message.text}
-            </div>
-          ))}
-
-          {waiting && (
-            <div className="chat-message chat-message--assistant chat-message--typing">
-              <span className="visually-hidden">Dr. ZImpasta is typing</span>
-              <span className="chat-dot" aria-hidden="true" />
-              <span className="chat-dot" aria-hidden="true" />
-              <span className="chat-dot" aria-hidden="true" />
-            </div>
-          )}
-        </div>
-
-        <form
-          className="chat-panel__composer"
-          onSubmit={(event) => {
-            event.preventDefault();
-            send(draft);
-          }}
+      {phase !== "closed" && (
+        <aside
+          id={panelId}
+          className={`chat-panel chat-panel--${phase}`}
+          aria-labelledby={titleId}
+          onKeyDown={(event) => event.key === "Escape" && closePanel()}
+          onAnimationEnd={handleAnimationEnd}
         >
-          <textarea
-            ref={inputRef}
-            className="chat-panel__input"
-            rows={1}
-            value={draft}
-            placeholder="Ask about your schedules…"
-            aria-label="Message to Dr. ZImpasta"
-            onChange={(event) => setDraft(event.target.value)}
-            onKeyDown={handleKeyDown}
-          />
-          <button type="submit" className="btn btn--primary" disabled={!draft.trim() || waiting}>
-            Send
-          </button>
-        </form>
-      </aside>
+          <header className="chat-panel__header">
+            <div>
+              <h2 id={titleId} className="chat-panel__title">
+                Ask Dr. ZImpasta
+              </h2>
+              <p className="chat-panel__subtitle">
+                Questions about your configuration and schedules
+              </p>
+            </div>
+            <button
+              type="button"
+              className="chat-panel__close"
+              aria-label="Close chat"
+              onClick={closePanel}
+            >
+              ×
+            </button>
+          </header>
+
+          <div className="chat-panel__messages" ref={listRef} aria-live="polite">
+            {messages.length === 0 && (
+              <div className="chat-welcome">
+                <Farfalle size={32} className="chat-welcome__mark" />
+                <p className="chat-welcome__text">
+                  Hi, I'm Dr. ZImpasta. Ask me about your configuration, how a schedule was built,
+                  or what to change.
+                </p>
+                <div className="chat-welcome__suggestions">
+                  {SUGGESTIONS.map((suggestion) => (
+                    <button
+                      key={suggestion}
+                      type="button"
+                      className="chat-suggestion"
+                      onClick={() => send(suggestion)}
+                    >
+                      {suggestion}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {messages.map((message) => (
+              <div
+                key={message.id}
+                className={`chat-message chat-message--${message.role}${
+                  message.failed ? " chat-message--failed" : ""
+                }`}
+              >
+                <span className="visually-hidden">
+                  {message.role === "user" ? "You:" : "Dr. ZImpasta:"}
+                </span>
+                {message.text}
+              </div>
+            ))}
+
+            {waiting && (
+              <div className="chat-message chat-message--assistant chat-message--typing">
+                <span className="visually-hidden">Dr. ZImpasta is typing</span>
+                <span className="chat-dot" aria-hidden="true" />
+                <span className="chat-dot" aria-hidden="true" />
+                <span className="chat-dot" aria-hidden="true" />
+              </div>
+            )}
+          </div>
+
+          <form
+            className="chat-panel__composer"
+            onSubmit={(event) => {
+              event.preventDefault();
+              send(draft);
+            }}
+          >
+            <textarea
+              ref={inputRef}
+              className="chat-panel__input"
+              rows={1}
+              value={draft}
+              placeholder="Ask about your schedules…"
+              aria-label="Message to Dr. ZImpasta"
+              onChange={(event) => setDraft(event.target.value)}
+              onKeyDown={handleKeyDown}
+            />
+            <button type="submit" className="btn btn--primary" disabled={!draft.trim() || waiting}>
+              Send
+            </button>
+          </form>
+        </aside>
+      )}
     </>
   );
 }
