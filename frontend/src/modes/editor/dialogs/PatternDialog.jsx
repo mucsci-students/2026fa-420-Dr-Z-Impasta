@@ -1,16 +1,8 @@
-// Description:
-// | Field                 | Control                 | Notes
-// | credits               | number, required        |
-// | disabled              | switch (Enabled)        | Inverted: switch on = disabled: false.
-// |                       |                         | Show the word too, not just the switch
-// | start_time            | time, optional          | Empty = null ("Any start time")
-// | meetings              | list, add/remove rows   | Required; one row per meeting
-// | meetings[].day        | select (weekdays)       | Options from api.config.options()
-// | meetings[].duration   | number, required        | Minutes
-// | meetings[].lab        | checkbox                | One lab meeting per pattern; the library
-// |                       |                         | reports it, don't check in JS
-// | meetings[].delivery   | select (delivery modes) | Defaults to in_person
-// | meetings[].start_time | time, optional          | Overrides the pattern's start_time
+/**
+ * The dialog for adding or editing a class pattern, opened from PatternCard or "Add pattern".
+ * It's an edit dialog like CourseDialog. The Enabled switch is the inverse of `disabled`.
+ * Rules such as "one lab meeting per pattern" are checked by the library on Save, not here.
+ */
 
 import { useState } from "react";
 import Button from "../../../components/Button.jsx";

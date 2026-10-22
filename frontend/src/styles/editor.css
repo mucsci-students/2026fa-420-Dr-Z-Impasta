@@ -27,7 +27,7 @@
 }
 
 .editor-row__add {
-    border: 1px dashed var(--line-strong);
+    border: 1px dashed;
     border-radius: var(--radius-lg);
     color: var(--accent);
     min-width: 100px;       /* narrower than a card, but never squeezed into a sliver */
@@ -54,7 +54,7 @@
   border: 1px solid var(--line);
   border-radius: var(--radius-lg);
   padding: var(--space-4);
-  max-width: 285px;         /* May change so that each card has their own fixed width */
+  max-width: 285px;
   min-width: 190px;
   flex: 0 0 auto;            /* keep its width inside the row instead of squashing */
   cursor: pointer;
@@ -447,6 +447,7 @@
   border: 1px solid var(--line);
   border-radius: 999px;
   font-size: 12px;
+  height: 40px;
 }
 
 .flag-chip:has(input:checked) {     /* highlight the whole chip when its flag is on */

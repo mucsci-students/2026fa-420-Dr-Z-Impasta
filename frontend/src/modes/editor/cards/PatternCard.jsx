@@ -1,9 +1,8 @@
-// Description: Credits; On/Off (disabled); One row per meeting (day, duration, LAB badge); pattern
-// start_time ("Starts at 16:00" / "Any start time"). Delivery per meeting (delivery: in person or online), e.g. an "Online"
-// badge next to LAB. Per-meeting start time (meetings[].start_time): a meeting can have its own
-// start that overrides the pattern's.
-
-// Known Bugs: Can't reset the pattern's start time once set.
+/**
+ * One class pattern in the Class Patterns row. Clicking the card opens PatternDialog; the On/Off
+ * switch saves right away through `onToggle` (stopPropagation keeps it from opening the dialog).
+ * A meeting's own start_time overrides the pattern's.
+ */
 
 import Badge from "../../../components/Badge.jsx";
 

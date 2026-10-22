@@ -1,5 +1,7 @@
-// Description: Name; Capacity; Used by N sections (For rooms and labs); Features (features tags, hidden when empty);
-// Availability (times): Mo–Fr availability chips, or "Unrestricted" when it's null.
+/**
+ * One room or lab; the Rooms and Labs rows both use this card. Clicking it opens ResourceDialog.
+ * `times` null means always available, so "Unrestricted" replaces the availability chips.
+ */
 
 import { plural } from "../../../format.js";
 import AvailabilityChips from "../AvailabilityChips.jsx";

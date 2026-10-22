@@ -1,11 +1,8 @@
-// Description: Confirms a delete after showing what it affects (the impact preview).
-//
-// | impact part | Shown as
-// | loading     | "Checking what this affects…" with a spinner
-// | blocking    | "Can't delete X yet": the course sections that use it as their only room,
-// |             | lab, or faculty member. Only a Close button; nothing can be deleted.
-// | cascades    | "Delete X?": the references removed along with it, then Delete / Cancel
-// | problems    | The library's issues, listed under either message
+/**
+ * Opens when Delete is pressed in an edit dialog. Shows one of: a spinner while the preview loads,
+ * "Couldn't check this delete", "Can't delete X yet" (sections that would lose their only room,
+ * lab, or faculty member), or "Delete X?" with everything else the delete removes.
+ */
 
 import Button from "../../../components/Button.jsx";
 import ConfirmDialog from "../../../components/ConfirmDialog.jsx";

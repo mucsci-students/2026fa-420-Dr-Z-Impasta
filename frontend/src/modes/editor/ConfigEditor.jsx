@@ -1,10 +1,12 @@
 /**
- * Configuration Editor (mode 01).
+ * Configuration Editor (mode 01): the page where users build the scheduler's input.
  *
- * The foundation provides the page frame and its empty and summary states. The
- * Configuration Editor feature adds: New / Load JSON… / Save JSON… / Validate, the item
- * cards and their edit dialogs, deletes with the impact preview, time slots, and global
- * settings. Start from docs/gui.md; the calls are in src/api/client.js (`api.config`).
+ * Clicking a card sets `editing`, which opens that item's dialog. Saving calls a handler
+ * in src/state/EventHandlers.js, then refresh(); the revision goes up and the full
+ * configuration (`doc`) is fetched again. This component never edits `doc` itself; the
+ * server is the only source of truth.
+ *
+ * New here? Read docs/gui.md first. The API calls are in src/api/client.js (`api.config`).
  */
 import EmptyState from "../../components/EmptyState.jsx";
 import IssueList from "../../components/IssueList.jsx";
@@ -38,21 +40,22 @@ import { Load, ConfirmLoad, Empty_Click, Validate, Save, ValidateAndSaveItem, De
 
 export default function ConfigEditor() {
   const { state, loading, refresh } = useAppState();
-  const config = state?.config;
-  const [doc, setDoc] = useState(null);
-  const revision = config?.revision;
+  const config = state?.config;                   // summary only; the full document is `doc`
+  const [doc, setDoc] = useState(null);           // { document, sections }: the full configuration and each course's section label
+  const revision = config?.revision;              // goes up on every server-side change
   const hasConfig = Boolean(config) && config.status !== "none";
-  const fileInputRef = useRef(null); //
-  const [loadingFile, setLoadingFile] = useState(false); //
-  const [editing, setEditing] = useState(null);   // the item being edited
+  const fileInputRef = useRef(null);              // the hidden <input type="file"> that the Load JSON… buttons click
+  const [loadingFile, setLoadingFile] = useState(false);   // true while New or Load JSON… is in progress
+  const [editing, setEditing] = useState(null);   // the item being edited, e.g. { area: "courses", index: 2 }; index null means "add new"
   const [options, setOptions] = useState(null);   // library choices for the dialogs; they have fallbacks
   const [deleting, setDeleting] = useState(null);  // the item being deleted, e.g. { area: "rooms", index: 0 }
   const [impact, setImpact] = useState(null);      // its delete preview, from api.config.deleteImpact
-  const [error, setError] = useState(null); //
+  const [error, setError] = useState(null);       // a page-level error (failed New / Load), shown above the banner
   const [localError, setLocalError] = useState(null);   // the error from a failed edit, e.g. { message, issues: [{ area, index, field, message }] }
   const [pendingLoad, setPendingLoad] = useState(null);   // a load waiting for "discard changes?"
-  const [settingsError, setSettingsError] = useState(null);
+  const [settingsError, setSettingsError] = useState(null);   // shown inside SettingsCard, which has no dialog
 
+  // Fetch the full document when a configuration first exists and after every change.
   useEffect(() => {
     if (!hasConfig) return;
     api.config.get().then((reply) => {
@@ -60,6 +63,7 @@ export default function ConfigEditor() {
     });
   }, [hasConfig, revision]);
 
+  // Fetch the dialogs' choices (weekdays, optimizer flags, …) once.
   useEffect(() => {
     api.config.options().then(setOptions).catch(() => { });   // the dialogs' fallbacks cover a failure
   }, []);
@@ -125,6 +129,8 @@ export default function ConfigEditor() {
   const weekdays = options?.weekdays?.length ? options.weekdays : ["MON", "TUE", "WED", "THU", "FRI"];
   const enabled = patterns?.filter((p) => !p.disabled).length;
   const settings = doc && { limit: doc.document.limit, optimizer_flags: doc.document.optimizer_flags };
+
+  // The editor. Every card's onEdit sets `editing`; the dialogs at the bottom open from it.
   return (
     <div className="editor">
       <PageHeader
@@ -137,7 +143,7 @@ export default function ConfigEditor() {
         }
         actions={
           <>
-           {/* <Button variant="ghost">Raw JSON</Button>*/}
+            {/* <Button variant="ghost">Raw JSON</Button>*/}
             <Button onClick={async () => { await Empty_Click(setLoadingFile, setError, setPendingLoad); await refresh(); }}>New</Button>
 
             <Button onClick={() => fileInputRef.current.click()}>Load JSON...</Button>
@@ -195,39 +201,36 @@ export default function ConfigEditor() {
               />
             ))}
           </CardRow>
-          <div className="editor-pair">
-
-            <CardRow
-              title="Rooms"
-              meta={items.rooms.length}
-              addLabel="Add room"
-              onAdd={() => setEditing({ area: "rooms", index: null })}
-            >
-              {items.rooms.map((r, i) => (
-                <ResourceCard
-                  key={i}
-                  resource={r}
-                  usedBy={items.courses.filter((c) => c.room.includes(r.name)).length}
-                  onEdit={() => setEditing({ area: "rooms", index: i })}
-                />
-              ))}
-            </CardRow>
-            <CardRow
-              title="Labs"
-              meta={items.labs.length}
-              addLabel="Add lab"
-              onAdd={() => setEditing({ area: "labs", index: null })}
-            >
-              {items.labs.map((l, i) => (
-                <ResourceCard
-                  key={i}
-                  resource={l}
-                  usedBy={items.courses.filter((c) => c.lab.includes(l.name)).length}
-                  onEdit={() => setEditing({ area: "labs", index: i })}
-                />
-              ))}
-            </CardRow>
-          </div>
+          <CardRow
+            title="Rooms"
+            meta={items.rooms.length}
+            addLabel="Add room"
+            onAdd={() => setEditing({ area: "rooms", index: null })}
+          >
+            {items.rooms.map((r, i) => (
+              <ResourceCard
+                key={i}
+                resource={r}
+                usedBy={items.courses.filter((c) => c.room.includes(r.name)).length}
+                onEdit={() => setEditing({ area: "rooms", index: i })}
+              />
+            ))}
+          </CardRow>
+          <CardRow
+            title="Labs"
+            meta={items.labs.length}
+            addLabel="Add lab"
+            onAdd={() => setEditing({ area: "labs", index: null })}
+          >
+            {items.labs.map((l, i) => (
+              <ResourceCard
+                key={i}
+                resource={l}
+                usedBy={items.courses.filter((c) => c.lab.includes(l.name)).length}
+                onEdit={() => setEditing({ area: "labs", index: i })}
+              />
+            ))}
+          </CardRow>
           <CardRow
             title="Class Patterns"
             meta={`${enabled} of ${patterns.length} enabled`}
@@ -260,6 +263,7 @@ export default function ConfigEditor() {
               onApply={async (values) => { if (await UpdateSettings(values, setSettingsError)) await refresh(); }}
             />
           </div>
+          {/* Edit dialogs: at most one is open, picked by editing.area. They hide while a delete is open. */}
           {!deleting && editing?.area === "faculty" && (
             <FacultyDialog
               key={`faculty-${editing.index}`}
@@ -349,6 +353,7 @@ export default function ConfigEditor() {
               onConfirm={async () => { if (await DeleteItem(deleting, setDeleting, setEditing, setLocalError)) await refresh(); }}
             />
           )}
+          {/* Shown when Load JSON… would overwrite unsaved changes. */}
           <ConfirmDialog
             open={pendingLoad !== null}
             title={`Discard changes and load ${pendingLoad?.filename}?`}

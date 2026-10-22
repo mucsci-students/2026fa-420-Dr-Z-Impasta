@@ -1,7 +1,8 @@
-// Description: course_id + section (CMSC 140 .01, from sections); credits; Capacity; Rooms;
-// Labs (hidden when empty); Faculty (null means "Any"); Conflicts; Modality (in_person / online / hybrid);
-// Room features (required_room_features, hidden when empty); Lab features (required_lab_features, hidden
-// when empty); Lab uses room (reserve_room_during_lab, true/false; only matters when the course has labs).
+/**
+ * One course section in the Courses row. Clicking it opens CourseDialog.
+ * `label` is the server's section label ("CMSC 140.01"); the part after course_id is the section.
+ * Labs and required features are hidden when empty; faculty null shows as "Any".
+ */
 
 import { plural } from "../../../format.js";
 import { MODALITY_NAMES } from "../labels.js";

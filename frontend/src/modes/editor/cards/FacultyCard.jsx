@@ -1,15 +1,19 @@
-// Description: Name; credits (12 cr, or 12–14 cr when minimum_credits ≠ maximum_credits); Mo–Fr
-// availability chips; Mandatory (hidden when empty); Limits (unique_course_limit, maximum_days);
-// Prefers (course names, hidden when empty); Room prefs (room_preferences, hidden when empty);
-// Lab prefs (lab_preferences, hidden when empty).
+/**
+ * One faculty member in the Faculty row. Clicking it opens FacultyDialog.
+ * Credits show as "12 cr", or "12–14 cr" when the minimum and maximum differ. Mandatory days
+ * and each preference list are hidden when empty.
+ */
 
 import AvailabilityChips from "../AvailabilityChips.jsx";
 
 const WEEKDAYS = ["MON", "TUE", "WED", "THU", "FRI"];
 
-/** { "CMSC 362": 5, "CMSC 161": 4 } → "CMSC 362 (5), CMSC 161 (4)", or "" when empty. */
+/**
+ * { "CMSC 362": 5, "CMSC 161": 4 } → "CMSC 362 (5), CMSC 161 (4)", or "" when empty.
+ * Spaces inside an entry are non-breaking, so the list wraps only between entries.
+ */
 function preferenceText(prefs) {
-  return Object.entries(prefs).map(([name, score]) => `${name} (${score})`).join(", ");
+  return Object.entries(prefs).map(([name, score]) => `${name} (${score})`.replaceAll(" ", "\u00A0")).join(", ");
 }
 
 /** A faculty member: credit range, weekly availability, mandatory days, limits, and preferences. */

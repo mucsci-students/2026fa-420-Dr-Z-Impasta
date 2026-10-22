@@ -1,7 +1,9 @@
-// Description: One reusable horizontal row: a section title with a count, optional header
-// buttons, then a sideways-scrolling strip with a dashed "+ Add X" tile and the cards. Cards
-// only partly in view are faded out, so the row only ever shows whole cards. Used by Faculty,
-// Courses, Rooms, Labs, Class Patterns, Time Slots, and Global Settings.
+/**
+ * One reusable horizontal row: a section title with a count, optional header
+ * buttons, then a sideways-scrolling strip with a dashed "+ Add X" tile and the cards. Cards
+ * only partly in view are faded out, so the row only ever shows whole cards. Used by Faculty,
+ * Courses, Rooms, Labs, Class Patterns, Time Slots, and Global Settings.
+ */
 
 import { useEffect, useRef } from "react";
 
