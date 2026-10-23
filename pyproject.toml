@@ -7,6 +7,7 @@ requires-python = ">=3.12"
 dependencies = [
     "course-constraint-scheduler>=3.0.0",
     "fastapi>=0.116",
+    "openai>=3.37",
     "rich>=15.0.0",
     "uvicorn[standard]>=0.35",
 ]
