@@ -1,4 +1,9 @@
 import { loadConfiguration, validateConfig, saveConfig, exportConfig, addItem, replaceItem, deleteItem, updateTimeSlot, updateSettings } from "../components/APICommunication";
+import { ConfigFileMemento, ConfigFileOriginator, ConfigFileHistory } from "./configEditorMemento"
+
+let MEMENTO = null;
+const ORIGINATOR = new ConfigFileOriginator();
+let HISTORY = null;
 
 const ConfigStatusObj = Object.freeze({
 	NONE: "none",
@@ -10,11 +15,33 @@ const Error = (error, title, labels, onDismiss) => {
 	return { "error" : error, "title" : title, "labels" : labels, "onDismiss" : onDismiss };
 };
 
+
+//TODO: fix
+export const redoAction = async(filename, setError, setPendingLoad) => {
+	state = ORIGINATOR.prevDoc;
+	ORIGINATOR.set(state);
+	ORIGINATOR.storeFile();
+
+	await sendLoad(filename, state.getFile(), true, setError, setPendingLoad);
+};
+
+export const undoAction = async(filename, setError, setPendingLoad) => {
+	const prevState = HISTORY.pop();
+	console.log(prevState);
+	ORIGINATOR.set(prevState);
+	ORIGINATOR.storeFile();
+
+	if(prevState != undefined)
+		await sendLoad(filename, prevState.getFile(), true, setError, setPendingLoad);
+};
+
 /** Send a file's text to the server, then show what happened. */
 const sendLoad = async(filename, content, discardChanges, setError, setPendingLoad) => {
 	const res = await loadConfiguration(filename, content, discardChanges);
 	if(res.ok) {
 		setError(null);
+		ORIGINATOR.set(content);
+		HISTORY = new ConfigFileHistory(ORIGINATOR);
 		return true;
 	}
 
@@ -241,3 +268,5 @@ export const UpdateSettings = async(vals, setSettingsError) => {
 		return false;
 	}
 };
+
+

@@ -31,15 +31,17 @@ test("test config file originator", () => {
 });
 
 test("test config file history", () => {
-	const hist = new ConfigFileHistory();
+	const hist = new ConfigFileHistory(new ConfigFileOriginator());
 	assert.deepEqual(hist.snapshots, []);
+
+	const memObj = new ConfigFileMemento(CONFIG_FILE);
+	hist.push(memObj);
+	assert.deepEqual(hist.getMemento(0), memObj);
+	assert.deepEqual(hist.getMemento(0).getFile(), CONFIG_FILE);
+	assert.deepEqual(hist.snapshots, [memObj]);
 	
-	hist.push(new ConfigFileMemento(CONFIG_FILE));
-	assert.deepEqual(hist.getMemento(0), CONFIG_FILE);
-	assert.deepEqual(hist.snapshots, [CONFIG_FILE]);
-	
-	assert.deepEqual(hist.getMemento(hist.snapshots.length - 1), CONFIG_FILE);
-	assert.deepEqual(hist.pop(), CONFIG_FILE);
+	assert.deepEqual(hist.getMemento(hist.snapshots.length - 1).getFile(), CONFIG_FILE);
+	assert.deepEqual(hist.pop().getFile(), CONFIG_FILE);
 
 	assert.deepEqual(hist.snapshots, []);
 

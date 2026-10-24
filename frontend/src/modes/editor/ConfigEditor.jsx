@@ -34,7 +34,7 @@ import TimeSlotsDialog from "./dialogs/TimeSlotsDialog.jsx";
 import ConfirmDialog from "../../components/ConfirmDialog.jsx";
 
 import ErrorMessage from "../../components/ErrorMessage.jsx";
-import { Load, ConfirmLoad, Empty_Click, Validate, Save, ValidateAndSaveItem, DeleteItem, UpdateTimeSlot, UpdateSettings } from "../../state/eventHandlers";
+import { Load, ConfirmLoad, Empty_Click, Validate, Save, ValidateAndSaveItem, DeleteItem, UpdateTimeSlot, UpdateSettings, redoAction, undoAction } from "../../state/eventHandlers";
 
 export default function ConfigEditor() {
   const { state, loading, refresh } = useAppState();
@@ -153,8 +153,8 @@ export default function ConfigEditor() {
             <Button variant="primary" onClick={async () => { await Validate(); await refresh(); }}>Validate</Button>
 
 		<div className="undo-redo-row">
-			<Button onClick={() => {}}>Undo</Button>
-			<Button onClick={() => {}}>Redo</Button>
+			<Button onClick={() => {undoAction(config.name, setError, setPendingLoad)}}>Undo</Button>
+			<Button onClick={() => {redoAction(config.name, setError, setPendingLoad)}}>Redo</Button>
 		</div>
           </>
 

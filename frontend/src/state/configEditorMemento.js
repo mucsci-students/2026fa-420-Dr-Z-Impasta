@@ -15,9 +15,11 @@ class ConfigFileOriginator {
 
 	constructor() {
 		this.doc = null;
+		this.prevDoc = this.doc;
 	}
 
 	set(newDoc) {
+		this.prevDoc = this.doc;
 		this.doc = newDoc;
 	}
 
@@ -33,15 +35,15 @@ class ConfigFileOriginator {
 
 class ConfigFileHistory {
 
-	constructor() {
-		this.snapshots = [];
+	constructor(originator) {
+		this.snapshots = originator.doc == null ? [] : [originator.storeFile()];
 	}
 
 	push(memento) {
 		if (!(memento instanceof ConfigFileMemento))
 			throw new TypeError("Expected a valid configuration file");
 
-		this.snapshots.push(memento.getFile());
+		this.snapshots.push(memento);
 	}
 
 	pop() {
