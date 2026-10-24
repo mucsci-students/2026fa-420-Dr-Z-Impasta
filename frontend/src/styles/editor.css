@@ -12,6 +12,8 @@
   gap: var(--space-3);
   overflow-x: auto;                /* scrolls sideways when there are many cards */
   scroll-snap-type: x mandatory;   /* stop scrolling with a card's left edge at the row's left edge */
+  position: relative;              /* so a card's offsetLeft is measured from the row (CardRow's arrows use it) */
+  padding-bottom: var(--space-2);
 }
 
 /* Every tile in a row: the "+ Add" tile and each card */
@@ -32,6 +34,10 @@
     color: var(--accent);
     min-width: 100px;       /* narrower than a card, but never squeezed into a sliver */
     cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: var(--space-1);
 }
 
 .editor-row {
@@ -367,6 +373,9 @@
 
 .editor-row__actions {
   margin-left: auto;      /* push the header's buttons to the right */
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
 }
 
 .day-tile {

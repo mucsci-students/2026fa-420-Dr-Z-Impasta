@@ -5,7 +5,8 @@
  * Courses, Rooms, Labs, Class Patterns, Time Slots, and Global Settings.
  */
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+import Button from "../../../components/Button.jsx";
 
 /**
  * One section of the editor: a title row, then a dashed "Add" tile and the item cards.
@@ -20,9 +21,12 @@ import { useEffect, useRef } from "react";
  *
  * The row scrolls sideways and snaps to each card's left edge. Any tile only partly in
  * view is marked `data-partial` and faded out (see editor.css), so only whole cards show.
+ * The ‹ › buttons in the title row scroll one page of whole cards at a time.
  */
 export default function CardRow({ title, meta, addLabel, onAdd, actions, children }) {
   const rowRef = useRef(null);
+  const [canLeft, setCanLeft] = useState(false);
+  const [canRight, setCanRight] = useState(false);
 
   // Watch every tile against the row's visible area. Fading a tile doesn't move anything,
   // so this only reacts to scrolling and resizing. Runs again when the cards change so new
@@ -42,12 +46,58 @@ export default function CardRow({ title, meta, addLabel, onAdd, actions, childre
     return () => observer.disconnect();
   }, [children]);
 
+  // Turn each arrow off when the row is already scrolled all the way to that side.
+  useEffect(() => {
+    const row = rowRef.current;
+    const update = () => {
+      setCanLeft(row.scrollLeft > 0);
+      setCanRight(row.scrollLeft + row.clientWidth < row.scrollWidth - 1); // -1 for fractional pixels
+    };
+    update();
+    row.addEventListener("scroll", update);
+    const resize = new ResizeObserver(update);
+    resize.observe(row);
+    return () => {
+      row.removeEventListener("scroll", update);
+      resize.disconnect();
+    };
+  }, [children]);
+
+  /**
+   * Scroll one page of whole cards: right (`dir` 1) or left (`dir` -1). The target card is
+   * picked here rather than scrolling by the row's width, because snapping to the nearest
+   * card edge could otherwise skip the card that was cut off.
+   */
+  function page(dir) {
+    const row = rowRef.current;
+    const tiles = [...row.children];
+    const start = row.scrollLeft;
+    const end = start + row.clientWidth;
+    const target =
+      dir > 0
+        ? tiles.find((t) => t.offsetLeft + t.offsetWidth > end + 1) // first card cut off on the right
+        : tiles.find((t) => t.offsetLeft >= start - row.clientWidth - 1); // first card of the previous page
+    if (target) row.scrollTo({ left: target.offsetLeft, behavior: "smooth" });
+  }
+
   return (
     <section className="editor-row">
       <header className="editor-row__header">
         <h2 className="editor-row__title">{title}</h2>
         <span className="editor-row__meta">{meta}</span>
-        {actions && <div className="editor-row__actions">{actions}</div>}
+        <div className="editor-row__actions">
+          {actions}
+          {(canLeft || canRight) && (
+            <>
+              <Button style={{ visibility: canLeft ? "visible" : "hidden" }} onClick={() => page(-1)} aria-label={`Scroll ${title} left`}>
+                ‹
+              </Button>
+              <Button style={{ visibility: canRight ? "visible" : "hidden" }} onClick={() => page(1)} aria-label={`Scroll ${title} right`}>
+                ›
+              </Button>
+            </>
+          )}
+        </div>
       </header>
       <div className="editor-row__items" ref={rowRef}>
         {onAdd && (
