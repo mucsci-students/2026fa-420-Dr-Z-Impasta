@@ -15,7 +15,6 @@ import { issuesFor } from "../../../components/issues.js";
 import AvailabilityEditor from "../AvailabilityEditor.jsx";
 import CheckboxList from "../CheckboxList.jsx";
 import PreferenceEditor from "../PreferenceEditor.jsx";
-//import { InvalidField }  from "../../../state/EventHandlers.jsx"; 
 
 const WEEKDAYS = ["MON", "TUE", "WED", "THU", "FRI"];
 

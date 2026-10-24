@@ -134,10 +134,19 @@ export default function PatternDialog({ index, pattern, options, busy, error, on
             <input className={classNameFunc("credits")} type="number" min={1} value={draft.credits ?? ""}
               onChange={(e) => set("credits", toNumber(e.target.value))} data-autofocus />
           </Field>
-          <Field label="Start time" help="Optional. Meetings without their own start time begin here." error={errorFor("start_time")}>
-            <input className={classNameFunc("start_time")} type="time" value={draft.start_time ?? ""}
-              onChange={(e) => set("start_time", toTime(e.target.value))} />
-          </Field>
+          {/* The button sits beside the Field, not inside it: Field gives its one child the label's id */}
+          <div className="time-field">
+            <Field label="Start time" help="Optional. Meetings without their own start time begin here." error={errorFor("start_time")}>
+              <input className={classNameFunc("start_time")} type="time" value={draft.start_time ?? ""}
+                onChange={(e) => set("start_time", toTime(e.target.value))} />
+            </Field>
+            {/* Browsers give a time box no reliable way to empty it, so this sets it back to "any" */}
+            {draft.start_time && (
+              <Button size="sm" variant="ghost" onClick={() => set("start_time", null)}>
+                Any time
+              </Button>
+            )}
+          </div>
         </div>
 
         <label className="toggle">
@@ -173,10 +182,21 @@ export default function PatternDialog({ index, pattern, options, busy, error, on
                 </select>
                 <input type="time" aria-label={`Meeting ${i + 1} start time`} value={m.start_time ?? ""}
                   onChange={(e) => setMeeting(i, "start_time", toTime(e.target.value))} />
-                <button type="button" className="meetings-editor__remove" aria-label={`Remove meeting ${i + 1}`}
-                  onClick={() => removeMeeting(i)}>
-                  ×
-                </button>
+                {/* One cell for both buttons, so the × sits right after the time box and moves
+                    over when "Any" appears */}
+                <div className="meetings-editor__end">
+                  {/* Clears the meeting's own start time, like "Any time" above */}
+                  {m.start_time && (
+                    <Button size="sm" variant="ghost" aria-label={`Any start time for meeting ${i + 1}`}
+                      onClick={() => setMeeting(i, "start_time", null)}>
+                      Any
+                    </Button>
+                  )}
+                  <button type="button" className="meetings-editor__remove" aria-label={`Remove meeting ${i + 1}`}
+                    onClick={() => removeMeeting(i)}>
+                    ×
+                  </button>
+                </div>
                 {rowError && <p className="field__error meetings-editor__error">{rowError}</p>}
               </div>
             );
