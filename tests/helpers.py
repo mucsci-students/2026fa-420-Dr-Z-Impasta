@@ -6,6 +6,7 @@ from pathlib import Path
 
 from scheduler import CombinedConfig
 
+from zimpasta.controller.assistant import AIReply, ToolCall
 from zimpasta.model.generate import Schedule
 
 FIXTURE_CONFIG = Path(__file__).resolve().parent / "fixtures" / "minimal_config.json"
@@ -130,3 +131,50 @@ class FakeSchedulerFactory:
     @property
     def last_config(self) -> CombinedConfig:
         return self.instances[-1].config
+
+
+class FakeAIClient:
+    """Stands in for OpenAI: returns scripted replies and records every request.
+
+    Each script step is an ``AIReply`` to return, an exception to raise, or a callable that
+    receives the request and returns a reply. Asking for more than the script holds fails
+    the test, so a test also proves how many API calls a message makes::
+
+        ai = FakeAIClient(calling(tool_call("validate_configuration")), saying("It's valid."))
+    """
+
+    model = "fake-model"
+
+    def __init__(self, *script) -> None:
+        self.script = list(script)
+        self.requests: list[dict] = []
+
+    def respond(self, *, instructions, input, tools, previous_id=None) -> AIReply:
+        request = {
+            "instructions": instructions,
+            "input": input,
+            "tools": tools,
+            "previous_id": previous_id,
+        }
+        self.requests.append(request)
+        if not self.script:
+            raise AssertionError("The fake AI was asked more often than the test scripted.")
+        step = self.script.pop(0)
+        if isinstance(step, BaseException):
+            raise step
+        if callable(step):
+            return step(request)
+        return step
+
+
+def tool_call(name: str, call_id: str = "call-1", **arguments) -> ToolCall:
+    """A tool call as the model would send it, with JSON-encoded arguments."""
+    return ToolCall(call_id=call_id, name=name, arguments=json.dumps(arguments))
+
+
+def calling(*calls: ToolCall, reply_id: str = "reply-1") -> AIReply:
+    return AIReply(id=reply_id, calls=calls)
+
+
+def saying(text: str, reply_id: str = "reply-final") -> AIReply:
+    return AIReply(id=reply_id, text=text)
