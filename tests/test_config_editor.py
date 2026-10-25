@@ -1,3 +1,4 @@
+import re
 import subprocess
 import time
 import urllib.request
@@ -16,10 +17,6 @@ RUN_SERVER = ["uv", "run", "zimpasta", "--gui"]
 
 @pytest.fixture(scope="session", autouse=True)
 def start_website():
-    # runs 'uv run zimpasta --gui' upon the running of this file
-
-    # subprocess.run(["npm", "ci"], cwd="frontend", check=True)
-    # subprocess.run(["npm", "run", "build"], cwd="frontend", check=True)
 
     # start website in the background
     server = subprocess.Popen(
@@ -348,11 +345,11 @@ def test_undo_button(loaded_config_page: Page):
         pass
 
     # get the number of rooms appearing on the screen before editing
-    # pattern_section = loaded_config_page.locator("section.editor-row").filter(
-    #    has=loaded_config_page.get_by_role("heading", level=2, name="Class Patterns")
-    # )
-    # pattern_count_locator = pattern_section.locator(".editor-row__meta")
-    # number_of_patterns_before = int(pattern_count_locator.inner_text().split(" ")[2])
+    pattern_section = loaded_config_page.locator("section.editor-row").filter(
+        has=loaded_config_page.get_by_role("heading", level=2, name="Class Patterns")
+    )
+    pattern_count_locator = pattern_section.locator(".editor-row__meta")
+    number_of_patterns_before = int(pattern_count_locator.inner_text().split(" ")[2])
 
     # get the number of labs appearing on the screen before editing
     lab_section = loaded_config_page.locator("section.editor-row").filter(
@@ -394,10 +391,11 @@ def test_undo_button(loaded_config_page: Page):
     popup.get_by_label("Different courses").fill(str(3))
 
     loaded_config_page.get_by_role("button", name="Add faculty member").click()
+    expect(fac_count_locator).to_have_text(str(number_of_fac_before + 1), timeout=5000)
 
     # undo
     loaded_config_page.get_by_role("button", name="Undo").click()
-    expect(fac_count_locator).to_have_text(str(number_of_fac_before))
+    expect(fac_count_locator).to_have_text(str(number_of_fac_before), timeout=5000)
 
     # test course un-doing
 
@@ -414,10 +412,15 @@ def test_undo_button(loaded_config_page: Page):
     popup.get_by_label("Linux").click()
 
     popup.get_by_role("button", name="Add course").click()
+    expect(course_count_locator).to_have_text(
+        str(number_of_courses_before + 1) + " sections", timeout=5000
+    )
 
     # undo
     loaded_config_page.get_by_role("button", name="Undo").click()
-    expect(course_count_locator).to_have_text(str(number_of_courses_before) + " sections")
+    expect(course_count_locator).to_have_text(
+        str(number_of_courses_before) + " sections", timeout=5000
+    )
 
     # test room un-doing
 
@@ -429,10 +432,11 @@ def test_undo_button(loaded_config_page: Page):
     popup.get_by_label("Capacity").fill(str(30))
 
     popup.get_by_role("button", name="Add room").click()
+    expect(room_count_locator).to_have_text(str(number_of_rooms_before + 1), timeout=5000)
 
     # undo
     loaded_config_page.get_by_role("button", name="Undo").click()
-    expect(room_count_locator).to_have_text(str(number_of_rooms_before))
+    expect(room_count_locator).to_have_text(str(number_of_rooms_before), timeout=5000)
 
     # test lab un-doing
 
@@ -444,10 +448,30 @@ def test_undo_button(loaded_config_page: Page):
     popup.get_by_label("Capacity").fill(str(30))
 
     popup.get_by_role("button", name="Add lab").click()
+    expect(lab_count_locator).to_have_text(str(number_of_labs_before + 1), timeout=5000)
 
     # undo
     loaded_config_page.get_by_role("button", name="Undo").click()
-    expect(lab_count_locator).to_have_text(str(number_of_labs_before))
+    expect(lab_count_locator).to_have_text(str(number_of_labs_before), timeout=5000)
+
+    # test pattern un-doing
+
+    # add a pattern
+    loaded_config_page.get_by_role("button", name="Add pattern").click()
+    popup = loaded_config_page.get_by_role("dialog")
+
+    popup.get_by_label("Credits").fill(str(3))
+
+    popup.get_by_role("button", name="Add pattern").click()
+    expect(pattern_count_locator).to_have_text(
+        re.compile(rf"\d+ of {number_of_patterns_before + 1} enabled"), timeout=5000
+    )
+
+    # undo
+    loaded_config_page.get_by_role("button", name="Undo").click()
+    expect(pattern_count_locator).to_have_text(
+        re.compile(rf"\d+ of {number_of_patterns_before} enabled"), timeout=5000
+    )
 
 
 def test_redo_button(loaded_config_page: Page):
@@ -460,11 +484,11 @@ def test_redo_button(loaded_config_page: Page):
         pass
 
     # get the number of patterns appearing on the screen before editing
-    # pattern_section = loaded_config_page.locator("section.editor-row").filter(
-    #    has=loaded_config_page.get_by_role("heading", level=2, name="Class Patterns")
-    # )
-    # pattern_count_locator = pattern_section.locator(".editor-row__meta")
-    # number_of_patterns_before = int(pattern_count_locator.inner_text().split(" ")[2])
+    pattern_section = loaded_config_page.locator("section.editor-row").filter(
+        has=loaded_config_page.get_by_role("heading", level=2, name="Class Patterns")
+    )
+    pattern_count_locator = pattern_section.locator(".editor-row__meta")
+    number_of_patterns_before = int(pattern_count_locator.inner_text().split(" ")[2])
 
     # get the number of labs appearing on the screen before editing
     lab_section = loaded_config_page.locator("section.editor-row").filter(
@@ -507,12 +531,17 @@ def test_redo_button(loaded_config_page: Page):
 
     loaded_config_page.get_by_role("button", name="Add faculty member").click()
 
-    # undo
-    loaded_config_page.get_by_role("button", name="Undo").click()
-    # redo
-    loaded_config_page.get_by_role("button", name="Redo").click()
-    loaded_config_page.wait_for_timeout(3000)
-    expect(fac_count_locator).to_have_text(str(number_of_fac_before + 1))
+    # undo-redo
+    undo_button = loaded_config_page.get_by_role("button", name="Undo")
+    redo_button = loaded_config_page.get_by_role("button", name="Redo")
+
+    expect(fac_count_locator).to_have_text(str(number_of_fac_before + 1), timeout=5000)
+
+    undo_button.click()
+    expect(fac_count_locator).to_have_text(str(number_of_fac_before), timeout=5000)
+
+    redo_button.click()
+    expect(fac_count_locator).to_have_text(str(number_of_fac_before + 1), timeout=5000)
 
     # test course re-doing
 
@@ -530,12 +559,23 @@ def test_redo_button(loaded_config_page: Page):
 
     popup.get_by_role("button", name="Add course").click()
 
-    # undo
-    loaded_config_page.get_by_role("button", name="Undo").click()
-    # redo
-    loaded_config_page.get_by_role("button", name="Redo").click()
-    loaded_config_page.wait_for_timeout(3000)
-    expect(course_count_locator).to_have_text(str(number_of_courses_before + 1) + " sections")
+    # undo-redo
+    undo_button = loaded_config_page.get_by_role("button", name="Undo")
+    redo_button = loaded_config_page.get_by_role("button", name="Redo")
+
+    expect(course_count_locator).to_have_text(
+        str(number_of_courses_before + 1) + " sections", timeout=5000
+    )
+
+    undo_button.click()
+    expect(course_count_locator).to_have_text(
+        str(number_of_courses_before) + " sections", timeout=5000
+    )
+
+    redo_button.click()
+    expect(course_count_locator).to_have_text(
+        str(number_of_courses_before + 1) + " sections", timeout=5000
+    )
 
     # test room re-doing
 
@@ -548,12 +588,17 @@ def test_redo_button(loaded_config_page: Page):
 
     popup.get_by_role("button", name="Add room").click()
 
-    # undo
-    loaded_config_page.get_by_role("button", name="Undo").click()
-    # redo
-    loaded_config_page.get_by_role("button", name="Redo").click()
-    loaded_config_page.wait_for_timeout(3000)
-    expect(room_count_locator).to_have_text(str(number_of_rooms_before + 1))
+    # undo-redo
+    undo_button = loaded_config_page.get_by_role("button", name="Undo")
+    redo_button = loaded_config_page.get_by_role("button", name="Redo")
+
+    expect(room_count_locator).to_have_text(str(number_of_rooms_before + 1), timeout=5000)
+
+    undo_button.click()
+    expect(room_count_locator).to_have_text(str(number_of_rooms_before), timeout=5000)
+
+    redo_button.click()
+    expect(room_count_locator).to_have_text(str(number_of_rooms_before + 1), timeout=5000)
 
     # test lab re-doing
 
@@ -566,9 +611,38 @@ def test_redo_button(loaded_config_page: Page):
 
     popup.get_by_role("button", name="Add lab").click()
 
-    # undo
+    # undo-redo
+    undo_button = loaded_config_page.get_by_role("button", name="Undo")
+    redo_button = loaded_config_page.get_by_role("button", name="Redo")
+
+    expect(lab_count_locator).to_have_text(str(number_of_labs_before + 1), timeout=5000)
+
+    undo_button.click()
+    expect(lab_count_locator).to_have_text(str(number_of_labs_before), timeout=5000)
+
+    redo_button.click()
+    expect(lab_count_locator).to_have_text(str(number_of_labs_before + 1), timeout=5000)
+
+    # test pattern re-doing
+
+    # add a pattern
+    loaded_config_page.get_by_role("button", name="Add pattern").click()
+    popup = loaded_config_page.get_by_role("dialog")
+
+    popup.get_by_label("Credits").fill(str(3))
+
+    popup.get_by_role("button", name="Add pattern").click()
+    expect(pattern_count_locator).to_have_text(
+        re.compile(rf"\d+ of {number_of_patterns_before + 1} enabled"), timeout=5000
+    )
+
+    # undo-redo
     loaded_config_page.get_by_role("button", name="Undo").click()
-    # redo
+    expect(pattern_count_locator).to_have_text(
+        re.compile(rf"\d+ of {number_of_patterns_before} enabled"), timeout=5000
+    )
+
     loaded_config_page.get_by_role("button", name="Redo").click()
-    loaded_config_page.wait_for_timeout(3000)
-    expect(lab_count_locator).to_have_text(str(number_of_labs_before + 1))
+    expect(pattern_count_locator).to_have_text(
+        re.compile(rf"\d+ of {number_of_patterns_before + 1} enabled"), timeout=5000
+    )
