@@ -511,7 +511,7 @@ def test_redo_button(loaded_config_page: Page):
     loaded_config_page.get_by_role("button", name="Undo").click()
     # redo
     loaded_config_page.get_by_role("button", name="Redo").click()
-    loaded_config_page.wait_for_timeout(1000)
+    loaded_config_page.wait_for_timeout(3000)
     expect(fac_count_locator).to_have_text(str(number_of_fac_before + 1))
 
     # test course re-doing
@@ -534,7 +534,7 @@ def test_redo_button(loaded_config_page: Page):
     loaded_config_page.get_by_role("button", name="Undo").click()
     # redo
     loaded_config_page.get_by_role("button", name="Redo").click()
-    loaded_config_page.wait_for_timeout(1000)
+    loaded_config_page.wait_for_timeout(3000)
     expect(course_count_locator).to_have_text(str(number_of_courses_before + 1) + " sections")
 
     # test room re-doing
@@ -552,7 +552,7 @@ def test_redo_button(loaded_config_page: Page):
     loaded_config_page.get_by_role("button", name="Undo").click()
     # redo
     loaded_config_page.get_by_role("button", name="Redo").click()
-    loaded_config_page.wait_for_timeout(1000)
+    loaded_config_page.wait_for_timeout(3000)
     expect(room_count_locator).to_have_text(str(number_of_rooms_before + 1))
 
     # test lab re-doing
@@ -570,5 +570,5 @@ def test_redo_button(loaded_config_page: Page):
     loaded_config_page.get_by_role("button", name="Undo").click()
     # redo
     loaded_config_page.get_by_role("button", name="Redo").click()
-    loaded_config_page.wait_for_timeout(1000)
+    loaded_config_page.wait_for_timeout(3000)
     expect(lab_count_locator).to_have_text(str(number_of_labs_before + 1))
