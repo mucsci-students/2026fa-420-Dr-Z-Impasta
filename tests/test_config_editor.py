@@ -336,3 +336,239 @@ def test_adding_a_class_pattern(loaded_config_page: Page):
     # test that the number of patterns on the screen incremented after an addition
     loaded_config_page.wait_for_timeout(1000)
     assert pattern_count_locator.inner_text().split(" ")[2] == str(number_of_patterns_before + 1)
+
+
+def test_undo_button(loaded_config_page: Page):
+    # load new config for this test function & discard previous, unsaved edits
+    discardBtn = loaded_config_page.get_by_role("button", name="Discard and load")
+    try:
+        discardBtn.wait_for(state="visible", timeout=5000)
+        discardBtn.click()
+    except PlaywrightTimeoutError:
+        pass
+
+    # get the number of rooms appearing on the screen before editing
+    # pattern_section = loaded_config_page.locator("section.editor-row").filter(
+    #    has=loaded_config_page.get_by_role("heading", level=2, name="Class Patterns")
+    # )
+    # pattern_count_locator = pattern_section.locator(".editor-row__meta")
+    # number_of_patterns_before = int(pattern_count_locator.inner_text().split(" ")[2])
+
+    # get the number of labs appearing on the screen before editing
+    lab_section = loaded_config_page.locator("section.editor-row").filter(
+        has=loaded_config_page.get_by_role("heading", level=2, name="Labs")
+    )
+    lab_count_locator = lab_section.locator(".editor-row__meta")
+    number_of_labs_before = int(lab_count_locator.inner_text())
+
+    # get the number of rooms appearing on the screen before editing
+    room_section = loaded_config_page.locator("section.editor-row").filter(
+        has=loaded_config_page.get_by_role("heading", level=2, name="Rooms")
+    )
+    room_count_locator = room_section.locator(".editor-row__meta")
+    number_of_rooms_before = int(room_count_locator.inner_text())
+
+    # get the number of courses appearing on the screen before editing
+    course_section = loaded_config_page.locator("section.editor-row").filter(
+        has=loaded_config_page.get_by_role("heading", level=2, name="Courses")
+    )
+    course_count_locator = course_section.locator(".editor-row__meta")
+    number_of_courses_before = int(course_count_locator.inner_text().split(" ")[0])
+
+    # get the number of faculty appearing on the screen before editing
+    faculty_section = loaded_config_page.locator("section.editor-row").filter(
+        has=loaded_config_page.get_by_role("heading", level=2, name="Faculty")
+    )
+    fac_count_locator = faculty_section.locator(".editor-row__meta")
+    number_of_fac_before = int(fac_count_locator.inner_text())
+
+    # test faculty un-doing
+
+    # add a faculty
+    loaded_config_page.get_by_role("button", name="Add faculty").click()
+    popup = loaded_config_page.get_by_role("dialog")
+
+    popup.get_by_label("Name").fill("Dr. Not-Zoppetti")
+    popup.get_by_label("Minimum credits").fill(str(3))
+    popup.get_by_label("Maximum credits").fill(str(12))
+    popup.get_by_label("Different courses").fill(str(3))
+
+    loaded_config_page.get_by_role("button", name="Add faculty member").click()
+
+    # undo
+    loaded_config_page.get_by_role("button", name="Undo").click()
+    expect(fac_count_locator).to_have_text(str(number_of_fac_before))
+
+    # test course un-doing
+
+    # add a course
+    loaded_config_page.get_by_role("button", name="Add course").click()
+    popup = loaded_config_page.get_by_role("dialog")
+
+    popup.get_by_label("Course ID").fill("CMSC 144")
+    popup.get_by_label("Credits").fill(str(4))
+    popup.get_by_label("Capacity").fill(str(30))
+    popup.get_by_label("Specific").click()
+    popup.get_by_label("Zoppetti").click()
+    popup.get_by_label("Roddy 136").click()
+    popup.get_by_label("Linux").click()
+
+    popup.get_by_role("button", name="Add course").click()
+
+    # undo
+    loaded_config_page.get_by_role("button", name="Undo").click()
+    expect(course_count_locator).to_have_text(str(number_of_courses_before) + " sections")
+
+    # test room un-doing
+
+    # add a room
+    loaded_config_page.get_by_role("button", name="Add room").click()
+    popup = loaded_config_page.get_by_role("dialog")
+
+    popup.get_by_label("Name").fill("Roddy 101")
+    popup.get_by_label("Capacity").fill(str(30))
+
+    popup.get_by_role("button", name="Add room").click()
+
+    # undo
+    loaded_config_page.get_by_role("button", name="Undo").click()
+    expect(room_count_locator).to_have_text(str(number_of_rooms_before))
+
+    # test lab un-doing
+
+    # add a lab
+    loaded_config_page.get_by_role("button", name="Add lab").click()
+    popup = loaded_config_page.get_by_role("dialog")
+
+    popup.get_by_label("Name").fill("Opera")
+    popup.get_by_label("Capacity").fill(str(30))
+
+    popup.get_by_role("button", name="Add lab").click()
+
+    # undo
+    loaded_config_page.get_by_role("button", name="Undo").click()
+    expect(lab_count_locator).to_have_text(str(number_of_labs_before))
+
+
+def test_redo_button(loaded_config_page: Page):
+    # load new config for this test function & discard previous, unsaved edits
+    discardBtn = loaded_config_page.get_by_role("button", name="Discard and load")
+    try:
+        discardBtn.wait_for(state="visible", timeout=5000)
+        discardBtn.click()
+    except PlaywrightTimeoutError:
+        pass
+
+    # get the number of patterns appearing on the screen before editing
+    # pattern_section = loaded_config_page.locator("section.editor-row").filter(
+    #    has=loaded_config_page.get_by_role("heading", level=2, name="Class Patterns")
+    # )
+    # pattern_count_locator = pattern_section.locator(".editor-row__meta")
+    # number_of_patterns_before = int(pattern_count_locator.inner_text().split(" ")[2])
+
+    # get the number of labs appearing on the screen before editing
+    lab_section = loaded_config_page.locator("section.editor-row").filter(
+        has=loaded_config_page.get_by_role("heading", level=2, name="Labs")
+    )
+    lab_count_locator = lab_section.locator(".editor-row__meta")
+    number_of_labs_before = int(lab_count_locator.inner_text())
+
+    # get the number of rooms appearing on the screen before editing
+    room_section = loaded_config_page.locator("section.editor-row").filter(
+        has=loaded_config_page.get_by_role("heading", level=2, name="Rooms")
+    )
+    room_count_locator = room_section.locator(".editor-row__meta")
+    number_of_rooms_before = int(room_count_locator.inner_text())
+
+    # get the number of courses appearing on the screen before editing
+    course_section = loaded_config_page.locator("section.editor-row").filter(
+        has=loaded_config_page.get_by_role("heading", level=2, name="Courses")
+    )
+    course_count_locator = course_section.locator(".editor-row__meta")
+    number_of_courses_before = int(course_count_locator.inner_text().split(" ")[0])
+
+    # get the number of faculty appearing on the screen before editing
+    faculty_section = loaded_config_page.locator("section.editor-row").filter(
+        has=loaded_config_page.get_by_role("heading", level=2, name="Faculty")
+    )
+    fac_count_locator = faculty_section.locator(".editor-row__meta")
+    number_of_fac_before = int(fac_count_locator.inner_text())
+
+    # test faculty re-doing
+
+    # add a faculty
+    loaded_config_page.get_by_role("button", name="Add faculty").click()
+    popup = loaded_config_page.get_by_role("dialog")
+
+    popup.get_by_label("Name").fill("Dr. Not-Zoppetti")
+    popup.get_by_label("Minimum credits").fill(str(3))
+    popup.get_by_label("Maximum credits").fill(str(12))
+    popup.get_by_label("Different courses").fill(str(3))
+
+    loaded_config_page.get_by_role("button", name="Add faculty member").click()
+
+    # undo
+    loaded_config_page.get_by_role("button", name="Undo").click()
+    # redo
+    loaded_config_page.get_by_role("button", name="Redo").click()
+    loaded_config_page.wait_for_timeout(1000)
+    expect(fac_count_locator).to_have_text(str(number_of_fac_before + 1))
+
+    # test course re-doing
+
+    # add a course
+    loaded_config_page.get_by_role("button", name="Add course").click()
+    popup = loaded_config_page.get_by_role("dialog")
+
+    popup.get_by_label("Course ID").fill("CMSC 144")
+    popup.get_by_label("Credits").fill(str(4))
+    popup.get_by_label("Capacity").fill(str(30))
+    popup.get_by_label("Specific").click()
+    popup.get_by_label(text="Zoppetti", exact=True).click()
+    popup.get_by_label("Roddy 136").click()
+    popup.get_by_label("Linux").click()
+
+    popup.get_by_role("button", name="Add course").click()
+
+    # undo
+    loaded_config_page.get_by_role("button", name="Undo").click()
+    # redo
+    loaded_config_page.get_by_role("button", name="Redo").click()
+    loaded_config_page.wait_for_timeout(1000)
+    expect(course_count_locator).to_have_text(str(number_of_courses_before + 1) + " sections")
+
+    # test room re-doing
+
+    # add a room
+    loaded_config_page.get_by_role("button", name="Add room").click()
+    popup = loaded_config_page.get_by_role("dialog")
+
+    popup.get_by_label("Name").fill("Roddy 101")
+    popup.get_by_label("Capacity").fill(str(30))
+
+    popup.get_by_role("button", name="Add room").click()
+
+    # undo
+    loaded_config_page.get_by_role("button", name="Undo").click()
+    # redo
+    loaded_config_page.get_by_role("button", name="Redo").click()
+    loaded_config_page.wait_for_timeout(1000)
+    expect(room_count_locator).to_have_text(str(number_of_rooms_before + 1))
+
+    # test lab re-doing
+
+    # add a lab
+    loaded_config_page.get_by_role("button", name="Add lab").click()
+    popup = loaded_config_page.get_by_role("dialog")
+
+    popup.get_by_label("Name").fill("Opera")
+    popup.get_by_label("Capacity").fill(str(30))
+
+    popup.get_by_role("button", name="Add lab").click()
+
+    # undo
+    loaded_config_page.get_by_role("button", name="Undo").click()
+    # redo
+    loaded_config_page.get_by_role("button", name="Redo").click()
+    loaded_config_page.wait_for_timeout(1000)
+    expect(lab_count_locator).to_have_text(str(number_of_labs_before + 1))
