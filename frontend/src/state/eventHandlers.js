@@ -15,24 +15,35 @@ const Error = (error, title, labels, onDismiss) => {
 	return { "error" : error, "title" : title, "labels" : labels, "onDismiss" : onDismiss };
 };
 
-
-//TODO: fix
-export const redoAction = async(filename, setError, setPendingLoad) => {
-	state = ORIGINATOR.prevDoc;
-	ORIGINATOR.set(state);
-	ORIGINATOR.storeFile();
-
-	await sendLoad(filename, state.getFile(), true, setError, setPendingLoad);
+export const pushToHist = (content) => {
+	HISTORY.push(new ConfigFileMemento(content));
 };
 
+export const pushToCurr = (content) => {
+	HISTORY.pushToCurr(new ConfigFileMemento(content));
+};
+
+
+//TODO: add loading symbol to let user know loading is happening
+export const redoAction = async(filename, setError, setPendingLoad) => {
+	const restore = HISTORY.getUndid();
+
+	ORIGINATOR.set(restore);
+	ORIGINATOR.storeFile();
+
+	if(restore != undefined)
+		await sendLoad(filename, JSON.stringify(restore.getFile()), true, setError, setPendingLoad);
+};
+
+//TODO: fix course undo bug
 export const undoAction = async(filename, setError, setPendingLoad) => {
 	const prevState = HISTORY.pop();
-	console.log(prevState);
+
 	ORIGINATOR.set(prevState);
 	ORIGINATOR.storeFile();
 
 	if(prevState != undefined)
-		await sendLoad(filename, prevState.getFile(), true, setError, setPendingLoad);
+		await sendLoad(filename, JSON.stringify(prevState.getFile()), true, setError, setPendingLoad);
 };
 
 /** Send a file's text to the server, then show what happened. */
@@ -40,8 +51,13 @@ const sendLoad = async(filename, content, discardChanges, setError, setPendingLo
 	const res = await loadConfiguration(filename, content, discardChanges);
 	if(res.ok) {
 		setError(null);
-		ORIGINATOR.set(content);
-		HISTORY = new ConfigFileHistory(ORIGINATOR);
+
+		//only set the memento objects on initial load
+		if(HISTORY == null) {
+			ORIGINATOR.set(JSON.parse(content));
+			HISTORY = new ConfigFileHistory(ORIGINATOR);
+		}
+
 		return true;
 	}
 
@@ -223,12 +239,13 @@ const handleItem = async (res, setEditing, setLocalError) => {
 
 
 const setErrors = (setLocalError, resJSON) => {
-  setLocalError(resJSON.error ?? { message: "The change was not applied." });   // { message, issues: [{ area, index, field, message }] }
+  setLocalError(resJSON.error ?? { message: "The change was not applied." });  
 };
 
 export const DeleteItem = async(deleting, setDeleting, setEditing, setLocalError) => {
 	try {
 		const res = await deleteItem(deleting.area, deleting.index);
+			
 		if(!res.ok) {
 			const { error } = await res.json();
 			setLocalError(error ?? { message: "Nothing was deleted." });

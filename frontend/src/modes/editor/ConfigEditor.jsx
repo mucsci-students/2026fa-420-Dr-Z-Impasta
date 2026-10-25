@@ -34,7 +34,7 @@ import TimeSlotsDialog from "./dialogs/TimeSlotsDialog.jsx";
 import ConfirmDialog from "../../components/ConfirmDialog.jsx";
 
 import ErrorMessage from "../../components/ErrorMessage.jsx";
-import { Load, ConfirmLoad, Empty_Click, Validate, Save, ValidateAndSaveItem, DeleteItem, UpdateTimeSlot, UpdateSettings, redoAction, undoAction } from "../../state/eventHandlers";
+import { Load, ConfirmLoad, Empty_Click, Validate, Save, ValidateAndSaveItem, DeleteItem, UpdateTimeSlot, UpdateSettings, redoAction, undoAction, pushToHist, pushToCurr } from "../../state/eventHandlers";
 
 export default function ConfigEditor() {
   const { state, loading, refresh } = useAppState();
@@ -137,7 +137,6 @@ export default function ConfigEditor() {
         }
         actions={
           <>
-           {/* <Button variant="ghost">Raw JSON</Button>*/}
             <Button onClick={async () => { await Empty_Click(setLoadingFile, setError, setPendingLoad); await refresh(); }}>New</Button>
 
             <Button onClick={() => fileInputRef.current.click()}>Load JSON...</Button>
@@ -174,7 +173,7 @@ export default function ConfigEditor() {
             title="Faculty"
             meta={items.faculty.length}
             addLabel="Add faculty"
-            onAdd={() => setEditing({ area: "faculty", index: null })}
+            onAdd={() => { setEditing({ area: "faculty", index: null }); }}
           >
             {items.faculty.map((f, i) => (
 
@@ -189,7 +188,7 @@ export default function ConfigEditor() {
             title="Courses"
             meta={plural(items.courses.length, "section")}
             addLabel="Add course"
-            onAdd={() => setEditing({ area: "courses", index: null })}
+            onAdd={() => { setEditing({ area: "courses", index: null }); }}
           >
             {items.courses.map((c, i) => (
               <CourseCard
@@ -208,7 +207,7 @@ export default function ConfigEditor() {
               title="Rooms"
               meta={items.rooms.length}
               addLabel="Add room"
-              onAdd={() => setEditing({ area: "rooms", index: null })}
+              onAdd={() => { setEditing({ area: "rooms", index: null }); }}
             >
               {items.rooms.map((r, i) => (
                 <ResourceCard
@@ -223,7 +222,7 @@ export default function ConfigEditor() {
               title="Labs"
               meta={items.labs.length}
               addLabel="Add lab"
-              onAdd={() => setEditing({ area: "labs", index: null })}
+              onAdd={() => { setEditing({ area: "labs", index: null }); }}
             >
               {items.labs.map((l, i) => (
                 <ResourceCard
@@ -239,7 +238,7 @@ export default function ConfigEditor() {
             title="Class Patterns"
             meta={`${enabled} of ${patterns.length} enabled`}
             addLabel="Add pattern"
-            onAdd={() => setEditing({ area: "patterns", index: null })}
+            onAdd={() => { setEditing({ area: "patterns", index: null }); }}
           >
             {patterns.map((p, i) => (
               <PatternCard
@@ -278,7 +277,13 @@ export default function ConfigEditor() {
               options={options}
               onCancel={() => { setLocalError(null); setEditing(null); }}
               onDelete={() => { setLocalError(null); setDeleting(editing); }}
-              onSave={async (draft) => { await ValidateAndSaveItem(editing, draft, setEditing, setLocalError); await refresh(); }}
+              onSave={async (draft) => 
+		      {
+			      pushToHist(doc.document); 
+			      const res = await ValidateAndSaveItem(editing, draft, setEditing, setLocalError); 
+			      await refresh(); 
+			      const newDoc = await res.json(); pushToCurr(newDoc.document); 
+	      }}
               error={localError}
             />
           )}
@@ -297,7 +302,13 @@ export default function ConfigEditor() {
               options={options}
               onCancel={() => { setLocalError(null); setEditing(null); }}
               onDelete={() => { setLocalError(null); setDeleting(editing); }}
-              onSave={async (draft) => { await ValidateAndSaveItem(editing, draft, setEditing, setLocalError); await refresh(); }}
+              onSave={async (draft) => 
+		      { 
+			      pushToHist(doc.document); 
+			      const res = await ValidateAndSaveItem(editing, draft, setEditing, setLocalError); 
+			      await refresh(); 
+			      const newDoc = await res.json(); pushToCurr(newDoc.document); 
+		      }}
               error={localError}
             />
           )}
@@ -311,7 +322,13 @@ export default function ConfigEditor() {
               options={options}
               onCancel={() => { setLocalError(null); setEditing(null); }}
               onDelete={() => { setLocalError(null); setDeleting(editing); }}
-              onSave={async (draft) => { await ValidateAndSaveItem(editing, draft, setEditing, setLocalError); await refresh(); }}
+              onSave={async (draft) => 
+		      { 
+			      pushToHist(doc.document); 
+			      const res = await ValidateAndSaveItem(editing, draft, setEditing, setLocalError); 
+			      await refresh(); 
+			      const newDoc = await res.json(); pushToCurr(newDoc.document); 
+		      }}
               error={localError}
             />
           )}
@@ -323,7 +340,13 @@ export default function ConfigEditor() {
               options={options}
               onCancel={() => { setLocalError(null); setEditing(null); }}
               onDelete={() => { setLocalError(null); setDeleting(editing); }}
-              onSave={async (draft) => { await ValidateAndSaveItem(editing, draft, setEditing, setLocalError); await refresh(); }}
+              onSave={async (draft) => 
+		      { 
+			      pushToHist(doc.document); 
+			      const res = await ValidateAndSaveItem(editing, draft, setEditing, setLocalError); 
+			      await refresh(); 
+			      const newDoc = await res.json(); pushToCurr(newDoc.document); 
+		      }}
               error={localError}
             />
           )}
@@ -333,7 +356,13 @@ export default function ConfigEditor() {
               day={editing.day}
               times={timeSlots.times}
               onCancel={() => { setLocalError(null); setEditing(null); }}
-              onSave={async (times) => { await UpdateTimeSlot({ times }, setEditing, setLocalError); await refresh(); }}
+              onSave={async (times) => 
+		      { 
+			      pushToHist(doc.document); 
+			      const res = await UpdateTimeSlot({ times }, setEditing, setLocalError); 
+			      await refresh(); 
+			      const newDoc = await res.json(); pushToCurr(newDoc.document); 
+		      }}
               error={localError}
 
             />
@@ -342,7 +371,13 @@ export default function ConfigEditor() {
             <TimeSlotsDialog
               timeSlots={timeSlots}
               onCancel={() => { setLocalError(null); setEditing(null); }}
-              onSave={async (values) => { await UpdateTimeSlot(values, setEditing, setLocalError); await refresh(); }}
+              onSave={async (values) => 
+		      { 
+			      pushToHist(doc.document); 
+			      const res = await UpdateTimeSlot(values, setEditing, setLocalError); 
+			      await refresh(); 
+			      const newDoc = await res.json(); pushToCurr(newDoc.document); 
+		      }}
               error={localError}
             />
           )}
@@ -353,7 +388,7 @@ export default function ConfigEditor() {
               loadError={shownImpact?.error}
               error={localError}
               onCancel={() => { setLocalError(null); setDeleting(null); }}   /* back to the edit dialog */
-              onConfirm={async () => { if (await DeleteItem(deleting, setDeleting, setEditing, setLocalError)) await refresh(); }}
+              onConfirm={async () => { if (await DeleteItem(deleting, setDeleting, setEditing, setLocalError)); pushToHist(doc.document); await refresh(); }}
             />
           )}
           <ConfirmDialog

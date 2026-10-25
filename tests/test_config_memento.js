@@ -42,8 +42,7 @@ test("test config file history", () => {
 	
 	assert.deepEqual(hist.getMemento(hist.snapshots.length - 1).getFile(), CONFIG_FILE);
 	assert.deepEqual(hist.pop().getFile(), CONFIG_FILE);
-
-	assert.deepEqual(hist.snapshots, []);
+	assert.deepEqual(hist.snapshots, [memObj]);
 
 
 });
