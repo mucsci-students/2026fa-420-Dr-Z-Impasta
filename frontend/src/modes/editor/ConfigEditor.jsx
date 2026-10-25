@@ -52,6 +52,8 @@ export default function ConfigEditor() {
   const [localError, setLocalError] = useState(null);   // the error from a failed edit, e.g. { message, issues: [{ area, index, field, message }] }
   const [pendingLoad, setPendingLoad] = useState(null);   // a load waiting for "discard changes?"
   const [settingsError, setSettingsError] = useState(null);
+	const [undoReloading, setUndoReloading] = useState(false);
+	const [redoReloading, setRedoReloading] = useState(false);
 
   useEffect(() => {
     if (!hasConfig) return;
@@ -153,16 +155,17 @@ export default function ConfigEditor() {
 
 		<div className="undo-redo-row">
 			<Button 
-		className={getHistoryLength() <= 1 ? "disabled-btn" : ""}
+		className={undoReloading ? "reloading" : (getHistoryLength() > 1 ? "" : "disabled-btn")}
 		disabled={getHistoryLength() <= 1}
-		onClick={async() => {await undoAction(doc.document, config.name, setError, setPendingLoad)}}
+		onClick={async() => {setUndoReloading(true); await undoAction(doc.document, config.name, setError, setPendingLoad); await refresh(); setUndoReloading(false); }}
 		>
 		Undo
 		</Button>
+
 			<Button 
-		className={getCurrHistoryLength() <= 1 ? "disabled-btn" : ""} 
+		className={redoReloading ? "reloading" : (getCurrHistoryLength() > 1 ? "" : "disabled-btn")} 
 		disabled={getCurrHistoryLength() <= 1}
-		onClick={async() => {await redoAction(doc.document, config.name, setError, setPendingLoad)}}
+		onClick={async() => {setRedoReloading(true); await redoAction(doc.document, config.name, setError, setPendingLoad); await refresh(); setRedoReloading(false); }}
 		>
 		Redo
 		</Button>
@@ -292,7 +295,7 @@ export default function ConfigEditor() {
               onSave={async (draft) => 
 		      {
 			      pushToHist(doc.document); 
-			      const res = await ValidateAndSaveItem(editing, draft, setEditing, setLocalError); 
+			      await ValidateAndSaveItem(editing, draft, setEditing, setLocalError); 
 			      await refresh(); 
 			    
 	      }}
@@ -317,7 +320,7 @@ export default function ConfigEditor() {
               onSave={async (draft) => 
 		      { 
 			      pushToHist(doc.document); 
-			      const res = await ValidateAndSaveItem(editing, draft, setEditing, setLocalError); 
+			      await ValidateAndSaveItem(editing, draft, setEditing, setLocalError); 
 			      await refresh(); 
 		      }}
               error={localError}
@@ -336,7 +339,7 @@ export default function ConfigEditor() {
               onSave={async (draft) => 
 		      { 
 			      pushToHist(doc.document); 
-			      const res = await ValidateAndSaveItem(editing, draft, setEditing, setLocalError); 
+			      await ValidateAndSaveItem(editing, draft, setEditing, setLocalError); 
 			      await refresh(); 
 		      }}
               error={localError}
@@ -353,7 +356,7 @@ export default function ConfigEditor() {
               onSave={async (draft) => 
 		      { 
 			      pushToHist(doc.document); 
-			      const res = await ValidateAndSaveItem(editing, draft, setEditing, setLocalError); 
+			      await ValidateAndSaveItem(editing, draft, setEditing, setLocalError); 
 			      await refresh(); 
 		      }}
               error={localError}
@@ -368,7 +371,8 @@ export default function ConfigEditor() {
               onSave={async (times) => 
 		      { 
 			      pushToHist(doc.document); 
-			      const res = await UpdateTimeSlot({ times }, setEditing, setLocalError); 
+			      await UpdateTimeSlot({ times }, setEditing, setLocalError); 
+			      
 			      await refresh(); 
 		      }}
               error={localError}
@@ -382,7 +386,8 @@ export default function ConfigEditor() {
               onSave={async (values) => 
 		      { 
 			      pushToHist(doc.document); 
-			      const res = await UpdateTimeSlot(values, setEditing, setLocalError); 
+			      await UpdateTimeSlot(values, setEditing, setLocalError); 
+
 			      await refresh(); 
 		      }}
               error={localError}

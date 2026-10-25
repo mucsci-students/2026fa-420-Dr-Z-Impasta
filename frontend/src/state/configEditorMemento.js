@@ -1,4 +1,3 @@
-// TODO: add error handling for non-combined-config-compliant files
 class ConfigFileMemento {
 
 	constructor(doc) {
@@ -14,7 +13,7 @@ class ConfigFileMemento {
 class ConfigFileOriginator {
 
 	constructor() {
-		this.doc = null;
+		this.doc = "";
 	}
 
 	set(newDoc) {
@@ -35,10 +34,10 @@ class ConfigFileHistory {
 
 	constructor(originator) {
 		// snapshots of state of config file before changes are saved
-		this.snapshots = originator.doc == null ? [] : [originator.storeFile()];
+		this.snapshots = originator.doc == "" ? [] : [originator.storeFile()];
 
 		// snapshots of state of config file after changes are saved
-		this.currSnapshots = [this.snapshots[0]];
+		this.currSnapshots = this.snapshots.length > 0 ? [this.snapshots[0]] : [];
 	}
 
 	push(memento) {
@@ -79,6 +78,14 @@ class ConfigFileHistory {
 
 	getMemento(index) {
 		return this.snapshots[index];
+	}
+	
+	getSnapshots() {
+		return this.snapshots;
+	}
+
+	getCurrSnapshots() {
+		return this.currSnapshots;
 	}
 }
 

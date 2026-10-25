@@ -17,10 +17,16 @@ const Error = (error, title, labels, onDismiss) => {
 
 // getters to see the length of the history arrays
 export const getHistoryLength = () => {
-	return HISTORY.snapshots.length;
+	if(HISTORY != null)
+		return (HISTORY.getSnapshots()).length;
+	else
+		return 0;
 };
 export const getCurrHistoryLength = () => {
-	return HISTORY.currSnapshots.length;
+	if(HISTORY != null)
+		return (HISTORY.getCurrSnapshots()).length;
+	else
+		return 0;
 };
 
 // pushes snapshot of history to appropriate array
@@ -32,7 +38,6 @@ const pushToCurr = (content) => {
 };
 
 
-//TODO: add loading symbol to let user know loading is happening
 export const redoAction = async(currDoc, filename, setError, setPendingLoad) => {
 	const restore = HISTORY.popCurr();
 
@@ -47,7 +52,6 @@ export const redoAction = async(currDoc, filename, setError, setPendingLoad) => 
 
 };
 
-//TODO: fix course undo bug
 export const undoAction = async(currDoc, filename, setError, setPendingLoad) => {
 	const prevState = HISTORY.pop();
 
@@ -60,6 +64,7 @@ export const undoAction = async(currDoc, filename, setError, setPendingLoad) => 
 
 	if(prevState != undefined)
 		await sendLoad(filename, JSON.stringify(prevState.getFile()), true, setError, setPendingLoad);
+
 };
 
 /** Send a file's text to the server, then show what happened. */
