@@ -38,7 +38,7 @@ class ConfigFileHistory {
 		this.snapshots = originator.doc == null ? [] : [originator.storeFile()];
 
 		// snapshots of state of config file after changes are saved
-		this.currSnapshots = [this.snapshots];
+		this.currSnapshots = [this.snapshots[0]];
 	}
 
 	push(memento) {
@@ -61,10 +61,6 @@ class ConfigFileHistory {
 		return this.snapshots.pop();
 	}
 
-	getMemento(index) {
-		return this.snapshots[index];
-	}
-
 	pushToCurr(memento) {
 		if(!(memento instanceof ConfigFileMemento))
 			throw new TypeError("Expected a valid configuration file");
@@ -72,8 +68,17 @@ class ConfigFileHistory {
 		this.currSnapshots.push(memento);
 	}
 
-	getUndid() {
-		return this.currSnapshots[this.currSnapshots.length - 1];
+	popCurr() {
+
+		if(this.currSnapshots.length <= 1) {
+			return this.currSnapshots[0];
+		}
+
+		return this.currSnapshots.pop();
+	}
+
+	getMemento(index) {
+		return this.snapshots[index];
 	}
 }
 

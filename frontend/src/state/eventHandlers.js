@@ -15,32 +15,48 @@ const Error = (error, title, labels, onDismiss) => {
 	return { "error" : error, "title" : title, "labels" : labels, "onDismiss" : onDismiss };
 };
 
+// getters to see the length of the history arrays
+export const getHistoryLength = () => {
+	return HISTORY.snapshots.length;
+};
+export const getCurrHistoryLength = () => {
+	return HISTORY.currSnapshots.length;
+};
+
+// pushes snapshot of history to appropriate array
 export const pushToHist = (content) => {
 	HISTORY.push(new ConfigFileMemento(content));
 };
-
-export const pushToCurr = (content) => {
+const pushToCurr = (content) => {
 	HISTORY.pushToCurr(new ConfigFileMemento(content));
 };
 
 
 //TODO: add loading symbol to let user know loading is happening
-export const redoAction = async(filename, setError, setPendingLoad) => {
-	const restore = HISTORY.getUndid();
+export const redoAction = async(currDoc, filename, setError, setPendingLoad) => {
+	const restore = HISTORY.popCurr();
+
+	// push snapshot of current state, before re-doing, to undo-action's history array
+	pushToHist(currDoc);
 
 	ORIGINATOR.set(restore);
 	ORIGINATOR.storeFile();
 
 	if(restore != undefined)
 		await sendLoad(filename, JSON.stringify(restore.getFile()), true, setError, setPendingLoad);
+
 };
 
 //TODO: fix course undo bug
-export const undoAction = async(filename, setError, setPendingLoad) => {
+export const undoAction = async(currDoc, filename, setError, setPendingLoad) => {
 	const prevState = HISTORY.pop();
 
+	// push snapshot of current state, before undoing, to redo-action's history array
+	pushToCurr(currDoc);
+	
 	ORIGINATOR.set(prevState);
 	ORIGINATOR.storeFile();
+
 
 	if(prevState != undefined)
 		await sendLoad(filename, JSON.stringify(prevState.getFile()), true, setError, setPendingLoad);

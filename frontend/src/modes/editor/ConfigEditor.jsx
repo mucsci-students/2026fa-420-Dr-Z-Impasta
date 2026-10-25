@@ -34,7 +34,7 @@ import TimeSlotsDialog from "./dialogs/TimeSlotsDialog.jsx";
 import ConfirmDialog from "../../components/ConfirmDialog.jsx";
 
 import ErrorMessage from "../../components/ErrorMessage.jsx";
-import { Load, ConfirmLoad, Empty_Click, Validate, Save, ValidateAndSaveItem, DeleteItem, UpdateTimeSlot, UpdateSettings, redoAction, undoAction, pushToHist, pushToCurr } from "../../state/eventHandlers";
+import { Load, ConfirmLoad, Empty_Click, Validate, Save, ValidateAndSaveItem, DeleteItem, UpdateTimeSlot, UpdateSettings, getHistoryLength, getCurrHistoryLength, redoAction, undoAction, pushToHist } from "../../state/eventHandlers";
 
 export default function ConfigEditor() {
   const { state, loading, refresh } = useAppState();
@@ -152,8 +152,20 @@ export default function ConfigEditor() {
             <Button variant="primary" onClick={async () => { await Validate(); await refresh(); }}>Validate</Button>
 
 		<div className="undo-redo-row">
-			<Button onClick={() => {undoAction(config.name, setError, setPendingLoad)}}>Undo</Button>
-			<Button onClick={() => {redoAction(config.name, setError, setPendingLoad)}}>Redo</Button>
+			<Button 
+		className={getHistoryLength() <= 1 ? "disabled-btn" : ""}
+		disabled={getHistoryLength() <= 1}
+		onClick={async() => {await undoAction(doc.document, config.name, setError, setPendingLoad)}}
+		>
+		Undo
+		</Button>
+			<Button 
+		className={getCurrHistoryLength() <= 1 ? "disabled-btn" : ""} 
+		disabled={getCurrHistoryLength() <= 1}
+		onClick={async() => {await redoAction(doc.document, config.name, setError, setPendingLoad)}}
+		>
+		Redo
+		</Button>
 		</div>
           </>
 
@@ -282,7 +294,7 @@ export default function ConfigEditor() {
 			      pushToHist(doc.document); 
 			      const res = await ValidateAndSaveItem(editing, draft, setEditing, setLocalError); 
 			      await refresh(); 
-			      const newDoc = await res.json(); pushToCurr(newDoc.document); 
+			    
 	      }}
               error={localError}
             />
@@ -307,7 +319,6 @@ export default function ConfigEditor() {
 			      pushToHist(doc.document); 
 			      const res = await ValidateAndSaveItem(editing, draft, setEditing, setLocalError); 
 			      await refresh(); 
-			      const newDoc = await res.json(); pushToCurr(newDoc.document); 
 		      }}
               error={localError}
             />
@@ -327,7 +338,6 @@ export default function ConfigEditor() {
 			      pushToHist(doc.document); 
 			      const res = await ValidateAndSaveItem(editing, draft, setEditing, setLocalError); 
 			      await refresh(); 
-			      const newDoc = await res.json(); pushToCurr(newDoc.document); 
 		      }}
               error={localError}
             />
@@ -345,7 +355,6 @@ export default function ConfigEditor() {
 			      pushToHist(doc.document); 
 			      const res = await ValidateAndSaveItem(editing, draft, setEditing, setLocalError); 
 			      await refresh(); 
-			      const newDoc = await res.json(); pushToCurr(newDoc.document); 
 		      }}
               error={localError}
             />
@@ -361,7 +370,6 @@ export default function ConfigEditor() {
 			      pushToHist(doc.document); 
 			      const res = await UpdateTimeSlot({ times }, setEditing, setLocalError); 
 			      await refresh(); 
-			      const newDoc = await res.json(); pushToCurr(newDoc.document); 
 		      }}
               error={localError}
 
@@ -376,7 +384,6 @@ export default function ConfigEditor() {
 			      pushToHist(doc.document); 
 			      const res = await UpdateTimeSlot(values, setEditing, setLocalError); 
 			      await refresh(); 
-			      const newDoc = await res.json(); pushToCurr(newDoc.document); 
 		      }}
               error={localError}
             />
