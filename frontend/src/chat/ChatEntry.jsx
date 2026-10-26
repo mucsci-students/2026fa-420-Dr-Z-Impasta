@@ -10,7 +10,7 @@ import IssueList from "../components/IssueList.jsx";
 import Spinner from "../components/Spinner.jsx";
 import { plural } from "../format.js";
 import { useAppState } from "../state/appStateContext.js";
-import { Save } from "../state/EventHandlers.js";
+import { Save } from "../state/eventHandlers.js";
 
 /**
  * `latestEdit` / `latestRun`: this is the newest change to the configuration / the newest
