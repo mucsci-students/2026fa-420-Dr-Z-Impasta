@@ -425,9 +425,14 @@ body.chat-resizing {
   cursor: pointer;
 }
 
-.chat-suggestion:hover {
+.chat-suggestion:hover:not(:disabled) {
   border-color: var(--accent);
   color: var(--accent-strong);
+}
+
+.chat-suggestion:disabled {
+  cursor: default;
+  opacity: 0.6;
 }
 
 /* ------------------------------------------------------------------ composer */
@@ -473,20 +478,46 @@ body.chat-resizing {
   white-space: pre-wrap;
 }
 
-/* Marks a stand-in reply while the assistant backend isn't connected. */
-.assistant-reply__demo {
-  align-self: flex-start;
-  padding: 1px 8px;
-  border-radius: 999px;
-  background: var(--surface-3);
-  color: var(--muted);
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+/* An action the assistant ran: one line, ✓ done, ✗ failed, ? waiting (grey once answered). */
+.chat-message--tool {
+  padding: 8px 12px;
+  font-size: 13px;
 }
 
-/* What the assistant did: one line per action, ✓ done, ✗ failed, ? waiting. */
+.chat-message--tool .assistant-actions__item {
+  margin: 0;
+}
+
+.assistant-actions__item--settled .assistant-actions__mark {
+  color: var(--muted);
+}
+
+/* The app speaking (a cancellation, an API failure, a step limit): small and centered. */
+.chat-notice {
+  align-self: center;
+  max-width: 90%;
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  text-align: center;
+}
+
+.chat-notice--failed {
+  color: var(--danger);
+}
+
+/* Why the assistant can't be used (no API key, or the browser version). */
+.chat-unavailable {
+  margin: 0;
+  padding: var(--space-3) var(--space-5);
+  border-top: 1px solid var(--warning-dot);
+  background: var(--warning-soft);
+  color: var(--ink);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+/* What the assistant did: ✓ done, ✗ failed, ? waiting. */
 .assistant-actions {
   display: flex;
   flex-direction: column;
