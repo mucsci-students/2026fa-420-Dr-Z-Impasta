@@ -37,7 +37,8 @@ import copy
 import dataclasses
 import json
 import threading
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Generator, Mapping
+from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import datetime
 from enum import StrEnum
@@ -240,6 +241,11 @@ class ConfigWorkspace:
     @property
     def revision(self) -> int:
         return self._revision
+
+    @property
+    def saved_revision(self) -> int:
+        """The newest revision the user has saved to a file."""
+        return self._saved_revision
 
     @property
     def dirty(self) -> bool:
@@ -487,6 +493,43 @@ class ConfigWorkspace:
     def update_settings(self, values: Mapping[str, object]) -> Change:
         """Change the generation limit and optimizer flags."""
         return self._update_section(None, "settings", SETTINGS_FIELDS, values)
+
+    @contextmanager
+    def transaction(self) -> Generator[None]:
+        """Make several edits as one: if any of them raises, undo all of them.
+
+        Each edit inside is still validated by the library as it is made, so the result
+        is valid whenever the block finishes. The lock is held throughout, so nothing
+        else changes the configuration in between. Used for combined edits requested
+        through the AI assistant.
+        """
+        with self._lock:
+            saved = (
+                self._status,
+                self._document,
+                self._config,
+                self._issues,
+                self._name,
+                self._revision,
+                self._saved_revision,
+                list(self._changes),
+                self._validated_at,
+            )
+            try:
+                yield
+            except BaseException:
+                (
+                    self._status,
+                    self._document,
+                    self._config,
+                    self._issues,
+                    self._name,
+                    self._revision,
+                    self._saved_revision,
+                    self._changes,
+                    self._validated_at,
+                ) = saved
+                raise
 
     # ---------------------------------------------------------------- internals
 

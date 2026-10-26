@@ -139,4 +139,16 @@ export const api = {
       get(`/schedules/export${query({ which: String(which), format })}`),
     clear: () => del("/schedules"),
   },
+
+  /** The AI assistant's chat. See docs/assistant.md for the entry and pending shapes. */
+  chat: {
+    /** `{ entries, busy, available, reason, model }` */
+    transcript: () => get("/chat"),
+    /** Resolves when the assistant has finished: `{ added, state }`. */
+    send: (message) => post("/chat", { message }),
+    /** `answer` is "confirm" or "cancel" for a confirmation, "saved" or "cancel" for a save. */
+    answer: (pendingId, answer, filename) =>
+      post(`/chat/pending/${encodeURIComponent(pendingId)}`, { answer, filename: filename ?? null }),
+    clear: () => del("/chat"),
+  },
 };

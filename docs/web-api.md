@@ -6,8 +6,9 @@ The GUI's views talk to the Python side only through this JSON API, served under
 `src/zimpasta/model/`. FastAPI also serves interactive docs of these routes at `/docs`.
 
 The browser version (docs/cloudflare-pages.md) answers the same routes from Python running
-in the page (`src/zimpasta/browser.py`), with one difference: a run generates at most
-`generation.max_schedules` schedules (see *Generation*).
+in the page (`src/zimpasta/browser.py`), with two differences: a run generates at most
+`generation.max_schedules` schedules (see *Generation*), and the AI assistant isn't
+available (see *Assistant*).
 
 ## Conventions
 
@@ -44,19 +45,23 @@ Every error has one shape. `code` is for program logic; `message` is written for
 | 400 | `malformed_json`, `unreadable_file` | An uploaded file is not JSON |
 | 400 | `bad_host` | The request was not addressed to localhost |
 | 403 | `cross_origin` | A state-changing request came from another site |
-| 404 | `not_found` | Unknown area, index, schedule number, or endpoint |
+| 400 | `empty_message`, `message_too_long`, `invalid_answer` | A chat message or a pending answer that can't be used |
+| 404 | `not_found` | Unknown area, index, schedule number, pending chat action, or endpoint |
 | 409 | `no_configuration` | Nothing has been created or loaded |
 | 409 | `configuration_incomplete` | Save or generate on an incomplete configuration (`issues` says what's missing) |
 | 409 | `unsaved_changes` | New or load would discard edits; `changes` lists them |
 | 409 | `delete_blocked` | `impact` lists the blocking references |
 | 409 | `generation_running` | A run is already in progress |
 | 409 | `no_schedules` | Export or view with no schedules |
+| 409 | `chat_busy` | The assistant is still answering the previous message |
+| 409 | `pending_settled`, `not_saved` | A pending chat action was already answered, or "saved" was reported before the file was saved |
 | 415 | `json_required` | A request body was not JSON |
 | 422 | `edit_rejected` | The library rejected an edit; nothing changed |
 | 422 | `invalid_configuration` | A loaded file is JSON but not a valid configuration |
 | 422 | `invalid_overrides` | A run's limit or optimizer flags are not valid |
 | 422 | `invalid_schedule_file` | An imported schedule file is not in the schedule format |
 | 500 | `unexpected` | A bug. The message is friendly and includes a `reference` found in the server log |
+| 503 | `ai_not_configured` | No OpenAI key, or the browser version; the message says what to do |
 
 ## State
 
@@ -70,7 +75,9 @@ Every error has one shape. `code` is for program logic; `message` is written for
             "counts": {"rooms": 3, "labs": 2, "sections": 17, "courses": 12, "faculty": 9,
                        "patterns": 16, "enabled_patterns": 9}},
  "generation": {"state": "idle", "running": false, "found": 0, ...},
- "schedules": {"count": 0, "source": null, "name": null, "created_at": null}}
+ "schedules": {"count": 0, "source": null, "name": null, "created_at": null},
+ "assistant": {"available": true, "reason": null, "model": "gpt-6-luna", "busy": false,
+               "entries": 6, "last_entry": "m6", "waiting": 0}}
 ```
 
 `config.status` is `none` (nothing open), `incomplete` (a new configuration still missing
@@ -170,12 +177,26 @@ and `end` (minutes), `start_time` and `end_time` (`HH:MM`), `duration`, `kind`
 or lab in the faculty view), and `room_held_for_lab` (a lab meeting shown under the room
 the section keeps reserved).
 
-## AI assistant
+## Assistant
 
-| Route | Body | Reply |
+The AI chat ([assistant.md](assistant.md)). The transcript is kept by the server, so every
+page shows the same one.
+
+| Method and path | Body | Returns |
 | --- | --- | --- |
-| `POST /api/assistant` | `{message}`, or `{confirm}` with a token from a previous reply | `{outcome, reply, actions, issues, config, generation_started, save_requested, confirmation}` |
+| `GET /api/chat` | | `{entries, busy, available, reason, model}` |
+| `POST /api/chat` | `{message}` (1-4000 characters) | `{added, state}`: the entries this message added, and the app state |
+| `POST /api/chat/pending/{id}` | `{answer, filename?}` | `{added, state}` |
+| `DELETE /api/chat` | | `{added: [], state}`; the transcript is empty |
 
-Not built yet. The full contract (request, reply, errors, tools, confirmation and save
-flows, and where the code goes) is in docs/ai-assistant.md. The chat in the GUI
-(`frontend/src/chat/`) already follows it and shows demo replies until the route exists.
+`POST /api/chat` returns when the assistant has finished, after any tool calls, typically a
+few seconds. Requests that can't start are errors: `503 ai_not_configured` (no key) or
+`409 chat_busy`. If OpenAI fails partway, the reply is still `200`, and its last entry is
+a `notice` with `error.code` `ai_unavailable` that says which actions, if any, already
+ran.
+
+`answer` is `confirm` or `cancel` for a `confirm` entry, and `saved` (with the file name)
+or `cancel` for a `save` entry. A confirmation whose configuration changed since it was
+proposed is not applied; it is answered with a `notice` whose `error.code` is
+`pending_expired`. Entry fields are described in [assistant.md](assistant.md#the-chat-panel-and-the-api).
+
