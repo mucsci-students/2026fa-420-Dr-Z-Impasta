@@ -236,7 +236,12 @@
   font-weight: 400;
   color: var(--viewer-muted);
 }
-
+.timetable__range {
+  font-weight: 400;
+  font-size: 0.85em;
+  opacity: 0.75;
+  white-space: nowrap;
+}
 .timetable__detail {
   color: #444;
   white-space: nowrap;
