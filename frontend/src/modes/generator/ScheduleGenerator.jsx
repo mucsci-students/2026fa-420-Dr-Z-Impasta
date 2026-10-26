@@ -19,6 +19,7 @@ import Card from "../../components/Card.jsx";
 import EmptyState from "../../components/EmptyState.jsx";
 import ErrorMessage from "../../components/ErrorMessage.jsx";
 import Field from "../../components/Field.jsx";
+import LoadingBar from "../../components/LoadingBar.jsx";
 import PageHeader from "../../components/PageHeader.jsx";
 import { Rotelle } from "../../components/PastaMarks.jsx";
 import Spinner from "../../components/Spinner.jsx";
@@ -123,6 +124,8 @@ export default function ScheduleGenerator() {
 
   const maxLimit = options?.generation?.max_schedules ?? null;
   const optimizerOptions = options?.optimizer_flags ?? [];
+  const generationTarget = limit === "" ? configured?.limit : Number(limit);
+  const hasGenerationTarget = Number.isFinite(generationTarget) && generationTarget > 0;
 
   const shownFlags = optimizerFlags ?? configured?.optimizer_flags ?? [];
   const overriding = optimizerFlags !== null;
@@ -261,7 +264,11 @@ export default function ScheduleGenerator() {
               {generation.running && (
                 <div>
                   <p>{plural(generation.found, "schedule")} found.</p>
-                  <Spinner label="Generating schedules" />
+                  <LoadingBar     //Loading bar component that takes a label, a current value, and the max value
+                    label="Generating schedules"
+                    value={hasGenerationTarget ? generation.found : undefined}
+                    max={hasGenerationTarget ? generationTarget : undefined}
+                  />
                 </div>
               )}
 
