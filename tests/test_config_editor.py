@@ -464,9 +464,9 @@ def test_undo_button(loaded_config_page: Page):
     popup.get_by_label("Credits").fill(str(3))
 
     popup.get_by_role("button", name="Add pattern").click()
-    #expect(pattern_count_locator).to_have_text(
+    # expect(pattern_count_locator).to_have_text(
     #    re.compile(rf"\d+ of {number_of_patterns_before + 1} enabled"), timeout=5000
-    #)
+    # )
 
     # undo
     loaded_config_page.get_by_role("button", name="Undo").click()
