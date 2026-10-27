@@ -21,6 +21,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException
 
+from zimpasta.controller.assistant import AIError, ChatBusy, ChatError, PendingNotFound
 from zimpasta.model.generation_job import GenerationBusy, InvalidOverrides
 from zimpasta.model.schedules import (
     InvalidScheduleFile,
@@ -66,8 +67,16 @@ def _respond(status: int, code: str, message: str, *, issues=(), **extra) -> JSO
 
 def _status_for(error: Exception) -> int:
     match error:
-        case ItemNotFound() | ScheduleNotFound():
+        case ItemNotFound() | ScheduleNotFound() | PendingNotFound():
             return 404
+        case AIError():
+            return 503
+        case ChatBusy():
+            return 409
+        case ChatError() if error.code in ("empty_message", "message_too_long", "invalid_answer"):
+            return 400
+        case ChatError():
+            return 409
         case NoConfiguration() | UnsavedChanges() | DeleteBlocked() | NotValid() | NoSchedules():
             return 409
         case GenerationBusy():
@@ -121,7 +130,14 @@ async def _unexpected(request: Request, error: Exception) -> JSONResponse:
 
 def install(app: FastAPI) -> None:
     """Register every handler on ``app``."""
-    for error_type in (WorkspaceError, ScheduleError, GenerationBusy, InvalidOverrides):
+    for error_type in (
+        WorkspaceError,
+        ScheduleError,
+        GenerationBusy,
+        InvalidOverrides,
+        AIError,
+        ChatError,
+    ):
         app.add_exception_handler(error_type, _model_error)
     app.add_exception_handler(RequestValidationError, _bad_request)
     app.add_exception_handler(HTTPException, _http_error)

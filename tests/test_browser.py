@@ -119,3 +119,15 @@ async def test_handle_speaks_json_after_start(monkeypatch):
     assert reply["status"] == 200
     assert ["content-type", "application/json"] in reply["headers"]
     assert json.loads(reply["body"])["generation"]["state"] == "idle"
+
+
+@pytest.mark.anyio
+async def test_the_assistant_is_unavailable_in_the_browser(app):
+    status, reply = await request(app, "GET", "/api/chat")
+    assert status == 200
+    body = json.loads(reply["body"])
+    assert body["available"] is False and "browser" in body["reason"]
+
+    status, reply = await request(app, "POST", "/api/chat", {"message": "Add a room"})
+    assert status == 503
+    assert json.loads(reply["body"])["error"]["code"] == "ai_not_configured"

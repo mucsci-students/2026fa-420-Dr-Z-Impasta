@@ -63,6 +63,8 @@ frontend/src/
     editor/ConfigEditor.jsx          Configuration Editor
     generator/ScheduleGenerator.jsx  Schedule Generator
     viewer/ScheduleViewer.jsx        Schedule Viewer
+  chat/               "Ask Dr. ZImpasta": the chat panel (ChatAssistant.jsx), its entries
+                      (ChatEntry.jsx), and /api/chat (useChat.js); see assistant.md
   styles/             tokens.css (colors, spacing, fonts from the mockups) and component CSS
 frontend/scripts/     build-browser.mjs and test-browser.mjs, for the browser version
 ```

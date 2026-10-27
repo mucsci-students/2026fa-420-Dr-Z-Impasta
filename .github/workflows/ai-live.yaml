@@ -1,0 +1,26 @@
+name: AI live test
+
+# One real request to OpenAI through the AI assistant (tests/live), to check the key, the
+# model, and tool calling. It runs only when started by hand from the Actions tab, so
+# routine pushes never use the API; the regular CI runs the deterministic AI tests instead.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  live:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+      - uses: astral-sh/setup-uv@v7
+      - run: uv sync --locked
+      - name: Run the live OpenAI test
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: uv run pytest -m live -v

@@ -507,3 +507,44 @@ def test_snapshot(workspace):
     assert snapshot["changes"][0]["area"] == "settings"
     assert snapshot["counts"]["sections"] == 2
     assert snapshot["validated_at"]
+
+
+# ------------------------------------------------------------------- transactions
+
+
+def test_a_transaction_keeps_every_edit_when_all_succeed(workspace):
+    before = workspace.revision
+
+    with workspace.transaction():
+        workspace.add("rooms", ROOM)
+        workspace.add("faculty", FACULTY)
+
+    assert [room["name"] for room in workspace.items("rooms")][-1] == "Room 201"
+    assert workspace.revision == before + 2
+    assert [change.action for change in workspace.changes] == ["added", "added"]
+
+
+def test_a_failed_edit_undoes_the_whole_transaction(workspace):
+    document, revision = workspace.document(), workspace.revision
+
+    with pytest.raises(EditRejected):
+        with workspace.transaction():
+            workspace.add("rooms", ROOM)
+            workspace.add("courses", course(rooms=("Nowhere 999",)))
+
+    assert workspace.document() == document
+    assert workspace.revision == revision
+    assert workspace.changes == ()
+    assert not workspace.dirty
+
+
+def test_any_exception_undoes_the_transaction_and_is_raised(workspace):
+    document = workspace.document()
+
+    with pytest.raises(KeyError):
+        with workspace.transaction():
+            workspace.update_settings({"limit": 7})
+            raise KeyError("preview only")
+
+    assert workspace.document() == document
+    assert workspace.saved_revision == workspace.revision

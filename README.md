@@ -110,6 +110,34 @@ header shows how many there are (*3 schedules*).
 If the schedules can't be read from the server, the page says so and offers **Retry**.
 Nothing is deleted.
 
+## The AI assistant
+
+The GUI's chat turns requests like "Add a room called Roddy 140 with 40 seats", "Delete Dr.
+Jones", "Is the configuration valid?", "Save it", or "Generate 3 schedules" into the app's
+own actions. It works through defined tools that call the same Controller and Model code
+as the buttons, so the scheduler library validates every change:
+
+- A combined edit is applied completely or not at all, and a rejected one leaves the last
+  valid configuration.
+- Deletes and discarding unsaved changes wait for **Confirm**.
+- Saving finishes with the usual Save As dialog.
+- The chat says whether a change is only applied or also saved, and reports each action's
+  real outcome.
+
+It needs an OpenAI API key in the environment when the app starts:
+
+```bash
+export OPENAI_API_KEY=...          # Windows PowerShell: $env:OPENAI_API_KEY = "..."
+uv run zimpasta --gui
+```
+
+The model is `gpt-6-luna` unless `ZIMPASTA_AI_MODEL` names another. Without a key, the
+chat says how to set one, and everything else works as usual. The key stays in the Python
+process: it is never sent to the browser, committed, or logged. The chat's transcript is
+kept by the app, so it is the same on every page until you clear it.
+[docs/assistant.md](docs/assistant.md) lists the tools, how failures are handled, and the
+API the chat panel uses.
+
 ## The shell
 
 ```bash
@@ -187,8 +215,10 @@ npm run test:browser
 
 `uv run ruff format .` fixes Python formatting in place. `uv run pytest` is the whole test
 suite: the Model, the Controller (including every API route), and the shell. It doesn't need
-the GUI to be built. `npm run test:browser` runs the browser version's Python in Node; its
-first run downloads about 15 MB.
+the GUI to be built, and it never calls OpenAI: the AI assistant's tests use a scripted fake.
+`npm run test:browser` runs the browser version's Python in Node; its first run downloads
+about 15 MB. The one live OpenAI test runs only on request, with `uv run pytest -m live`
+and `OPENAI_API_KEY` set.
 
 ## Architecture (MVC)
 
@@ -292,6 +322,8 @@ src/zimpasta/
     export.py         the shell's JSON and CSV export with overwrite protection
   controller/       the Controller
     app_controller.py AppController: one method per GUI action
+    assistant/        the AI chat: session.py (transcript, loop), tools.py, prompt.py,
+                      client.py (OpenAI); see docs/assistant.md
     routes.py         the /api routes
     errors.py         one JSON error shape for every failure
     security.py       localhost only; no cross-site requests
@@ -370,6 +402,8 @@ new server-side workflow as an `AppController` method with pytest tests.
 - One session per server: two browser tabs share the same configuration and schedules.
 - The browser version generates at most 5 schedules per run, solves about 3× slower, answers
   nothing else while a schedule is being solved, and loses its session when the tab closes.
+- The AI assistant needs `uv run zimpasta --gui` and an OpenAI key; the hosted browser
+  version has no assistant. It answers one message at a time.
 - The Viewer's timetable covers 08:00–20:00. A meeting outside those hours is cut off or
   left off the grid; the Table view lists every meeting.
 
@@ -387,6 +421,8 @@ new server-side workflow as an `AppController` method with pytest tests.
 
 - [docs/gui.md](docs/gui.md): how the GUI is organized and how to build a mode on it.
 - [docs/web-api.md](docs/web-api.md): the JSON API between the GUI and the Model.
+- [docs/assistant.md](docs/assistant.md): the AI assistant: key setup, tools, safeguards,
+  the chat API, and its tests.
 - [docs/cloudflare-pages.md](docs/cloudflare-pages.md): the browser version on Cloudflare
   Pages, with Python running in the page, and its pull request previews.
 - [docs/run-scheduler.md](docs/run-scheduler.md): schedule generation, in-session results,
