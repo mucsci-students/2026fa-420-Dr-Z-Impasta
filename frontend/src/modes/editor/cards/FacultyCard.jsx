@@ -1,10 +1,11 @@
 /**
- * One faculty member in the Faculty row. Clicking it opens FacultyDialog.
+ * One faculty member in the Faculty row. Its Edit button opens FacultyDialog.
  * Credits show as "12 cr", or "12–14 cr" when the minimum and maximum differ. Mandatory days
  * and each preference list are hidden when empty.
  */
 
 import AvailabilityChips from "../AvailabilityChips.jsx";
+import EditButton from "./EditButton.jsx";
 
 const WEEKDAYS = ["MON", "TUE", "WED", "THU", "FRI"];
 
@@ -30,12 +31,7 @@ export default function FacultyCard({ faculty, onEdit }) {
   const maximumDays = faculty.maximum_days;
 
   return (
-    <article
-      className="item-card"
-      onClick={onEdit}
-      onKeyDown={(e) => { if (e.key === "Enter") onEdit?.(); }}
-      tabIndex={0}
-    >
+    <article className="item-card">
       <div className="item-card__header">
         <h3 className="item-card__title">{faculty.name}</h3>
         <span className="item-card__credits">{credits}</span>
@@ -71,6 +67,7 @@ export default function FacultyCard({ faculty, onEdit }) {
           </>
         )}
       </dl>
+      <EditButton label={faculty.name} onEdit={onEdit} />
     </article>
   );
 }

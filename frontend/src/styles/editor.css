@@ -85,7 +85,21 @@
   max-width: 285px;
   min-width: 190px;
   flex: 0 0 auto;            /* keep its width inside the row instead of squashing */
-  cursor: pointer;
+  display: flex;             /* a column, so the Edit button can sit at the bottom */
+  flex-direction: column;
+}
+
+/* The part just above the Edit button (always the last one). Its bottom margin differs from card
+   to card (12px under facts, 0 under a note), so it's dropped and the button sets the space. */
+.item-card > :nth-last-child(2) {
+  margin-bottom: 0;
+}
+
+.item-card__actions {
+  margin-top: auto;              /* push to the bottom, so the buttons line up across a row */
+  padding-top: var(--space-3);   /* the same space above Edit in every card */
+  display: flex;
+  justify-content: flex-end;
 }
 
 .item-card__title {
@@ -149,10 +163,6 @@
   background: transparent;
   border: 1px dashed var(--line);
   color: var(--faint);
-}
-
-.item-card:hover {
-  border-color: var(--accent);
 }
 
 .pattern-meetings {
