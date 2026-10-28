@@ -1,0 +1,623 @@
+/*
+ * "Ask Dr. ZImpasta": the corner button and the chat panel that slides in from the right.
+ * Colors come from src/styles/tokens.css.
+ */
+
+/* ------------------------------------------------------------------ launcher */
+
+.chat-launcher {
+  position: fixed;
+  right: var(--space-5);
+  bottom: var(--space-5);
+  z-index: 30;
+  display: inline-flex;
+  align-items: center;
+  padding: 12px;
+  border: 0;
+  border-radius: 14px;
+  background: var(--accent);
+  color: var(--on-accent, #fff);
+  font: 500 14px var(--font-sans);
+  box-shadow: var(--shadow-float);
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    transform 0.2s ease,
+    opacity 0.2s ease,
+    visibility 0s;
+}
+
+.chat-launcher:hover {
+  background: var(--accent-strong);
+  transform: translateY(-1px);
+}
+
+.chat-launcher__mark {
+  flex: none;
+}
+
+/* The launcher arrives as just the logo, popping in, before the label unfurls. */
+.chat-launcher:not(.chat-launcher--hidden) {
+  animation: chat-pop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes chat-pop {
+  from {
+    transform: scale(0.4);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* The label starts folded away behind the logo, then unfurls to the right of it. A grid
+   column animating from 0fr to 1fr grows to exactly the text's width. */
+.chat-launcher__label-wrap {
+  display: grid;
+  grid-template-columns: 0fr;
+  transition: grid-template-columns 0.6s cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+.chat-launcher__label {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+/* The gap between logo and text lives inside the clipped label, so it folds away too. */
+.chat-launcher__text {
+  display: block;
+  padding: 0 6px 0 8px;
+}
+
+.chat-launcher--expanded .chat-launcher__label-wrap {
+  grid-template-columns: 1fr;
+}
+
+.chat-launcher--expanded .chat-launcher__label {
+  opacity: 1;
+  transition: opacity 0.35s ease 0.18s;
+}
+
+/* As the label unfurls, the farfalle flaps its wings once. */
+.chat-launcher--expanded .chat-launcher__mark {
+  animation: chat-flap 0.6s ease-in-out;
+}
+
+@keyframes chat-flap {
+  0%,
+  100% {
+    transform: scaleX(1);
+  }
+  25% {
+    transform: scaleX(0.45);
+  }
+  50% {
+    transform: scaleX(1.1);
+  }
+  75% {
+    transform: scaleX(0.8);
+  }
+}
+
+/* While the panel is open the button steps aside; it comes back when the panel closes. */
+.chat-launcher--hidden {
+  opacity: 0;
+  transform: translateY(8px) scale(0.96);
+  visibility: hidden;
+  pointer-events: none;
+  transition:
+    transform 0.2s ease,
+    opacity 0.2s ease,
+    visibility 0s linear 0.2s;
+}
+
+/* Notifications sit just above the launcher instead of on top of it. */
+.toasts {
+  bottom: calc(var(--space-5) + 60px);
+}
+
+/* --------------------------------------------------------------------- panel */
+
+.chat-panel {
+  position: fixed;
+  top: 56px; /* below the top bar (.topbar in layout.css), so the modes stay reachable */
+  right: 0;
+  bottom: 0;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  width: 50vw; /* until the left edge is dragged (useResizablePanel.js) */
+  min-width: min(360px, 100vw);
+  max-width: calc(100vw - 240px);
+  background: var(--surface);
+  border-left: 1px solid var(--line);
+  box-shadow: var(--shadow-modal);
+}
+
+/* The panel exists only while open or closing (ChatAssistant.jsx). It slides in from the
+   right edge when it appears, and slides back out before it is removed. Keyframe
+   animations rather than a transition, because Safari can skip a transition here. */
+.chat-panel--open {
+  animation: chat-slide-in 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+  transition: transform 0.2s ease; /* settling back after being pushed partway out */
+}
+
+.chat-panel--dragging {
+  transition: none;
+}
+
+.chat-panel--closing {
+  animation: chat-slide-out 0.25s cubic-bezier(0.4, 0, 1, 1) forwards;
+  pointer-events: none;
+}
+
+@keyframes chat-slide-in {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@keyframes chat-slide-out {
+  from {
+    transform: translateX(var(--chat-from, 0px)); /* from wherever it was pushed to */
+  }
+  to {
+    transform: translateX(100%);
+  }
+}
+
+/* Small windows: the panel takes the whole width (the edge is hidden further down). */
+@media (max-width: 800px) {
+  .chat-panel {
+    width: 100vw !important;
+    max-width: none;
+  }
+}
+
+/* --------------------------------------------------------------- resize edge */
+
+/* A strip along the left edge with a grip in the middle; drag it sideways. */
+.chat-panel__resize {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -6px;
+  z-index: 1;
+  width: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: ew-resize;
+  touch-action: none;
+}
+
+.chat-panel__resize::before {
+  content: "";
+  width: 4px;
+  height: 40px;
+  border-radius: 999px;
+  background: var(--line-strong);
+  transition:
+    background 0.15s,
+    height 0.15s;
+}
+
+.chat-panel__resize:hover::before,
+.chat-panel__resize:focus-visible::before,
+.chat-panel--dragging .chat-panel__resize::before {
+  background: var(--accent);
+  height: 64px;
+}
+
+/* Small windows: the panel is full width, so there's no edge to drag. */
+@media (max-width: 800px) {
+  .chat-panel__resize {
+    display: none;
+  }
+}
+
+/* While dragging: the resize cursor everywhere, and no text gets selected. */
+body.chat-resizing {
+  cursor: ew-resize;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* No sliding. Kept at 1ms rather than none so the end of the slide-out still fires. */
+  .chat-panel--open,
+  .chat-panel--closing {
+    animation-duration: 1ms;
+  }
+
+  .chat-launcher,
+  .chat-launcher--hidden,
+  .chat-launcher__label-wrap,
+  .chat-launcher__label {
+    transition: none;
+  }
+
+  .chat-launcher,
+  .chat-launcher__mark {
+    animation: none !important;
+  }
+
+  /* No unfurling: the label is simply there. */
+  .chat-launcher__label-wrap {
+    grid-template-columns: 1fr;
+  }
+
+  .chat-launcher__label {
+    opacity: 1;
+  }
+}
+
+.chat-panel__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-4) var(--space-5);
+  border-bottom: 1px solid var(--line);
+}
+
+.chat-panel__title {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.chat-panel__subtitle {
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.chat-panel__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex: none;
+}
+
+.chat-panel__close {
+  flex: none;
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--muted);
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.chat-panel__close:hover {
+  background: var(--surface-3);
+  color: var(--ink);
+}
+
+/* ------------------------------------------------------------------ messages */
+
+.chat-panel__messages {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-5);
+  overflow-y: auto;
+  background: var(--surface-2);
+}
+
+.chat-message {
+  max-width: 80%;
+  padding: 10px 14px;
+  font-size: 14px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.chat-message--user {
+  align-self: flex-end;
+  background: var(--accent-soft);
+  color: var(--ink);
+  border-radius: 14px 14px 4px 14px;
+}
+
+.chat-message--assistant {
+  align-self: flex-start;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 14px 14px 14px 4px;
+}
+
+.chat-message--failed {
+  background: var(--danger-soft);
+  border-color: var(--danger-line);
+  color: var(--danger);
+}
+
+/* Three dots while an answer is on its way. */
+.chat-message--typing {
+  display: inline-flex;
+  gap: 4px;
+  padding: 14px 16px;
+}
+
+.chat-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--faint);
+  animation: chat-bounce 1.2s infinite ease-in-out;
+}
+
+.chat-dot:nth-of-type(2) {
+  animation-delay: 0.15s;
+}
+
+.chat-dot:nth-of-type(3) {
+  animation-delay: 0.3s;
+}
+
+@keyframes chat-bounce {
+  0%,
+  60%,
+  100% {
+    transform: translateY(0);
+    opacity: 0.5;
+  }
+  30% {
+    transform: translateY(-4px);
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chat-dot {
+    animation: none;
+  }
+}
+
+/* The empty conversation: a hello and a few questions to start with. */
+.chat-welcome {
+  margin: auto 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-4);
+  text-align: center;
+}
+
+.chat-welcome__mark {
+  color: var(--accent);
+}
+
+.chat-welcome__text {
+  max-width: 34ch;
+  color: var(--ink-2);
+  font-size: 14px;
+}
+
+.chat-welcome__suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-2);
+}
+
+.chat-suggestion {
+  padding: 6px 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--ink-2);
+  font: 13px var(--font-sans);
+  cursor: pointer;
+}
+
+.chat-suggestion:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--accent-strong);
+}
+
+.chat-suggestion:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+
+/* ------------------------------------------------------------------ composer */
+
+.chat-panel__composer {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-5) var(--space-4);
+  border-top: 1px solid var(--line);
+}
+
+.chat-panel__input {
+  flex: 1;
+  min-height: 38px;
+  max-height: 160px;
+  resize: none;
+  font-size: 14px;
+  line-height: 1.45;
+  field-sizing: content; /* grows with the text where supported */
+}
+
+.chat-panel__composer .btn {
+  min-height: 38px;
+}
+
+/* ------------------------------------------------------------- reply details */
+
+/* A reply that's waiting for the user to confirm something. */
+.chat-message--confirm {
+  background: var(--warning-soft);
+  border-color: var(--warning-dot);
+}
+
+.assistant-reply {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  white-space: normal;
+}
+
+.assistant-reply__text {
+  white-space: pre-wrap;
+}
+
+/* An action the assistant ran: one line, ✓ done, ✗ failed, ? waiting (grey once answered). */
+.chat-message--tool {
+  padding: 8px 12px;
+  font-size: 13px;
+}
+
+.chat-message--tool .assistant-actions__item {
+  margin: 0;
+}
+
+.assistant-actions__item--settled .assistant-actions__mark {
+  color: var(--muted);
+}
+
+/* The app speaking (a cancellation, an API failure, a step limit): small and centered. */
+.chat-notice {
+  align-self: center;
+  max-width: 90%;
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  text-align: center;
+}
+
+.chat-notice--failed {
+  color: var(--danger);
+}
+
+/* Why the assistant can't be used (no API key, or the browser version). */
+.chat-unavailable {
+  margin: 0;
+  padding: var(--space-3) var(--space-5);
+  border-top: 1px solid var(--warning-dot);
+  background: var(--warning-soft);
+  color: var(--ink);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+/* What the assistant did: ✓ done, ✗ failed, ? waiting. */
+.assistant-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 13px;
+}
+
+.assistant-actions__item {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+
+.assistant-actions__mark {
+  flex: none;
+  width: 16px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.assistant-actions__item--done .assistant-actions__mark {
+  color: var(--success);
+}
+
+.assistant-actions__item--failed .assistant-actions__mark {
+  color: var(--danger);
+}
+
+.assistant-actions__item--pending .assistant-actions__mark {
+  color: var(--warning);
+}
+
+.assistant-actions__error {
+  display: block;
+  color: var(--danger);
+}
+
+/* "Applied · not saved to a file yet" or "Applied and saved", with a link to the editor. */
+.assistant-reply__status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  font-size: 13px;
+}
+
+.assistant-chip {
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.assistant-chip--applied {
+  background: var(--warning-soft);
+  color: var(--warning);
+}
+
+.assistant-chip--saved {
+  background: var(--success-soft);
+  color: var(--success);
+}
+
+.assistant-confirm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.assistant-confirm__question {
+  font-weight: 600;
+}
+
+.assistant-confirm__details {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 13px;
+}
+
+.assistant-reply__buttons,
+.assistant-reply__follow-up {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.assistant-reply__note {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--ink-2);
+  font-size: 13px;
+}
+
+/* The issue list inside a bubble sits a little tighter. */
+.assistant-reply .issues {
+  margin: 0;
+  font-size: 13px;
+}
