@@ -196,7 +196,7 @@ def test_adding_a_faculty_member(loaded_config_page: Page):
     popup.get_by_label("Name").fill("Dr. Not-Zoppetti")
     popup.get_by_label("Minimum credits").fill(str(3))
     popup.get_by_label("Maximum credits").fill(str(12))
-    popup.get_by_label("Different courses").fill(str(3))
+    popup.get_by_role("spinbutton", name="Different courses Help: The").fill(str(3))
 
     loaded_config_page.get_by_role("button", name="Add faculty member").click()
 
@@ -389,7 +389,7 @@ def test_undo_button(loaded_config_page: Page):
     popup.get_by_label("Name").fill("Dr. Not-Zoppetti")
     popup.get_by_label("Minimum credits").fill(str(3))
     popup.get_by_label("Maximum credits").fill(str(12))
-    popup.get_by_label("Different courses").fill(str(3))
+    popup.get_by_role("spinbutton", name="Different courses Help: The").fill(str(3))
 
     loaded_config_page.get_by_role("button", name="Add faculty member").click()
     expect(fac_count_locator).to_have_text(str(number_of_fac_before + 1), timeout=5000)
@@ -532,7 +532,7 @@ def test_redo_button(loaded_config_page: Page):
     popup.get_by_label("Name").fill("Dr. Not-Zoppetti")
     popup.get_by_label("Minimum credits").fill(str(3))
     popup.get_by_label("Maximum credits").fill(str(12))
-    popup.get_by_label("Different courses").fill(str(3))
+    popup.get_by_role("spinbutton", name="Different courses Help: The").fill(str(3))
 
     loaded_config_page.get_by_role("button", name="Add faculty member").click()
 
