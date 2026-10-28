@@ -112,7 +112,9 @@ export default function ScheduleGenerator() {
         >
           {config?.status === "incomplete"
             ? "The configuration in the editor isn't complete yet. Finish it, then come back to generate schedules."
-            : "Create or load a configuration in the Configuration Editor, then come back to generate schedules."}
+            : config?.status === "invalid"
+              ? "The configuration in the editor has problems to fix. Fix them, then come back to generate schedules."
+              : "Create or load a configuration in the Configuration Editor, then come back to generate schedules."}
         </EmptyState>
       </>
     );

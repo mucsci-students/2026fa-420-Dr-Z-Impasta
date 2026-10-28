@@ -1,4 +1,7 @@
-// Description: Generation limit (limit); optimizer flag chips. Default limit of 10?
+/**
+ * The Global Settings card. Unlike the other cards it has no dialog: each change is sent as
+ * soon as it's made, and a rejected change shows its error inside the card.
+ */
 
 import { useState } from "react";
 import Card from "../../../components/Card.jsx";

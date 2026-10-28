@@ -107,7 +107,7 @@ export const api = {
     add: (area, item) => post(`/config/${area}`, item),
     replace: (area, index, item) => put(`/config/${area}/${index}`, item),
     deleteImpact: (area, index) => get(`/config/${area}/${index}/impact`),
-    remove: (area, index) => del(`/config/${area}/${index}`),
+    remove: (area, index, force = false) => del(`/config/${area}/${index}${force ? "?force=true" : ""}`),
     updateTimeSlots: (values) => put("/config/time-slots", values),
     updateSettings: (values) => put("/config/settings", values),
   },
