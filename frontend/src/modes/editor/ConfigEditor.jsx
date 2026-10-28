@@ -124,6 +124,7 @@ export default function ConfigEditor() {
   }
 
   const status = configStatus(config);
+  const canSave = config.status === "valid";   // the server only exports a valid configuration
   // Valid, but the server's quick checks found something that rules out every schedule
   // (e.g. a disabled class pattern someone needs). The messages name the items themselves.
   const warnings = (config.warnings ?? []).map(({ path, code, message }) => ({ path, code, message }));
@@ -160,7 +161,14 @@ export default function ConfigEditor() {
             />
 
 
-            <Button onClick={async () => { const res = await Save(); if (res) { await refresh(); } }}>Save JSON...</Button>
+            <Button
+              disabled={!canSave}
+              className={canSave ? "" : "disabled-btn"}
+              aria-describedby={canSave ? undefined : "save-hint"}
+              onClick={async () => { const res = await Save(); if (res) { await refresh(); } }}
+            >
+              Save JSON...
+            </Button>
             <Button variant="primary" onClick={async () => { await Validate(); await refresh(); }}>Validate</Button>
 
 		<div className="undo-redo-row">
@@ -188,7 +196,12 @@ export default function ConfigEditor() {
       <ErrorMessage error={error?.error} title={error?.title} onDismiss={error?.onDismiss} />
       <Banner tone={bannerTone} title={status.label}>
         {describeCounts(config.counts)}.
-        {(config.status === "incomplete" || config.status === "invalid") && <IssueList issues={config.issues} />}
+        {!canSave && (
+          <>
+            <p id="save-hint">Fix these before saving the configuration:</p>
+            <IssueList issues={config.issues} />
+          </>
+        )}
         {warnings.length > 0 && (
           <>
             <p>No schedule can be generated until these are fixed:</p>

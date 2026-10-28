@@ -560,3 +560,11 @@ html:has(dialog:modal) {
 html {
   scrollbar-gutter: stable;   /* keep the scrollbar's space even while it's hidden */
 }
+
+/* The solid red button in the editor's warning dialogs (Delete, Delete anyway, Discard and
+   load). On hover it looks like an ordinary Delete button's hover; without the text color,
+   its white text stays on the pale hover background and the button looks blank. */
+.editor .dialog--danger .btn--danger:hover:not(:disabled) {
+  border-color: var(--danger-line);
+  color: var(--danger);
+}
