@@ -19,20 +19,28 @@ Status
     configuration. An incomplete configuration cannot be saved or used for generation.
 ``valid``
     The library accepts the whole configuration. From here an edit is committed only if
-    the result is still valid. The one exception is a delete the user confirms despite
-    the warning (``remove(..., force=True)``), which may leave it incomplete or invalid.
+    the result is still valid. The exceptions are a delete the user confirms despite the
+    warning (``remove(..., force=True)``) and a forced replace (``replace(..., force=True)``,
+    used by a class pattern's On/Off switch), which may leave it incomplete or invalid.
 ``invalid``
     The library rejects the configuration, but every item is still valid on its own; only
     problems between items remain, such as a section left without a room. Reached only
-    by a forced delete. While invalid, any edit that keeps every item valid on its own is
+    by a forced delete or replace. While invalid, any edit that keeps every item valid on its own is
     committed, even one that adds problems; ``issues`` always lists what is still wrong.
     A delete that would add problems still needs ``force``, so the user sees a warning
     first. An invalid configuration cannot be saved or used for generation.
 
-    A forced delete can also leave the configuration incomplete (deleting the last room,
+    A forced change can also leave the configuration incomplete (deleting the last room,
     say). The library then skips its checks between items, so the edit that completes the
     configuration again is committed even if those checks now find problems; the
     configuration becomes invalid and lists them.
+
+Warnings
+--------
+A valid configuration can still have no schedule at all, for example after disabling the
+only class pattern that puts a faculty member on their mandatory day. After every change
+the workspace runs the library's quick static checks (:mod:`zimpasta.model.feasibility`)
+and keeps what they find in ``warnings``. Warnings never block an edit.
 
 Unsaved changes
 ---------------
@@ -70,6 +78,7 @@ from scheduler.config import ClassPattern
 
 from zimpasta.model import references as refs
 from zimpasta.model.defaults import empty_configuration
+from zimpasta.model.feasibility import schedule_problems
 from zimpasta.model.issues import COLLECTIONS, Issue, issue, issues_from_error
 
 AREAS: tuple[str, ...] = tuple(COLLECTIONS)
@@ -237,13 +246,14 @@ class ConfigWorkspace:
         self._document: dict | None = None
         self._config: CombinedConfig | None = None
         self._issues: tuple[Issue, ...] = ()
+        self._warnings: tuple[Issue, ...] = ()
         self._name: str | None = None
         self._revision = 0
         self._saved_revision = 0
         self._changes: list[Change] = []
         self._validated_at: datetime | None = None
         self._forced = False
-        """Whether a forced delete left the configuration not valid (cleared once valid).
+        """Whether a forced change left the configuration not valid (cleared once valid).
         True whenever the status is ``invalid``."""
 
     # ------------------------------------------------------------------ reading
@@ -283,6 +293,11 @@ class ConfigWorkspace:
     def issues(self) -> tuple[Issue, ...]:
         """What keeps an incomplete or invalid configuration from being valid; empty otherwise."""
         return self._issues
+
+    @property
+    def warnings(self) -> tuple[Issue, ...]:
+        """What keeps a valid configuration from having any schedule (see "Warnings")."""
+        return self._warnings
 
     def document(self) -> dict | None:
         """A copy of the configuration as a ``CombinedConfig`` JSON document."""
@@ -332,6 +347,7 @@ class ConfigWorkspace:
                 "dirty": self.dirty,
                 "changes": [change.to_dict() for change in self._changes],
                 "issues": [problem.to_dict() for problem in self._issues],
+                "warnings": [problem.to_dict() for problem in self._warnings],
                 "validated_at": (
                     self._validated_at.isoformat(timespec="seconds") if self._validated_at else None
                 ),
@@ -456,8 +472,12 @@ class ConfigWorkspace:
                 lambda doc: ("added", area, f"Added {self._noun(area, doc, index)}"),
             )
 
-    def replace(self, area: str, index: int, item: object) -> Change:
-        """Replace item ``index`` of ``area``. A new name also renames references to it."""
+    def replace(self, area: str, index: int, item: object, *, force: bool = False) -> Change:
+        """Replace item ``index`` of ``area``. A new name also renames references to it.
+
+        With ``force`` the change is committed even if it leaves the configuration
+        incomplete or invalid (see "Status"), as long as the item is valid on its own.
+        """
         with self._lock:
             document = self._require_document()
             old = self._item(document, area, index)
@@ -476,7 +496,7 @@ class ConfigWorkspace:
                     summary += f" ({count} {'reference' if count == 1 else 'references'} updated)"
                 return "edited", area, summary
 
-            return self._commit(candidate, describe)
+            return self._commit(candidate, describe, force=force)
 
     def delete_impact(self, area: str, index: int) -> refs.DeleteImpact:
         """What deleting item ``index`` of ``area`` would block, remove, or break."""
@@ -547,6 +567,7 @@ class ConfigWorkspace:
                 self._document,
                 self._config,
                 self._issues,
+                self._warnings,
                 self._name,
                 self._revision,
                 self._saved_revision,
@@ -562,6 +583,7 @@ class ConfigWorkspace:
                     self._document,
                     self._config,
                     self._issues,
+                    self._warnings,
                     self._name,
                     self._revision,
                     self._saved_revision,
@@ -668,6 +690,7 @@ class ConfigWorkspace:
         self._document = evaluation.document
         self._config = evaluation.config
         self._issues = evaluation.issues
+        self._warnings = schedule_problems(evaluation.config) if evaluation.config else ()
         self._validated_at = self._clock()
 
     def _guard_unsaved(self, discard_changes: bool) -> None:

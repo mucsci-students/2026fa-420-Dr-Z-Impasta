@@ -277,3 +277,15 @@ def test_unexpected_errors_are_friendly(controller, monkeypatch):
 
     assert "boom" not in body["message"]
     assert body["reference"] in body["message"]
+
+
+def test_a_forced_replace_is_applied_even_if_the_configuration_breaks(loaded):
+    section = loaded.get("/api/config/courses/0").json()["item"]
+    section["room"] = ["Nowhere"]
+    error(loaded.put("/api/config/courses/0", json=section), 422, "edit_rejected")
+
+    applied = loaded.put("/api/config/courses/0", json=section, params={"force": "true"})
+
+    assert applied.status_code == 200
+    assert applied.json()["state"]["status"] == "invalid"
+    assert applied.json()["state"]["issues"]

@@ -75,9 +75,10 @@ export const addItem = async(area, object) => {
 	return response;
 };
 
-export const replaceItem = async(area, index, item) => {
+/** `force` applies the change even if the configuration then has problems (see TogglePattern). */
+export const replaceItem = async(area, index, item, force = false) => {
 
-	const response = await send(`/api/config/${area}/${index}`, {
+	const response = await send(`/api/config/${area}/${index}${force ? "?force=true" : ""}`, {
 		method: "PUT",
 		headers: {
 			"Content-Type": "application/json",

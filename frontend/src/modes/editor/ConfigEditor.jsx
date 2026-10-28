@@ -36,7 +36,7 @@ import TimeSlotsDialog from "./dialogs/TimeSlotsDialog.jsx";
 import ConfirmDialog from "../../components/ConfirmDialog.jsx";
 
 import ErrorMessage from "../../components/ErrorMessage.jsx";
-import { Load, ConfirmLoad, Empty_Click, Validate, Save, ValidateAndSaveItem, DeleteItem, UpdateTimeSlot, UpdateSettings, getHistoryLength, getCurrHistoryLength, redoAction, undoAction, pushToHist } from "../../state/eventHandlers";
+import { Load, ConfirmLoad, Empty_Click, Validate, Save, ValidateAndSaveItem, DeleteItem, UpdateTimeSlot, UpdateSettings, TogglePattern, getHistoryLength, getCurrHistoryLength, redoAction, undoAction, pushToHist } from "../../state/eventHandlers";
 
 export default function ConfigEditor() {
   const { state, loading, refresh } = useAppState();
@@ -124,7 +124,11 @@ export default function ConfigEditor() {
   }
 
   const status = configStatus(config);
-  const bannerTone = status.tone === "neutral" ? "info" : status.tone;
+  // Valid, but the server's quick checks found something that rules out every schedule
+  // (e.g. a disabled class pattern someone needs). The messages name the items themselves.
+  const warnings = (config.warnings ?? []).map(({ path, code, message }) => ({ path, code, message }));
+  const bannerTone =
+    warnings.length > 0 && status.tone === "success" ? "warning" : status.tone === "neutral" ? "info" : status.tone;
   const items = doc?.document.config;                     // rooms, labs, courses, faculty
   const timeSlots = doc?.document.time_slot_config;        // time blocks, timing options
   const patterns = timeSlots?.classes;                     // class patterns
@@ -185,6 +189,12 @@ export default function ConfigEditor() {
       <Banner tone={bannerTone} title={status.label}>
         {describeCounts(config.counts)}.
         {(config.status === "incomplete" || config.status === "invalid") && <IssueList issues={config.issues} />}
+        {warnings.length > 0 && (
+          <>
+            <p>No schedule can be generated until these are fixed:</p>
+            <IssueList issues={warnings} />
+          </>
+        )}
       </Banner>
       {!doc ? (
         <Spinner label="Loading the configuration" />
@@ -263,10 +273,7 @@ export default function ConfigEditor() {
                 key={i}
                 pattern={p}
                 onEdit={() => setEditing({ area: "patterns", index: i })}
-                onToggle={async () => {
-                  await ValidateAndSaveItem({ area: "patterns", index: i }, { ...p, disabled: !p.disabled }, setEditing, setLocalError); await refresh();
-                }
-                }
+                onToggle={async () => { if (await TogglePattern(i, p, setError)) await refresh(); }}
               />
             ))}
           </CardRow>

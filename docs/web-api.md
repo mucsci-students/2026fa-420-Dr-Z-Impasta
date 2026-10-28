@@ -71,7 +71,7 @@ Every error has one shape. `code` is for program logic; `message` is written for
 {"config": {"status": "valid", "name": "sample_config.json", "revision": 4, "saved_revision": 2,
             "dirty": true, "changes": [{"revision": 3, "action": "edited", "area": "faculty",
             "summary": "Faculty member Hardy: maximum_credits 14 → 12"}],
-            "issues": [], "validated_at": "2026-09-28T16:41:00",
+            "issues": [], "warnings": [], "validated_at": "2026-09-28T16:41:00",
             "counts": {"rooms": 3, "labs": 2, "sections": 17, "courses": 12, "faculty": 9,
                        "patterns": 16, "enabled_patterns": 9}},
  "generation": {"state": "idle", "running": false, "found": 0, ...},
@@ -82,8 +82,13 @@ Every error has one shape. `code` is for program logic; `message` is written for
 
 `config.status` is `none` (nothing open), `incomplete` (a new configuration still missing
 a room, course, or faculty member; `issues` says which), `invalid` (a forced delete left
-problems between items, such as a section with no room; `issues` lists them, and any edit
+problems between items, such as a section with no room, after a forced delete or edit; `issues` lists them, and any edit
 that keeps each item valid on its own is accepted, even one that adds problems), or `valid`.
+
+`config.warnings` lists what keeps a valid configuration from having any schedule, found
+by the library's quick checks after every change (for example, a disabled class pattern was
+the only one putting a faculty member on their mandatory day). They never block an edit.
+Each has the same shape as an issue. An empty list doesn't promise a schedule exists.
 
 ## Configuration
 
@@ -100,7 +105,7 @@ that keeps each item valid on its own is accepted, even one that adds problems),
 | `GET /api/config/{area}` | | `{area, items}` |
 | `POST /api/config/{area}` | the new item | 201, `{state, document, sections, change, index}` |
 | `GET /api/config/{area}/{index}` | | `{area, index, item}` |
-| `PUT /api/config/{area}/{index}` | the whole item | `{state, document, sections, change, index}` |
+| `PUT /api/config/{area}/{index}` | the whole item; `?force=true` applies it even if the configuration then has problems (the class pattern On/Off switch uses this) | `{state, document, sections, change, index}` |
 | `GET /api/config/{area}/{index}/impact` | | `{label, can_delete, can_force, blocking, cascades, problems}`; changes nothing |
 | `DELETE /api/config/{area}/{index}` | `?force=true` to delete anyway | `{state, document, sections, change, impact}` |
 | `PUT /api/config/time-slots` | any of `times`, `max_time_gap`, `min_time_overlap` | As for items |

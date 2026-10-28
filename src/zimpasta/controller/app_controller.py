@@ -146,8 +146,8 @@ class AppController:
             "index": len(self.workspace.items(area)) - 1,
         }
 
-    def replace_item(self, area: str, index: int, item: object) -> dict:
-        change = self.workspace.replace(area, index, item)
+    def replace_item(self, area: str, index: int, item: object, *, force: bool = False) -> dict:
+        change = self.workspace.replace(area, index, item, force=force)
         return {**self.configuration(), "change": change.to_dict(), "index": index}
 
     def delete_impact(self, area: str, index: int) -> dict:

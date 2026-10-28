@@ -264,6 +264,29 @@ const setErrors = (setLocalError, resJSON) => {
   setLocalError(resJSON.error ?? { message: "The change was not applied." });  
 };
 
+/**
+ * A class pattern's On/Off switch. Always applied (force), so patterns can be turned off in
+ * any order; if that leaves the configuration with problems, the banner lists them. A
+ * failure is shown at the top of the page (`setError`), since no dialog is open.
+ */
+export const TogglePattern = async(index, pattern, setError) => {
+	const failed = (error) =>
+		setError(Error(error, "Couldn't change the class pattern", undefined, () => setError(null)));
+	try {
+		const res = await replaceItem("patterns", index, { ...pattern, disabled: !pattern.disabled }, true);
+		if(!res.ok) {
+			const { error } = await res.json();
+			failed(error ?? { message: "The class pattern was not changed." });
+			return false;
+		}
+		setError(null);
+		return true;
+	} catch {
+		failed({ message: "The server couldn't be reached. The class pattern was not changed." });
+		return false;
+	}
+};
+
 /** `force`: the user confirmed the delete after the dialog warned what it breaks. */
 export const DeleteItem = async(deleting, setDeleting, setEditing, setLocalError, force = false) => {
 	try {

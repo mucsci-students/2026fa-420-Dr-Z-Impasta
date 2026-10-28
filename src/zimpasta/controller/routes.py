@@ -179,8 +179,10 @@ def get_item(app: App, area: str, index: int) -> dict:
 
 
 @router.put("/config/{area}/{index}")
-def replace_item(app: App, area: str, index: int, item: JsonObject) -> dict:
-    return app.replace_item(area, index, item)
+def replace_item(app: App, area: str, index: int, item: JsonObject, force: bool = False) -> dict:
+    """Replace the item. ``?force=true`` applies it even if the configuration then has
+    problems (it becomes ``invalid``); an item that is invalid on its own is still refused."""
+    return app.replace_item(area, index, item, force=force)
 
 
 @router.get("/config/{area}/{index}/impact")
