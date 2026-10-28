@@ -289,6 +289,50 @@ def test_mark_saved_clears_changes_up_to_that_revision(workspace):
     assert workspace.changes == ()
 
 
+def test_changes_that_cancel_out_leave_nothing_to_save(workspace):
+    workspace.add("rooms", ROOM)
+    workspace.remove("rooms", 1)
+
+    assert not workspace.dirty
+    assert workspace.changes == ()
+    assert workspace.snapshot()["dirty"] is False
+    workspace.load_text(json.dumps(workspace.document()), filename="other.json")  # no prompt
+
+
+def test_undoing_the_latest_change_drops_only_that_change(workspace):
+    workspace.update_settings({"limit": 4})
+    workspace.add("rooms", ROOM)
+    workspace.remove("rooms", 1)
+
+    assert [change.summary for change in workspace.changes] == ["Settings: limit 3 → 4"]
+    workspace.update_settings({"limit": 3})  # the loaded value
+    assert workspace.changes == ()
+
+
+def test_returning_to_the_saved_state_counts_as_saved(workspace):
+    workspace.update_settings({"limit": 4})
+    exported = workspace.export_text()
+    workspace.mark_saved(exported.revision, "saved.json")
+
+    workspace.update_settings({"limit": 6})
+    assert workspace.dirty
+    workspace.update_settings({"limit": 4})
+
+    assert not workspace.dirty
+
+
+def test_saving_an_exported_revision_after_another_edit(workspace):
+    workspace.update_settings({"limit": 4})
+    exported = workspace.export_text()
+    workspace.update_settings({"limit": 6})
+
+    workspace.mark_saved(exported.revision)
+    assert [change.summary for change in workspace.changes] == ["Settings: limit 4 → 6"]
+
+    workspace.update_settings({"limit": 4})  # back to what the file has
+    assert not workspace.dirty
+
+
 def test_validate_reports_current_state(workspace):
     report = workspace.validate()
 

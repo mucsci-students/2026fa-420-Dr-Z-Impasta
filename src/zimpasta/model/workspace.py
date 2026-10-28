@@ -44,11 +44,13 @@ and keeps what they find in ``warnings``. Warnings never block an edit.
 
 Unsaved changes
 ---------------
-Each committed change bumps ``revision`` and adds a :class:`Change` to a journal.
-``mark_saved`` records which revision the user saved; ``dirty`` is true while newer
-changes exist. ``new`` and ``load_text`` refuse to discard unsaved changes unless called
-with ``discard_changes=True``, raising :class:`UnsavedChanges` with the journal so the
-view can list what would be lost.
+Each committed change bumps ``revision`` and adds a :class:`Change` to a journal, unless
+it brings the configuration back to how it was: then the changes it undid leave the
+journal (turning a pattern off and on again leaves nothing to save, and so does adding a
+room and deleting it). ``mark_saved`` records which revision the user saved; ``dirty`` is
+true while the configuration differs from the saved one. ``new`` and ``load_text`` refuse
+to discard unsaved changes unless called with ``discard_changes=True``, raising
+:class:`UnsavedChanges` with the journal so the view can list what would be lost.
 
 Items are addressed by area (``rooms``, ``labs``, ``courses``, ``faculty``,
 ``patterns``) and position, because course ids repeat across sections.
@@ -242,7 +244,7 @@ class ConfigWorkspace:
     def __init__(self, *, clock: Callable[[], datetime] = datetime.now) -> None:
         self._lock = threading.RLock()
         self._clock = clock
-        self._status = ConfigStatus.NONE
+        self._status: ConfigStatus = ConfigStatus.NONE
         self._document: dict | None = None
         self._config: CombinedConfig | None = None
         self._issues: tuple[Issue, ...] = ()
@@ -250,7 +252,13 @@ class ConfigWorkspace:
         self._name: str | None = None
         self._revision = 0
         self._saved_revision = 0
+        self._saved_document: dict | None = None
+        """The configuration as last saved or loaded, to tell when edits return to it."""
         self._changes: list[Change] = []
+        self._states: list[dict] = []
+        """The document after each change in ``_changes``, in the same order."""
+        self._exported: tuple[int, dict] | None = None
+        """The revision and document last exported, which ``mark_saved`` usually names."""
         self._validated_at: datetime | None = None
         self._forced = False
         """Whether a forced change left the configuration not valid (cleared once valid).
@@ -278,7 +286,8 @@ class ConfigWorkspace:
 
     @property
     def dirty(self) -> bool:
-        return self._revision != self._saved_revision
+        """Whether the configuration differs from the saved one (see "Unsaved changes")."""
+        return bool(self._changes)
 
     @property
     def changes(self) -> tuple[Change, ...]:
@@ -441,6 +450,7 @@ class ConfigWorkspace:
         """The configuration serialized by the library, ready to be written as UTF-8 JSON."""
         with self._lock:
             config = self.require_valid()
+            self._exported = (self._revision, copy.deepcopy(self._require_document()))
             return ExportedConfig(
                 content=config.model_dump_json(indent=2) + "\n",
                 filename=self._name or DEFAULT_FILENAME,
@@ -453,8 +463,15 @@ class ConfigWorkspace:
             self._require_document()
             if not 0 <= revision <= self._revision:
                 raise WorkspaceError(f"Revision {revision} does not exist.")
+            saved = self._document_at(revision)
+            if saved is not None:
+                self._saved_document = saved
             self._saved_revision = max(self._saved_revision, revision)
-            self._changes = [change for change in self._changes if change.revision > revision]
+            kept = [i for i, change in enumerate(self._changes) if change.revision > revision]
+            self._changes = [self._changes[i] for i in kept]
+            self._states = [self._states[i] for i in kept]
+            if self._document == self._saved_document:
+                self._changes, self._states = [], []
             if filename:
                 self._name = filename
 
@@ -572,6 +589,7 @@ class ConfigWorkspace:
                 self._revision,
                 self._saved_revision,
                 list(self._changes),
+                list(self._states),
                 self._validated_at,
                 self._forced,
             )
@@ -588,6 +606,7 @@ class ConfigWorkspace:
                     self._revision,
                     self._saved_revision,
                     self._changes,
+                    self._states,
                     self._validated_at,
                     self._forced,
                 ) = saved
@@ -628,8 +647,33 @@ class ConfigWorkspace:
         self._forced = evaluation.status is not ConfigStatus.VALID and (force or self._forced)
         self._apply(evaluation)
         change = Change(self._revision, action, area, summary)
-        self._changes.append(change)
+        self._record(change)
         return change
+
+    def _record(self, change: Change) -> None:
+        """Add ``change`` to the journal, or, if it brings the configuration back to an
+        earlier state, drop the changes it undid instead."""
+        if self._document == self._saved_document:
+            self._changes, self._states = [], []
+            return
+        for position, state in enumerate(self._states):
+            if state == self._document:
+                del self._changes[position + 1 :]
+                del self._states[position + 1 :]
+                return
+        self._changes.append(change)
+        self._states.append(copy.deepcopy(self._require_document()))
+
+    def _document_at(self, revision: int) -> dict | None:
+        """The document as it was at ``revision``, if the workspace still knows it."""
+        if revision == self._revision:
+            return copy.deepcopy(self._document)
+        if self._exported is not None and self._exported[0] == revision:
+            return copy.deepcopy(self._exported[1])
+        for change, state in zip(self._changes, self._states, strict=True):
+            if change.revision == revision:
+                return copy.deepcopy(state)
+        return None
 
     def _blocking(self, issues: tuple[Issue, ...]) -> tuple[Issue, ...]:
         """The problems that caused a rejection, without the ones the configuration
@@ -680,12 +724,16 @@ class ConfigWorkspace:
     def _reset(self, evaluation: _Evaluation, *, name: str | None) -> None:
         self._revision += 1
         self._saved_revision = self._revision
-        self._changes = []
+        self._changes, self._states = [], []
+        self._exported = None
         self._name = name
         self._forced = False
         self._apply(evaluation)
+        self._saved_document = copy.deepcopy(self._document)
 
     def _apply(self, evaluation: _Evaluation) -> None:
+        if evaluation.status is None:
+            raise RuntimeError("A rejected document can't be applied.")  # callers check first
         self._status = evaluation.status
         self._document = evaluation.document
         self._config = evaluation.config
