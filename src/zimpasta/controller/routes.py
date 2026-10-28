@@ -190,8 +190,10 @@ def delete_impact(app: App, area: str, index: int) -> dict:
 
 
 @router.delete("/config/{area}/{index}")
-def delete_item(app: App, area: str, index: int) -> dict:
-    return app.delete_item(area, index)
+def delete_item(app: App, area: str, index: int, force: bool = False) -> dict:
+    """Delete the item. ``?force=true`` deletes it even when the impact preview warns
+    (``can_delete`` false, ``can_force`` true); the configuration may become invalid."""
+    return app.delete_item(area, index, force=force)
 
 
 # -------------------------------------------------------------- generation

@@ -19,7 +19,20 @@ Status
     configuration. An incomplete configuration cannot be saved or used for generation.
 ``valid``
     The library accepts the whole configuration. From here an edit is committed only if
-    the result is still valid, so a valid configuration never becomes invalid.
+    the result is still valid. The one exception is a delete the user confirms despite
+    the warning (``remove(..., force=True)``), which may leave it incomplete or invalid.
+``invalid``
+    The library rejects the configuration, but every item is still valid on its own; only
+    problems between items remain, such as a section left without a room. Reached only
+    by a forced delete. While invalid, any edit that keeps every item valid on its own is
+    committed, even one that adds problems; ``issues`` always lists what is still wrong.
+    A delete that would add problems still needs ``force``, so the user sees a warning
+    first. An invalid configuration cannot be saved or used for generation.
+
+    A forced delete can also leave the configuration incomplete (deleting the last room,
+    say). The library then skips its checks between items, so the edit that completes the
+    configuration again is committed even if those checks now find problems; the
+    configuration becomes invalid and lists them.
 
 Unsaved changes
 ---------------
@@ -85,6 +98,7 @@ _SUMMARY_FIELDS = 3
 class ConfigStatus(StrEnum):
     NONE = "none"
     INCOMPLETE = "incomplete"
+    INVALID = "invalid"
     VALID = "valid"
 
 
@@ -149,11 +163,13 @@ class DeleteBlocked(WorkspaceError):
 class NotValid(WorkspaceError):
     code = "configuration_incomplete"
 
-    def __init__(self, issues: tuple[Issue, ...]) -> None:
-        super().__init__(
-            "The configuration is not complete yet. " + " ".join(i.message for i in issues),
-            issues=issues,
+    def __init__(self, issues: tuple[Issue, ...], *, invalid: bool = False) -> None:
+        intro = (
+            "The configuration has problems to fix first."
+            if invalid
+            else "The configuration is not complete yet."
         )
+        super().__init__(intro + " " + " ".join(i.message for i in issues), issues=issues)
 
 
 @dataclass(frozen=True)
@@ -203,7 +219,7 @@ class ExportedConfig:
 @dataclass(frozen=True)
 class _Evaluation:
     status: ConfigStatus | None
-    """``None`` when the library rejects the document outright."""
+    """``None`` when an item is not valid even on its own, so the document can't be kept."""
 
     config: CombinedConfig | None
     issues: tuple[Issue, ...]
@@ -226,6 +242,9 @@ class ConfigWorkspace:
         self._saved_revision = 0
         self._changes: list[Change] = []
         self._validated_at: datetime | None = None
+        self._forced = False
+        """Whether a forced delete left the configuration not valid (cleared once valid).
+        True whenever the status is ``invalid``."""
 
     # ------------------------------------------------------------------ reading
 
@@ -262,7 +281,7 @@ class ConfigWorkspace:
 
     @property
     def issues(self) -> tuple[Issue, ...]:
-        """What keeps an incomplete configuration from being valid; empty otherwise."""
+        """What keeps an incomplete or invalid configuration from being valid; empty otherwise."""
         return self._issues
 
     def document(self) -> dict | None:
@@ -399,7 +418,7 @@ class ConfigWorkspace:
             if self._status is ConfigStatus.NONE:
                 raise NoConfiguration()
             if self._config is None:
-                raise NotValid(self._issues)
+                raise NotValid(self._issues, invalid=self._status is ConfigStatus.INVALID)
             return self._config
 
     def export_text(self) -> ExportedConfig:
@@ -465,25 +484,44 @@ class ConfigWorkspace:
             document = self._require_document()
             self._item(document, area, index)
             impact = refs.delete_impact(document, area, index)
-            if impact.blocking:
-                return impact
             evaluation = self._evaluate(refs.apply_delete(document, area, index))
-            if not self._acceptable(evaluation.status):
-                impact = dataclasses.replace(impact, problems=self._blocking(evaluation.issues))
+            if not self._acceptable(evaluation):
+                problems = self._blocking(evaluation.issues)
+            elif evaluation.status is not ConfigStatus.VALID and self._forced:
+                # Already broken: edits are accepted anyway, but a delete still warns about
+                # any problem it adds.
+                problems = self._new_problems(evaluation.issues)
+            else:
+                problems = ()
+            if problems:
+                impact = dataclasses.replace(
+                    impact, problems=problems, can_force=evaluation.status is not None
+                )
             return impact
 
-    def remove(self, area: str, index: int) -> tuple[Change, refs.DeleteImpact]:
-        """Delete item ``index`` of ``area`` and its optional references, if nothing blocks it."""
+    def remove(
+        self, area: str, index: int, *, force: bool = False
+    ) -> tuple[Change, refs.DeleteImpact]:
+        """Delete item ``index`` of ``area`` and its references to it.
+
+        Without ``force`` the delete is refused when it would leave a section without its
+        only room, lab, or faculty member, or make the configuration invalid. With
+        ``force`` (the user saw the warning and confirmed) it goes ahead anyway, and the
+        configuration may become incomplete or invalid. A delete that would leave an item
+        invalid on its own is refused either way.
+        """
         with self._lock:
             impact = self.delete_impact(area, index)
-            if not impact.can_delete:
+            if not (impact.can_delete or (force and impact.can_force)):
                 raise DeleteBlocked(impact)
             candidate = refs.apply_delete(self._require_document(), area, index)
             summary = f"Removed {refs.AREA_NOUNS[area]} {impact.label}"
-            if impact.cascades:
-                count = len(impact.cascades)
-                summary += f" and {count} {'reference' if count == 1 else 'references'} to it"
-            change = self._commit(candidate, lambda doc: ("removed", area, summary))
+            references = len(impact.blocking) + len(impact.cascades)
+            if references:
+                summary += (
+                    f" and {references} {'reference' if references == 1 else 'references'} to it"
+                )
+            change = self._commit(candidate, lambda doc: ("removed", area, summary), force=force)
             return change, impact
 
     def update_time_slots(self, values: Mapping[str, object]) -> Change:
@@ -514,6 +552,7 @@ class ConfigWorkspace:
                 self._saved_revision,
                 list(self._changes),
                 self._validated_at,
+                self._forced,
             )
             try:
                 yield
@@ -528,6 +567,7 @@ class ConfigWorkspace:
                     self._saved_revision,
                     self._changes,
                     self._validated_at,
+                    self._forced,
                 ) = saved
                 raise
 
@@ -556,29 +596,49 @@ class ConfigWorkspace:
                 lambda doc: ("updated", area, f"{noun}: {_diff(before, {**before, **values})}"),
             )
 
-    def _commit(self, candidate: dict, describe) -> Change:
+    def _commit(self, candidate: dict, describe, *, force: bool = False) -> Change:
         evaluation = self._evaluate(candidate)
-        if not self._acceptable(evaluation.status):
+        if not self._acceptable(evaluation, force=force):
             issues = self._blocking(evaluation.issues)
             raise EditRejected(_rejection_message(issues), issues=issues)
         action, area, summary = describe(evaluation.document)
         self._revision += 1
+        self._forced = evaluation.status is not ConfigStatus.VALID and (force or self._forced)
         self._apply(evaluation)
         change = Change(self._revision, action, area, summary)
         self._changes.append(change)
         return change
 
     def _blocking(self, issues: tuple[Issue, ...]) -> tuple[Issue, ...]:
-        """The problems that caused a rejection, without an incomplete configuration's
-        standing "add at least one ..." notes, which are not the edit's fault."""
-        if self._status is not ConfigStatus.INCOMPLETE:
+        """The problems that caused a rejection, without the ones the configuration
+        already had (an incomplete configuration's "add at least one ..." notes, or an
+        invalid configuration's problems), which are not the edit's fault."""
+        if self._status is ConfigStatus.INCOMPLETE:
+            causes = tuple(problem for problem in issues if not problem.is_missing_required_item)
+        elif self._status is ConfigStatus.INVALID:
+            causes = self._new_problems(issues)
+        else:
             return issues
-        causes = tuple(problem for problem in issues if not problem.is_missing_required_item)
         return causes or issues
 
-    def _acceptable(self, status: ConfigStatus | None) -> bool:
+    def _new_problems(self, issues: tuple[Issue, ...]) -> tuple[Issue, ...]:
+        """The problems in ``issues`` that the configuration doesn't already have.
+
+        Compared by code and message, not position, because a delete shifts indexes.
+        """
+        known = {(problem.code, problem.message) for problem in self._issues}
+        return tuple(problem for problem in issues if (problem.code, problem.message) not in known)
+
+    def _acceptable(self, evaluation: _Evaluation, *, force: bool = False) -> bool:
+        status = evaluation.status
         if status is ConfigStatus.VALID:
             return True
+        if status is None:
+            return False
+        if force:
+            return True
+        if self._forced:
+            return True  # already broken by a forced delete; see "Status" above
         return status is ConfigStatus.INCOMPLETE and self._status is ConfigStatus.INCOMPLETE
 
     def _evaluate(self, document: dict) -> _Evaluation:
@@ -588,7 +648,11 @@ class ConfigWorkspace:
             issues = tuple(issues_from_error(error))
             if issues and all(problem.is_missing_required_item for problem in issues):
                 return _Evaluation(ConfigStatus.INCOMPLETE, None, issues, _canonical(document))
-            return _Evaluation(None, None, issues, None)
+            try:
+                canonical = _canonical(document)
+            except ValidationError:
+                return _Evaluation(None, None, issues, None)  # an item is invalid on its own
+            return _Evaluation(ConfigStatus.INVALID, None, issues, canonical)
         return _Evaluation(ConfigStatus.VALID, config, (), json.loads(config.model_dump_json()))
 
     def _reset(self, evaluation: _Evaluation, *, name: str | None) -> None:
@@ -596,6 +660,7 @@ class ConfigWorkspace:
         self._saved_revision = self._revision
         self._changes = []
         self._name = name
+        self._forced = False
         self._apply(evaluation)
 
     def _apply(self, evaluation: _Evaluation) -> None:

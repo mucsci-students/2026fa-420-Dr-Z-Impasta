@@ -184,7 +184,7 @@ export default function ConfigEditor() {
       <ErrorMessage error={error?.error} title={error?.title} onDismiss={error?.onDismiss} />
       <Banner tone={bannerTone} title={status.label}>
         {describeCounts(config.counts)}.
-        {config.status === "incomplete" && <IssueList issues={config.issues} />}
+        {(config.status === "incomplete" || config.status === "invalid") && <IssueList issues={config.issues} />}
       </Banner>
       {!doc ? (
         <Spinner label="Loading the configuration" />
@@ -404,7 +404,13 @@ export default function ConfigEditor() {
               loadError={shownImpact?.error}
               error={localError}
               onCancel={() => { setLocalError(null); setDeleting(null); }}   /* back to the edit dialog */
-              onConfirm={async () => { if (await DeleteItem(deleting, setDeleting, setEditing, setLocalError)); pushToHist(doc.document); await refresh(); }}
+              onConfirm={async () => {
+                const force = shownImpact?.reply?.can_delete === false;   // the user saw the warning
+                if (await DeleteItem(deleting, setDeleting, setEditing, setLocalError, force)) {
+                  pushToHist(doc.document);
+                  await refresh();
+                }
+              }}
             />
           )}
           {/* Shown when Load JSON… would overwrite unsaved changes. */}

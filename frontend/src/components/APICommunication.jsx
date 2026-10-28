@@ -88,9 +88,10 @@ export const replaceItem = async(area, index, item) => {
 	return response;
 };
 
-export const deleteItem = async(area, index) => {
+/** `force` deletes even when the impact preview warned (can_delete false, can_force true). */
+export const deleteItem = async(area, index, force = false) => {
 	
-	const response = await send(`/api/config/${area}/${index}`, {
+	const response = await send(`/api/config/${area}/${index}${force ? "?force=true" : ""}`, {
 		method: "DELETE",
 		headers: {
 			"Content-Type": "application/json",

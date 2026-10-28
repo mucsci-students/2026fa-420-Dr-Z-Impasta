@@ -7,14 +7,6 @@
   margin-bottom: var(--space-2);
 }
 
-.undo-redo-row {
-/*	flex-basis: 100%;
-	display: flex;
-	justify-content: flex-end;
-	gap: 8px;
-	*/
-}
-
 .disabled-btn {
     background-color: #333;
     color: #888;

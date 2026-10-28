@@ -8,6 +8,7 @@ let HISTORY = null;
 const ConfigStatusObj = Object.freeze({
 	NONE: "none",
 	INCOMPLETE: "incomplete",
+	INVALID: "invalid",
 	VALID: "valid"
 });
 
@@ -263,9 +264,10 @@ const setErrors = (setLocalError, resJSON) => {
   setLocalError(resJSON.error ?? { message: "The change was not applied." });  
 };
 
-export const DeleteItem = async(deleting, setDeleting, setEditing, setLocalError) => {
+/** `force`: the user confirmed the delete after the dialog warned what it breaks. */
+export const DeleteItem = async(deleting, setDeleting, setEditing, setLocalError, force = false) => {
 	try {
-		const res = await deleteItem(deleting.area, deleting.index);
+		const res = await deleteItem(deleting.area, deleting.index, force);
 			
 		if(!res.ok) {
 			const { error } = await res.json();

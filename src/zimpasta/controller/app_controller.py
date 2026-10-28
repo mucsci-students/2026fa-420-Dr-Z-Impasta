@@ -153,8 +153,8 @@ class AppController:
     def delete_impact(self, area: str, index: int) -> dict:
         return self.workspace.delete_impact(area, index).to_dict()
 
-    def delete_item(self, area: str, index: int) -> dict:
-        change, impact = self.workspace.remove(area, index)
+    def delete_item(self, area: str, index: int, *, force: bool = False) -> dict:
+        change, impact = self.workspace.remove(area, index, force=force)
         return {**self.configuration(), "change": change.to_dict(), "impact": impact.to_dict()}
 
     def update_time_slots(self, values: Mapping) -> dict:
