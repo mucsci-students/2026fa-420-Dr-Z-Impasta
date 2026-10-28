@@ -19,6 +19,7 @@ import Card from "../../components/Card.jsx";
 import EmptyState from "../../components/EmptyState.jsx";
 import ErrorMessage from "../../components/ErrorMessage.jsx";
 import Field from "../../components/Field.jsx";
+import HelpTip from "../../components/HelpTip.jsx";
 import PageHeader from "../../components/PageHeader.jsx";
 import { Rotelle } from "../../components/PastaMarks.jsx";
 import Spinner from "../../components/Spinner.jsx";
@@ -181,7 +182,7 @@ export default function ScheduleGenerator() {
                 <fieldset className="flag-list">
                   <legend>
                     Optimizer options{" "}
-                    <span className="muted">{overriding ? "(override for this run)" : "(from the configuration)"}</span>
+                    <HelpTip text="Options for optimizing the generated schedules." />
                   </legend>
                   {overriding && (
                     <Button size="sm" variant="ghost" onClick={() => setOptimizerFlags(null)}>
