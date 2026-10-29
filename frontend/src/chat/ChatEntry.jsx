@@ -118,7 +118,8 @@ function PendingAction({ pending, busy, onAnswer }) {
       setSave(null);
       await refresh().catch(() => {});
       onAnswer(pending.id, "saved");
-    } else if (result?.name === "AbortError") {
+    } else if (result === null) {
+      // The user closed the save dialog.
       setSave(null);
       onAnswer(pending.id, "cancel");
     } else if (Array.isArray(result)) {

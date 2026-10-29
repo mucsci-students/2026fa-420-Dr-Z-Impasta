@@ -1,4 +1,5 @@
-import { loadConfiguration, validateConfig, saveConfig, exportConfig, addItem, replaceItem, deleteItem, updateTimeSlot, updateSettings } from "../components/APICommunication";
+import { api } from "../api/client.js";
+import { saveFile } from "../files.js";
 import { ConfigFileMemento, ConfigFileOriginator, ConfigFileHistory } from "./configEditorMemento"
 
 let MEMENTO = null;
@@ -12,7 +13,8 @@ const ConfigStatusObj = Object.freeze({
 	VALID: "valid"
 });
 
-const Error = (error, title, labels, onDismiss) => {
+/** A page-level error for ConfigEditor's ErrorMessage. */
+const pageError = (error, title, labels, onDismiss) => {
 	return { "error" : error, "title" : title, "labels" : labels, "onDismiss" : onDismiss };
 };
 
@@ -70,27 +72,27 @@ export const undoAction = async(currDoc, filename, setError, setPendingLoad) => 
 
 /** Send a file's text to the server, then show what happened. */
 const sendLoad = async(filename, content, discardChanges, setError, setPendingLoad) => {
-	const res = await loadConfiguration(filename, content, discardChanges);
-	if(res.ok) {
-		setError(null);
-
-		//only set the memento objects on initial load
-		if(HISTORY == null) {
-			ORIGINATOR.set(JSON.parse(content));
-			HISTORY = new ConfigFileHistory(ORIGINATOR);
+	try {
+		await api.config.load({ filename, content, discardChanges });
+	} catch(error) {
+		if(error.code === "unsaved_changes") {
+			// Ask first; ConfirmLoad sends it again if the user agrees
+			setPendingLoad({ filename, content, changes: error.extra?.changes ?? [] });
+			return false;
 		}
-
-		return true;
-	}
-
-	const { error } = await res.json();
-	if(error?.code === "unsaved_changes") {
-		// Ask first; ConfirmLoad sends it again if the user agrees
-		setPendingLoad({ filename, content, changes: error.changes ?? [] });
+		setError(pageError(error, `Couldn't load ${filename}`, undefined, () => setError(null)));
 		return false;
 	}
-	setError(Error({ message: error?.message, issues: error?.issues }, `Couldn't load ${filename}`, undefined, () => setError(null)));
-	return false;
+
+	setError(null);
+
+	//only set the memento objects on initial load
+	if(HISTORY == null) {
+		ORIGINATOR.set(JSON.parse(content));
+		HISTORY = new ConfigFileHistory(ORIGINATOR);
+	}
+
+	return true;
 };
 
 export const Load = async(event, setLoadingFile, setError, setPendingLoad) => {
@@ -104,7 +106,7 @@ export const Load = async(event, setLoadingFile, setError, setPendingLoad) => {
 		try {
 			content = await file.text();
 		} catch {
-			setError(Error({ message: `${file.name} couldn't be read. Check that the file still exists and you can open it.` }, `Couldn't load ${file.name}`, undefined, () => setError(null)));
+			setError(pageError({ message: `${file.name} couldn't be read. Check that the file still exists and you can open it.` }, `Couldn't load ${file.name}`, undefined, () => setError(null)));
 			return false;
 		}
 		return await sendLoad(file.name, content, false, setError, setPendingLoad);
@@ -126,17 +128,16 @@ export const ConfirmLoad = async(pending, setPendingLoad, setLoadingFile, setErr
 
 export const Empty_Click = async(setLoadingFile, setError, setPendingLoad) => {
 	setLoadingFile(true);
-
-	const content = await fetch('/new_config.json')
-		.then(response => {
-			if (!response.ok) throw new Error('Failed to load config');
-			return response.text();
-		});
-
-	const filename = "unnamed.json"
 	try {
-		return await sendLoad(filename, content, false, setError, setPendingLoad);
-	} 
+		// The starter file is served next to the GUI, not by the API, so this is a plain
+		// fetch(). send() would pass it to Python in the browser build, which doesn't serve it.
+		const response = await fetch(`${import.meta.env.BASE_URL}new_config.json`).catch(() => null);
+		if(!response?.ok) {
+			setError(pageError({ message: "The starter configuration couldn't be loaded. Reload the page and try again." }, "Couldn't start a new configuration", undefined, () => setError(null)));
+			return false;
+		}
+		return await sendLoad("unnamed.json", await response.text(), false, setError, setPendingLoad);
+	}
 	finally {
 		await new Promise(resolve => setTimeout(resolve, 2000));
 		setLoadingFile(false);
@@ -144,124 +145,55 @@ export const Empty_Click = async(setLoadingFile, setError, setPendingLoad) => {
 };
 
 export const Validate = async() => {
-
 	try {
-		const res = await validateConfig();
-		return {"status": res["report"]["status"], "issues": res["report"]["issues"]};
-
+		const { report } = await api.config.validate();
+		return { "status": report.status, "issues": report.issues };
 	} catch(err) {
 		return err;
 	}
 };
 
-const saveConfigInternally = async(request) => {
-	try {
-		const res = await saveConfig(request);
-		return res;
-	} catch(err) {
-		return err;
-	}
-};
-
+/**
+ * Validate, export, ask where to save, then tell the server it was saved.
+ * Returns the saved content, null if the user closed the save dialog, the issues if the
+ * configuration isn't valid, or the error if something failed.
+ */
 export const Save = async() => {
-
 	const report = await Validate();
-	if(report["status"] == ConfigStatusObj.VALID) {
+	if(report instanceof Error) return report;
+	if(report.status !== ConfigStatusObj.VALID) return report.issues;
 
-		try {
-			const {content, filename, revision} = await exportConfig();
-			await Download(content, filename);
-			await saveConfigInternally({revision : revision, filename : filename});
-			return content;
-
-		} catch(err) {
-			return err;
-		}
-	} else {
-		return report["issues"];
+	try {
+		const { content, filename, revision } = await api.config.exportFile();
+		const saved = await saveFile({ suggestedName: filename, content });
+		if(!saved) return null;
+		await api.config.markSaved({ revision, filename: saved.name });
+		return content;
+	} catch(err) {
+		return err;
 	}
 };
 
-
-const Download = async(content, filename) => {
-
-	if ("showSaveFilePicker" in window) {
-		const fileHandle = await window.showSaveFilePicker({
-			suggestedName: filename,
-			types: [
-			{
-				description: "JSON configuration",
-				accept: {
-					"application/json": [".json"],
-				},
-			},
-		],
-	});
-
-	const writable = await fileHandle.createWritable();
-	await writable.write(content);
-	await writable.close();
-
-	return;
+/** Send one edit from a dialog. On success close the dialog; on failure show why in it. */
+const applyEdit = async(request, setEditing, setLocalError) => {
+	try {
+		await request();
+	} catch(err) {
+		setLocalError(err);
+		return false;
 	}
-
-	// Fallback
-	const blob = new Blob(
-		[content],
-                { type: "application/json" }
-	);
-	const url = URL.createObjectURL(blob);
-	const link = document.createElement("a");
-        link.href = url;
-	link.download = filename;
-
-	document.body.appendChild(link);
-	link.click();
-        link.remove();
-	URL.revokeObjectURL(url);
+	setEditing(null);
+	setLocalError(null);
+	return true;
 };
 
 export const ValidateAndSaveItem = async(editing, draft, setEditing, setLocalError) => {
-	const area = editing.area;
-	const index = editing.index;
-	
-	if(index == null) {
-
-		try {
-			const res = await handleItem(await addItem(area, draft), setEditing, setLocalError);
-			return res;
-		} catch(err) {
-			return err;
-		}
-
-	} else {
-
-		try {
-			const res = await handleItem(await replaceItem(area, index, draft), setEditing, setLocalError);
-			return res;
-		} catch(err) {
-			return err;
-		}
-	}
-};
-
-const handleItem = async (res, setEditing, setLocalError) => {
-
-	if(!res.ok) {
-		const resJSON = await res.json();
-		setErrors(setLocalError, resJSON);
-
-	} else {
-		setEditing(null);
-		setLocalError(null);
-	}
-
-	return res;
-};
-
-
-const setErrors = (setLocalError, resJSON) => {
-  setLocalError(resJSON.error ?? { message: "The change was not applied." });  
+	const { area, index } = editing;
+	return applyEdit(
+		() => (index == null ? api.config.add(area, draft) : api.config.replace(area, index, draft)),
+		setEditing,
+		setLocalError,
+	);
 };
 
 /**
@@ -270,66 +202,40 @@ const setErrors = (setLocalError, resJSON) => {
  * failure is shown at the top of the page (`setError`), since no dialog is open.
  */
 export const TogglePattern = async(index, pattern, setError) => {
-	const failed = (error) =>
-		setError(Error(error, "Couldn't change the class pattern", undefined, () => setError(null)));
 	try {
-		const res = await replaceItem("patterns", index, { ...pattern, disabled: !pattern.disabled }, true);
-		if(!res.ok) {
-			const { error } = await res.json();
-			failed(error ?? { message: "The class pattern was not changed." });
-			return false;
-		}
-		setError(null);
-		return true;
-	} catch {
-		failed({ message: "The server couldn't be reached. The class pattern was not changed." });
+		await api.config.replace("patterns", index, { ...pattern, disabled: !pattern.disabled }, true);
+	} catch(err) {
+		setError(pageError(err, "Couldn't change the class pattern", undefined, () => setError(null)));
 		return false;
 	}
+	setError(null);
+	return true;
 };
 
 /** `force`: the user confirmed the delete after the dialog warned what it breaks. */
 export const DeleteItem = async(deleting, setDeleting, setEditing, setLocalError, force = false) => {
 	try {
-		const res = await deleteItem(deleting.area, deleting.index, force);
-			
-		if(!res.ok) {
-			const { error } = await res.json();
-			setLocalError(error ?? { message: "Nothing was deleted." });
-			return false;   // keep the dialog open so the reason stays visible
-		}
-		setLocalError(null);
-		setDeleting(null);
-		setEditing(null);
-		return true;
-	} catch {
-		setLocalError({ message: "The server couldn't be reached. Nothing was deleted." });
-		return false;
-	}
-};
-
-export const UpdateTimeSlot = async(vals, setEditing, setLocalError) => {
-
-	try {
-    return await handleItem(await updateTimeSlot(vals), setEditing, setLocalError);
+		await api.config.remove(deleting.area, deleting.index, force);
 	} catch(err) {
-		return err;
+		setLocalError(err);
+		return false;   // keep the dialog open so the reason stays visible
 	}
+	setLocalError(null);
+	setDeleting(null);
+	setEditing(null);
+	return true;
 };
+
+export const UpdateTimeSlot = async(vals, setEditing, setLocalError) =>
+	applyEdit(() => api.config.updateTimeSlots(vals), setEditing, setLocalError);
 
 export const UpdateSettings = async(vals, setSettingsError) => {
 	try {
-		const res = await updateSettings(vals);
-		if(!res.ok) {
-			const { error } = await res.json();
-			setSettingsError(error ?? { message: "The change was not applied." });
-			return false;
-		}
-		setSettingsError(null);
-		return true;
-	} catch {
-		setSettingsError({ message: "The server couldn't be reached. The change was not applied." });
+		await api.config.updateSettings(vals);
+	} catch(err) {
+		setSettingsError(err);
 		return false;
 	}
+	setSettingsError(null);
+	return true;
 };
-
-

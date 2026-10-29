@@ -105,7 +105,9 @@ export const api = {
     list: (area) => get(`/config/${area}`),
     item: (area, index) => get(`/config/${area}/${index}`),
     add: (area, item) => post(`/config/${area}`, item),
-    replace: (area, index, item) => put(`/config/${area}/${index}`, item),
+    /** `force` applies the change even if the configuration then has problems. */
+    replace: (area, index, item, force = false) =>
+      put(`/config/${area}/${index}${force ? "?force=true" : ""}`, item),
     deleteImpact: (area, index) => get(`/config/${area}/${index}/impact`),
     remove: (area, index, force = false) => del(`/config/${area}/${index}${force ? "?force=true" : ""}`),
     updateTimeSlots: (values) => put("/config/time-slots", values),
