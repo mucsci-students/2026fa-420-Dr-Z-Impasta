@@ -33,3 +33,30 @@ export function issuesFor(issues, { area, index, field }) {
       (field === undefined || issue.field === field || issue.field?.startsWith(`${field}.`)),
   );
 }
+
+/**
+ * The issues from a rejected Save, sorted for a form that edits one item. `fields` are the
+ * fields the form shows; `index` is undefined for a new item or an area without items.
+ *
+ * - `errorFor(field, exact)`: the messages for that field and its sub-fields (only the field
+ *   itself if `exact`), joined, or undefined if there are none. Use it as a Field's `error`.
+ * - `errorClass(field)`: "input-error" if the field has any, else "".
+ * - `unplaced`: the issues no field shows, for the form's banner.
+ */
+export function formIssues(issues, { area, index, fields }) {
+  const all = issues ?? [];
+  const inFields = (issue) => fields.some((f) => issue.field === f || issue.field?.startsWith(`${f}.`));
+
+  function errorFor(field, exact = false) {
+    const found = issuesFor(all, { area, index, field }).filter((issue) => !exact || issue.field === field);
+    return found.length > 0 ? found.map((issue) => issue.message).join(" ") : undefined;
+  }
+
+  return {
+    errorFor,
+    errorClass: (field) => (errorFor(field) ? "input-error" : ""),
+    unplaced: all.filter(
+      (issue) => issue.area !== area || (index !== undefined && issue.index !== index) || !inFields(issue),
+    ),
+  };
+}

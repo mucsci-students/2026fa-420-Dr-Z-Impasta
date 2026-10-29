@@ -6,13 +6,11 @@
 
 import { useState } from "react";
 import Button from "../../../components/Button.jsx";
-import ConfirmDialog from "../../../components/ConfirmDialog.jsx";
-import Dialog from "../../../components/Dialog.jsx";
-import ErrorMessage from "../../../components/ErrorMessage.jsx";
-import UnsavedChangesPrompt from "../../../components/UnsavedChangesPrompt.jsx";
-import { issuesFor } from "../../../components/issues.js";
+import { formIssues } from "../../../components/issues.js";
 import { DAY_NAMES } from "../labels.js";
 import { hourAfter } from "../times.js";
+import EditDialog from "./EditDialog.jsx";
+import { useDraft } from "./useDraft.js";
 
 /** A day's first block, when it has none. */
 const FIRST_BLOCK = { start: "08:00", end: "17:00", spacing: 60 };
@@ -38,27 +36,12 @@ const newBlockKeys = (count) => Array.from({ length: count }, () => nextBlockKey
 export default function DayBlocksDialog({ day, times, busy, error, onSave, onCancel }) {
   const name = DAY_NAMES[day] ?? day;
   const original = times[day] ?? [];
-  const [blocks, setBlocks] = useState(original);
-  const isDirty = JSON.stringify(blocks) !== JSON.stringify(original);
-  const [confirmingDiscard, setConfirmingDiscard] = useState(false);
+  const { draft: blocks, setDraft: setBlocks, isDirty } = useDraft(original);
 
   // One key per row of blocks, in the same order
   const [blockKeys, setBlockKeys] = useState(() => newBlockKeys(original.length));
   // The row keys when Save was last pressed; the server's `times.DAY.N` errors refer to these positions
   const [savedKeys, setSavedKeys] = useState(blockKeys);
-
-  // Problems with nowhere to appear in this dialog; the banner lists them instead
-  const FIELDS = [`times.${day}`];
-  const unplaced = (error?.issues ?? []).filter((issue) =>
-    issue.area !== "time_slots" ||
-    !FIELDS.some((f) => issue.field === f || issue.field?.startsWith(`${f}.`)),
-  );
-
-  /** Cancel, Escape, or ×: ask first if there are unsaved edits. */
-  function requestClose() {
-    if (isDirty) setConfirmingDiscard(true);
-    else onCancel?.();
-  }
 
   function save() {
     setSavedKeys(blockKeys);
@@ -81,101 +64,76 @@ export default function DayBlocksDialog({ day, times, busy, error, onSave, onCan
     setBlockKeys((keys) => keys.filter((_, j) => j !== i));
   }
 
-  /** The library's message for a field of this day. `exact` leaves out the issues for its sub-fields. */
-  function errorFor(field, exact = false) {
-    const found = issuesFor(error?.issues, { area: "time_slots", field }).filter(
-      (issue) => !exact || issue.field === field,
-    );
-    return found.length > 0 ? found.map((issue) => issue.message).join(" ") : undefined;
-  }
+  const { errorFor, errorClass, unplaced } = formIssues(error?.issues, {
+    area: "time_slots",
+    fields: [`times.${day}`],
+  });
 
-  /** A function to assign the input field the 'input-error' class if it contains invalid data */
-  function classNameFunc(field) {
-    if ((error?.issues ?? []).some((issue) => issue.field?.split(".")[3] === field)) {
-      return "input-error";
-    } else {
-      return "";
-    }
-  }
-
-
-  /** The library's message for the block row with this key, from where it was at the last Save. */
-  function blockError(key) {
+  /**
+   * The field the server's errors use for the block row with this key ("times.MON.2"), from
+   * where the row was at the last Save, or null if it was added since.
+   */
+  function blockField(key) {
     const position = savedKeys.indexOf(key);
-    return position === -1 ? undefined : errorFor(`times.${day}.${position}`);
+    return position === -1 ? null : `times.${day}.${position}`;
   }
 
   const dayError = errorFor(`times.${day}`, true);
 
-  // The prompts are siblings of the Dialog, not children; see ResourceDialog.
   return (
-    <>
-      <Dialog
-        open
-        width="520px"
-        title={`${name} time blocks`}
-        onClose={requestClose}
-        actions={
-          <>
-            <Button onClick={requestClose} disabled={busy}>Cancel</Button>
-            <Button variant="primary" busy={busy} onClick={save}>Save</Button>
-          </>
-        }
-      >
-        <ErrorMessage error={error && { message: "The change was not applied.", issues: unplaced }} title="Not saved." />
-
-        <fieldset className="blocks-editor">
-          <legend>Blocks on {name}</legend>
-          <div className="blocks-editor__head" aria-hidden="true">
-            <span>Start</span><span>End</span><span>Spacing (min)</span><span />
-          </div>
-          {blocks.length === 0 && <p className="muted">No blocks. {name} needs at least one.</p>}
-          {blocks.map((block, i) => {
-            const rowError = blockError(blockKeys[i]);
-            return (
-              <div key={blockKeys[i]} className="blocks-editor__row">
-                <input className={classNameFunc("start")} type="time" aria-label={`Block ${i + 1} start`} value={block.start ?? ""}
-                  onChange={(e) => setBlock(i, "start", e.target.value)} data-autofocus={i === 0 || undefined} />
-                <input className={classNameFunc("end")} type="time" aria-label={`Block ${i + 1} end`} value={block.end ?? ""}
-                  onChange={(e) => setBlock(i, "end", e.target.value)} />
-                <input className={classNameFunc("spacing")} type="number" min={1} aria-label={`Block ${i + 1} spacing in minutes`} value={block.spacing ?? ""}
-                  onChange={(e) => setBlock(i, "spacing", toNumber(e.target.value))} />
-                <button type="button" className="blocks-editor__remove" aria-label={`Remove block ${i + 1}`}
-                  onClick={() => removeBlock(i)}>
-                  ×
-                </button>
-                {rowError && (
-                  <p className="field__error blocks-editor__error">
-                    <span aria-hidden="true">⚠ </span>
-                    {rowError}
-                  </p>
-                )}
-              </div>
-            );
-          })}
-          <Button size="sm" variant="ghost" onClick={addBlock}>
-            + Add block
-          </Button>
-          {dayError && (
-            <p className="field__error">
-              <span aria-hidden="true">⚠ </span>
-              {dayError}
-            </p>
-          )}
-        </fieldset>
-      </Dialog>
-      <UnsavedChangesPrompt when={isDirty} />
-      <ConfirmDialog
-        open={confirmingDiscard}
-        title="Discard changes?"
-        destructive
-        confirmLabel="Discard"
-        cancelLabel="Keep editing"
-        onConfirm={onCancel}
-        onCancel={() => setConfirmingDiscard(false)}
-      >
-        <p>Your changes to {name}'s time blocks haven't been saved.</p>
-      </ConfirmDialog>
-    </>
+    <EditDialog
+      width="520px"
+      title={`${name} time blocks`}
+      what={`${name}'s time blocks`}
+      isDirty={isDirty}
+      error={error}
+      unplaced={unplaced}
+      busy={busy}
+      onSave={save}
+      onCancel={onCancel}
+    >
+      <fieldset className="blocks-editor">
+        <legend>Blocks on {name}</legend>
+        <div className="blocks-editor__head" aria-hidden="true">
+          <span>Start</span><span>End</span><span>Spacing (min)</span><span />
+        </div>
+        {blocks.length === 0 && <p className="muted">No blocks. {name} needs at least one.</p>}
+        {blocks.map((block, i) => {
+          const rowField = blockField(blockKeys[i]);
+          const rowError = rowField && errorFor(rowField);
+          /** "input-error" if this row's `part` (start, end, spacing) has an issue. */
+          const partClass = (part) => (rowField ? errorClass(`${rowField}.${part}`) : "");
+          return (
+            <div key={blockKeys[i]} className="blocks-editor__row">
+              <input className={partClass("start")} type="time" aria-label={`Block ${i + 1} start`} value={block.start ?? ""}
+                onChange={(e) => setBlock(i, "start", e.target.value)} data-autofocus={i === 0 || undefined} />
+              <input className={partClass("end")} type="time" aria-label={`Block ${i + 1} end`} value={block.end ?? ""}
+                onChange={(e) => setBlock(i, "end", e.target.value)} />
+              <input className={partClass("spacing")} type="number" min={1} aria-label={`Block ${i + 1} spacing in minutes`} value={block.spacing ?? ""}
+                onChange={(e) => setBlock(i, "spacing", toNumber(e.target.value))} />
+              <button type="button" className="blocks-editor__remove" aria-label={`Remove block ${i + 1}`}
+                onClick={() => removeBlock(i)}>
+                ×
+              </button>
+              {rowError && (
+                <p className="field__error blocks-editor__error">
+                  <span aria-hidden="true">⚠ </span>
+                  {rowError}
+                </p>
+              )}
+            </div>
+          );
+        })}
+        <Button size="sm" variant="ghost" onClick={addBlock}>
+          + Add block
+        </Button>
+        {dayError && (
+          <p className="field__error">
+            <span aria-hidden="true">⚠ </span>
+            {dayError}
+          </p>
+        )}
+      </fieldset>
+    </EditDialog>
   );
 }

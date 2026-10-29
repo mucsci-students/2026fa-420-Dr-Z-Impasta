@@ -83,7 +83,7 @@ move it to `components/`.
 | `Badge`, `StatusPill` | Short labels and status like "Valid · saved"; the text carries the meaning, color only reinforces it |
 | `Banner` | A message across a section; `tone` is info, success, warning, or danger, and `title` states it in words |
 | `ErrorMessage` | Show a failed call: the server's message plus every located issue |
-| `IssueList`, `issuesFor()` | List issues, or pick the ones for one field to show next to it |
+| `IssueList`, `issuesFor()`, `formIssues()` | List issues, or pick the ones for one field to show next to it; `formIssues` does both for a whole form |
 | `Field`, `HelpTip` | A labelled control with required marker, help, and its error, all wired for screen readers |
 | `Dialog`, `ConfirmDialog` | Modal dialogs; `ConfirmDialog destructive` for deletes, clears, and discards |
 | `UnsavedChangesPrompt` | Put in a page with a form draft; asks before switching modes or closing the tab |
@@ -124,7 +124,9 @@ item with `api.config.replace(area, index, item)` (or `add`). If the library rej
 reply is `edit_rejected` with issues located by `area`, `index`, and `field`; show them next to
 the fields with `issuesFor(error.issues, { area, index, field })`, keep the draft open, and
 nothing has changed on the server. While a draft differs from the applied item, render
-`<UnsavedChangesPrompt when={isDirty} />`.
+`<UnsavedChangesPrompt when={isDirty} />`. The editor's dialogs do all of this with
+`useDraft(original)` and `EditDialog` (in `modes/editor/dialogs/`), which add the "Not saved."
+banner, the buttons, and "Discard changes?" on Cancel.
 
 **Deletes preview first.** Call `api.config.deleteImpact(area, index)` and list `cascades` in a
 `ConfirmDialog destructive`. If `can_delete` is false, the dialog is a warning: also show

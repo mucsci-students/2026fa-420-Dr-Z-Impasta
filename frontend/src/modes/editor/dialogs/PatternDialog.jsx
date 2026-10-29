@@ -6,13 +6,11 @@
 
 import { useState } from "react";
 import Button from "../../../components/Button.jsx";
-import ConfirmDialog from "../../../components/ConfirmDialog.jsx";
-import Dialog from "../../../components/Dialog.jsx";
-import ErrorMessage from "../../../components/ErrorMessage.jsx";
 import Field from "../../../components/Field.jsx";
-import UnsavedChangesPrompt from "../../../components/UnsavedChangesPrompt.jsx";
-import { issuesFor } from "../../../components/issues.js";
+import { formIssues } from "../../../components/issues.js";
 import { DELIVERY_NAMES } from "../labels.js";
+import EditDialog from "./EditDialog.jsx";
+import { useDraft } from "./useDraft.js";
 
 const NEW_MEETING = { day: "MON", start_time: null, duration: 50, lab: false, delivery: "in_person" };
 const NEW_PATTERN = { credits: null, meetings: [NEW_MEETING], disabled: false, start_time: null };
@@ -32,9 +30,7 @@ const newMeetingKeys = (count) => Array.from({ length: count }, () => nextMeetin
 export default function PatternDialog({ index, pattern, options, busy, error, onSave, onCancel, onDelete }) {
   const isNew = index === null;
   const original = pattern ?? NEW_PATTERN;
-  const [draft, setDraft] = useState(original);
-  const isDirty = JSON.stringify(draft) !== JSON.stringify(original);
-  const [confirmingDiscard, setConfirmingDiscard] = useState(false);
+  const { draft, set, isDirty } = useDraft(original);
 
   // One key per row of draft.meetings, in the same order
   const [meetingKeys, setMeetingKeys] = useState(() => newMeetingKeys(original.meetings.length));
@@ -44,27 +40,9 @@ export default function PatternDialog({ index, pattern, options, busy, error, on
   const weekdays = options?.weekdays?.length ? options.weekdays : WEEKDAYS;
   const deliveryModes = options?.delivery_modes?.length ? options.delivery_modes : Object.keys(DELIVERY_NAMES);
 
-  // Problems that have no field in this dialog to appear under; the banner lists them instead
-  const FIELDS = [ "credits", "start_time", "disabled", "meetings" ];
-  const unplaced = (error?.issues ?? []).filter((issue) =>
-    issue.area !== "patterns" ||
-    (index !== null && issue.index !== index) ||
-    !FIELDS.some((f) => issue.field === f || issue.field?.startsWith(`${f}.`)),
-  );
-
-  /** Cancel, Escape, or ×: ask first if there are unsaved edits. */
-  function requestClose() {
-    if (isDirty) setConfirmingDiscard(true);
-    else onCancel?.();
-  }
-
   function save() {
     setSavedKeys(meetingKeys);
     onSave?.(draft);
-  }
-
-  function set(field, value) {
-    setDraft((d) => ({ ...d, [field]: value }));
   }
 
   /** Change one field of meeting number i. */
@@ -86,139 +64,113 @@ export default function PatternDialog({ index, pattern, options, busy, error, on
     setMeetingKeys((keys) => keys.filter((_, j) => j !== i));
   }
 
-  /** The library's message for one field. `exact` leaves out the issues for its sub-fields. */
-  function errorFor(field, exact = false) {
-    const found = issuesFor(error?.issues, { area: "patterns", index: index ?? undefined, field })
-      .filter((issue) => !exact || issue.field === field);
-    return found.length > 0 ? found.map((issue) => issue.message).join(" ") : undefined;
-  }
+  const { errorFor, errorClass, unplaced } = formIssues(error?.issues, {
+    area: "patterns",
+    index: index ?? undefined,
+    fields: ["credits", "start_time", "disabled", "meetings"],
+  });
 
-
-  /** A function to assign the input field the 'input-error' class if it contains invalid data */
-  function classNameFunc(field) {
-    if ((error?.issues ?? []).some((issue) => issue.field === field)) {
-      return "input-error";
-    } else {
-      return "";
-    }
-  }
-
-  /** The library's message for the meeting row with this key, from where it was at the last Save. */
-  function meetingError(key) {
+  /**
+   * The field the server's errors use for the meeting row with this key ("meetings.2"), from
+   * where the row was at the last Save, or null if it was added since.
+   */
+  function meetingField(key) {
     const position = savedKeys.indexOf(key);
-    return position === -1 ? undefined : errorFor(`meetings.${position}`);
+    return position === -1 ? null : `meetings.${position}`;
   }
 
-  // The prompts are siblings of the Dialog, not children; see ResourceDialog.
   return (
-    <>
-      <Dialog
-        open
-        width="640px"
-        title={isNew ? "Add class pattern" : `Edit ${original.credits}-credit pattern`}
-        onClose={requestClose}
-        actions={
-          <>
-            {!isNew && <Button variant="danger" onClick={onDelete} disabled={busy}>Delete</Button>}
-            <Button onClick={requestClose} disabled={busy}>Cancel</Button>
-            <Button variant="primary" busy={busy} onClick={save}>
-              {isNew ? "Add pattern" : "Save"}
-            </Button>
-          </>
-        }
-      >
-        <ErrorMessage error={error && { message: "The change was not applied.", issues: unplaced }} title="Not saved." />
-
-        <div className="form-grid">
-          <Field label="Credits" required error={errorFor("credits")}>
-            <input className={classNameFunc("credits")} type="number" min={1} value={draft.credits ?? ""}
-              onChange={(e) => set("credits", toNumber(e.target.value))} data-autofocus />
+    <EditDialog
+      width="640px"
+      title={isNew ? "Add class pattern" : `Edit ${original.credits}-credit pattern`}
+      what="this pattern"
+      isDirty={isDirty}
+      error={error}
+      unplaced={unplaced}
+      busy={busy}
+      saveLabel={isNew ? "Add pattern" : "Save"}
+      onSave={save}
+      onCancel={onCancel}
+      onDelete={isNew ? undefined : onDelete}
+    >
+      <div className="form-grid">
+        <Field label="Credits" required error={errorFor("credits")}>
+          <input className={errorClass("credits")} type="number" min={1} value={draft.credits ?? ""}
+            onChange={(e) => set("credits", toNumber(e.target.value))} data-autofocus />
+        </Field>
+        {/* The button sits beside the Field, not inside it: Field gives its one child the label's id */}
+        <div className="time-field">
+          <Field label="Start time" help="Optional. Meetings without their own start time begin here." error={errorFor("start_time")}>
+            <input className={errorClass("start_time")} type="time" value={draft.start_time ?? ""}
+              onChange={(e) => set("start_time", toTime(e.target.value))} />
           </Field>
-          {/* The button sits beside the Field, not inside it: Field gives its one child the label's id */}
-          <div className="time-field">
-            <Field label="Start time" help="Optional. Meetings without their own start time begin here." error={errorFor("start_time")}>
-              <input className={classNameFunc("start_time")} type="time" value={draft.start_time ?? ""}
-                onChange={(e) => set("start_time", toTime(e.target.value))} />
-            </Field>
-            {/* Browsers give a time box no reliable way to empty it, so this sets it back to "any" */}
-            {draft.start_time && (
-              <Button size="sm" variant="ghost" onClick={() => set("start_time", null)}>
-                Any time
-              </Button>
-            )}
-          </div>
+          {/* Browsers give a time box no reliable way to empty it, so this sets it back to "any" */}
+          {draft.start_time && (
+            <Button size="sm" variant="ghost" onClick={() => set("start_time", null)}>
+              Any time
+            </Button>
+          )}
         </div>
+      </div>
 
-        <label className="toggle">
-          <input type="checkbox" role="switch" checked={!draft.disabled}
-            onChange={(e) => set("disabled", !e.target.checked)} />
-          <span>{draft.disabled ? "Disabled: the scheduler won't use it" : "Enabled"}</span>
-        </label>
+      <label className="toggle">
+        <input type="checkbox" role="switch" checked={!draft.disabled}
+          onChange={(e) => set("disabled", !e.target.checked)} />
+        <span>{draft.disabled ? "Disabled: the scheduler won't use it" : "Enabled"}</span>
+      </label>
 
-        <fieldset className="meetings-editor">
-          <legend>Meetings</legend>
-          <div className="meetings-editor__head" aria-hidden="true">
-            <span>Day</span><span>Minutes</span><span>Lab</span><span>Delivery</span><span>Own start</span><span />
-          </div>
-          {draft.meetings.map((m, i) => {
-            const rowError = meetingError(meetingKeys[i]);
-            return (
-              <div key={meetingKeys[i]} className="meetings-editor__row">
-                <select aria-label={`Meeting ${i + 1} day`} value={m.day}
-                  onChange={(e) => setMeeting(i, "day", e.target.value)}>
-                  {weekdays.map((d) => <option key={d} value={d}>{d}</option>)}
-                </select>
-                <input className={classNameFunc("duration")} type="number" min={1} aria-label={`Meeting ${i + 1} minutes`} value={m.duration ?? ""}
-                  onChange={(e) => setMeeting(i, "duration", toNumber(e.target.value))} />
-                <input type="checkbox" aria-label={`Meeting ${i + 1} is the lab`} checked={m.lab}
-                  onChange={(e) => setMeeting(i, "lab", e.target.checked)} />
-                <select aria-label={`Meeting ${i + 1} delivery`} value={m.delivery}
-                  onChange={(e) => setMeeting(i, "delivery", e.target.value)}>
-                  {deliveryModes.map((d) => (
-                    <option key={d} value={d}>
-                      {DELIVERY_NAMES[d] ?? d}
-                    </option>
-                  ))}
-                </select>
-                <input type="time" aria-label={`Meeting ${i + 1} start time`} value={m.start_time ?? ""}
-                  onChange={(e) => setMeeting(i, "start_time", toTime(e.target.value))} />
-                {/* One cell for both buttons, so the × sits right after the time box and moves
-                    over when "Any" appears */}
-                <div className="meetings-editor__end">
-                  {/* Clears the meeting's own start time, like "Any time" above */}
-                  {m.start_time && (
-                    <Button size="sm" variant="ghost" aria-label={`Any start time for meeting ${i + 1}`}
-                      onClick={() => setMeeting(i, "start_time", null)}>
-                      Any
-                    </Button>
-                  )}
-                  <button type="button" className="meetings-editor__remove" aria-label={`Remove meeting ${i + 1}`}
-                    onClick={() => removeMeeting(i)}>
-                    ×
-                  </button>
-                </div>
-                {rowError && <p className="field__error meetings-editor__error">{rowError}</p>}
+      <fieldset className="meetings-editor">
+        <legend>Meetings</legend>
+        <div className="meetings-editor__head" aria-hidden="true">
+          <span>Day</span><span>Minutes</span><span>Lab</span><span>Delivery</span><span>Own start</span><span />
+        </div>
+        {draft.meetings.map((m, i) => {
+          const rowField = meetingField(meetingKeys[i]);
+          const rowError = rowField && errorFor(rowField);
+          return (
+            <div key={meetingKeys[i]} className="meetings-editor__row">
+              <select aria-label={`Meeting ${i + 1} day`} value={m.day}
+                onChange={(e) => setMeeting(i, "day", e.target.value)}>
+                {weekdays.map((d) => <option key={d} value={d}>{d}</option>)}
+              </select>
+              <input className={rowField ? errorClass(`${rowField}.duration`) : ""} type="number" min={1} aria-label={`Meeting ${i + 1} minutes`} value={m.duration ?? ""}
+                onChange={(e) => setMeeting(i, "duration", toNumber(e.target.value))} />
+              <input type="checkbox" aria-label={`Meeting ${i + 1} is the lab`} checked={m.lab}
+                onChange={(e) => setMeeting(i, "lab", e.target.checked)} />
+              <select aria-label={`Meeting ${i + 1} delivery`} value={m.delivery}
+                onChange={(e) => setMeeting(i, "delivery", e.target.value)}>
+                {deliveryModes.map((d) => (
+                  <option key={d} value={d}>
+                    {DELIVERY_NAMES[d] ?? d}
+                  </option>
+                ))}
+              </select>
+              <input type="time" aria-label={`Meeting ${i + 1} start time`} value={m.start_time ?? ""}
+                onChange={(e) => setMeeting(i, "start_time", toTime(e.target.value))} />
+              {/* One cell for both buttons, so the × sits right after the time box and moves
+                  over when "Any" appears */}
+              <div className="meetings-editor__end">
+                {/* Clears the meeting's own start time, like "Any time" above */}
+                {m.start_time && (
+                  <Button size="sm" variant="ghost" aria-label={`Any start time for meeting ${i + 1}`}
+                    onClick={() => setMeeting(i, "start_time", null)}>
+                    Any
+                  </Button>
+                )}
+                <button type="button" className="meetings-editor__remove" aria-label={`Remove meeting ${i + 1}`}
+                  onClick={() => removeMeeting(i)}>
+                  ×
+                </button>
               </div>
-            );
-          })}
-          <Button size="sm" variant="ghost" onClick={addMeeting}>
-            + Add meeting
-          </Button>
-          {errorFor("meetings", true) && <p className="field__error">{errorFor("meetings", true)}</p>}
-        </fieldset>
-      </Dialog>
-      <UnsavedChangesPrompt when={isDirty} />
-      <ConfirmDialog
-        open={confirmingDiscard}
-        title="Discard changes?"
-        destructive
-        confirmLabel="Discard"
-        cancelLabel="Keep editing"
-        onConfirm={onCancel}
-        onCancel={() => setConfirmingDiscard(false)}
-      >
-        <p>Your changes to this pattern haven't been saved.</p>
-      </ConfirmDialog>
-    </>
+              {rowError && <p className="field__error meetings-editor__error">{rowError}</p>}
+            </div>
+          );
+        })}
+        <Button size="sm" variant="ghost" onClick={addMeeting}>
+          + Add meeting
+        </Button>
+        {errorFor("meetings", true) && <p className="field__error">{errorFor("meetings", true)}</p>}
+      </fieldset>
+    </EditDialog>
   );
 }
