@@ -1,11 +1,8 @@
-// Description:
-// | Field    | Control                       | Notes
-// | name     | text, required                |
-// | capacity | number, required              |
-// | features | TagInput                      |
-// | times    | checkbox + AvailabilityEditor | "Always available" checked = null;
-// |          |                               | unchecked shows the editor, starting from
-// |          |                               | the last hours set, or weekdays 08:00–17:00
+/**
+ * The dialog for adding or editing a room or lab (`area` says which), opened from ResourceCard or
+ * "Add room" / "Add lab". It's an edit dialog like CourseDialog. "Unrestricted availability" saves
+ * times as null; unticking it brings back the last hours set, or weekdays 08:00–17:00.
+ */
 
 import { useState } from "react";
 import Button from "../../../components/Button.jsx";

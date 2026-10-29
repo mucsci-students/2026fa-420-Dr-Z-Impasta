@@ -48,9 +48,9 @@ Every error has one shape. `code` is for program logic; `message` is written for
 | 400 | `empty_message`, `message_too_long`, `invalid_answer` | A chat message or a pending answer that can't be used |
 | 404 | `not_found` | Unknown area, index, schedule number, pending chat action, or endpoint |
 | 409 | `no_configuration` | Nothing has been created or loaded |
-| 409 | `configuration_incomplete` | Save or generate on an incomplete configuration (`issues` says what's missing) |
+| 409 | `configuration_incomplete` | Save or generate on an incomplete or invalid configuration (`issues` says what's wrong) |
 | 409 | `unsaved_changes` | New or load would discard edits; `changes` lists them |
-| 409 | `delete_blocked` | `impact` lists the blocking references |
+| 409 | `delete_blocked` | A delete without `force=true` that `impact` warns about, or one the server can't keep even forced (`can_force` false) |
 | 409 | `generation_running` | A run is already in progress |
 | 409 | `no_schedules` | Export or view with no schedules |
 | 409 | `chat_busy` | The assistant is still answering the previous message |
@@ -71,7 +71,7 @@ Every error has one shape. `code` is for program logic; `message` is written for
 {"config": {"status": "valid", "name": "sample_config.json", "revision": 4, "saved_revision": 2,
             "dirty": true, "changes": [{"revision": 3, "action": "edited", "area": "faculty",
             "summary": "Faculty member Hardy: maximum_credits 14 → 12"}],
-            "issues": [], "validated_at": "2026-09-28T16:41:00",
+            "issues": [], "warnings": [], "validated_at": "2026-09-28T16:41:00",
             "counts": {"rooms": 3, "labs": 2, "sections": 17, "courses": 12, "faculty": 9,
                        "patterns": 16, "enabled_patterns": 9}},
  "generation": {"state": "idle", "running": false, "found": 0, ...},
@@ -81,7 +81,14 @@ Every error has one shape. `code` is for program logic; `message` is written for
 ```
 
 `config.status` is `none` (nothing open), `incomplete` (a new configuration still missing
-a room, course, or faculty member; `issues` says which), or `valid`.
+a room, course, or faculty member; `issues` says which), `invalid` (a forced delete left
+problems between items, such as a section with no room, after a forced delete or edit; `issues` lists them, and any edit
+that keeps each item valid on its own is accepted, even one that adds problems), or `valid`.
+
+`config.warnings` lists what keeps a valid configuration from having any schedule, found
+by the library's quick checks after every change (for example, a disabled class pattern was
+the only one putting a faculty member on their mandatory day). They never block an edit.
+Each has the same shape as an issue. An empty list doesn't promise a schedule exists.
 
 ## Configuration
 
@@ -98,9 +105,9 @@ a room, course, or faculty member; `issues` says which), or `valid`.
 | `GET /api/config/{area}` | | `{area, items}` |
 | `POST /api/config/{area}` | the new item | 201, `{state, document, sections, change, index}` |
 | `GET /api/config/{area}/{index}` | | `{area, index, item}` |
-| `PUT /api/config/{area}/{index}` | the whole item | `{state, document, sections, change, index}` |
-| `GET /api/config/{area}/{index}/impact` | | `{label, can_delete, blocking, cascades, problems}`; changes nothing |
-| `DELETE /api/config/{area}/{index}` | | `{state, document, sections, change, impact}` |
+| `PUT /api/config/{area}/{index}` | the whole item; `?force=true` applies it even if the configuration then has problems (the class pattern On/Off switch uses this) | `{state, document, sections, change, index}` |
+| `GET /api/config/{area}/{index}/impact` | | `{label, can_delete, can_force, blocking, cascades, problems}`; changes nothing |
+| `DELETE /api/config/{area}/{index}` | `?force=true` to delete anyway | `{state, document, sections, change, impact}` |
 | `PUT /api/config/time-slots` | any of `times`, `max_time_gap`, `min_time_overlap` | As for items |
 | `PUT /api/config/settings` | any of `limit`, `optimizer_flags` | As for items |
 

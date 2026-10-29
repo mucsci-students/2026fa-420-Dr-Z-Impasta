@@ -1,11 +1,11 @@
-// Description: Credits; On/Off (disabled); One row per meeting (day, duration, LAB badge); pattern
-// start_time ("Starts at 16:00" / "Any start time"). Delivery per meeting (delivery: in person or online), e.g. an "Online"
-// badge next to LAB. Per-meeting start time (meetings[].start_time): a meeting can have its own
-// start that overrides the pattern's.
-
-// Known Bugs: Can't reset the pattern's start time once set.
+/**
+ * One class pattern in the Class Patterns row. Its Edit button opens PatternDialog; the On/Off
+ * switch saves right away through `onToggle`.
+ * A meeting's own start_time overrides the pattern's.
+ */
 
 import Badge from "../../../components/Badge.jsx";
+import EditButton from "./EditButton.jsx";
 
 /** A class pattern: credits, on/off, its meetings (day, length, lab, delivery, start), and start time. */
 export default function PatternCard({ pattern, onEdit, onToggle }) {
@@ -16,20 +16,10 @@ export default function PatternCard({ pattern, onEdit, onToggle }) {
       : "Any start time";
 
   return (
-    <article
-      className={`item-card ${pattern.disabled ? "item-card--disabled" : ""}`}
-      tabIndex={0}
-      onClick={onEdit}
-      onKeyDown={(e) => {
-        if (e.target === e.currentTarget && (e.key === "Enter" || e.key === " ")) {
-          e.preventDefault();
-          onEdit?.();
-        }
-      }}
-    >
+    <article className={`item-card ${pattern.disabled ? "item-card--disabled" : ""}`}>
       <div className="item-card__header">
         <h3 className="item-card__title">{pattern.credits} credits</h3>
-        <label className="toggle" onClick={(e) => e.stopPropagation()}>
+        <label className="toggle">
           <span>{pattern.disabled ? "Off" : "On"}</span>
           <input
             type="checkbox"
@@ -53,6 +43,7 @@ export default function PatternCard({ pattern, onEdit, onToggle }) {
         ))}
       </ul>
       <p className="item-card__note">{startText}</p>
+      <EditButton label={`${pattern.credits}-credit pattern`} onEdit={onEdit} />
     </article>
   );
 }

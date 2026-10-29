@@ -1,11 +1,8 @@
-// Description:
-// | Field                | Control               | Notes
-// | times[DAY]           | list, add/remove rows | Each weekday needs at least one block; the
-// |                      |                       | library reports an empty one. Saving sends
-// |                      |                       | the whole times object, not just this day
-// | times[DAY][].start   | time, required        |
-// | times[DAY][].end     | time, required        |
-// | times[DAY][].spacing | number (minutes)      | Minutes between slots
+/**
+ * The dialog for one weekday's time blocks, opened from a day's tile on TimeSlotsCard. It's an
+ * edit dialog like CourseDialog. Each block is a start, an end, and the spacing in minutes between
+ * slots. Save sends the whole `times` object, with every day, not just this one.
+ */
 
 import { useState } from "react";
 import Button from "../../../components/Button.jsx";

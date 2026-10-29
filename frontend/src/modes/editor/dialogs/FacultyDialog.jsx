@@ -1,16 +1,8 @@
-// Description:
-// |     Field           |       Control	    |              Notes
-// | name	             | text, required	    |
-// | minimum_credits	 | number, required	    |
-// | maximum_credits	 | number, required	    |
-// | unique_course_limit | number, required	    |
-// | maximum_days	     | number (min=0 max=5) | Optional; defaults to 5
-// | times	             | AvailabilityEditor	| Required. An empty day means unavailable
-// | mandatory_days	     | Mo–Fr checkboxes	    |
-// | course_preferences	 | PreferenceEditor	    | Pick from the course IDs in the document, plus an 
-// |                     |                      | integer score
-// | room_preferences	 | PreferenceEditor	    | Pick from room names
-// | lab_preferences	 | PreferenceEditor	    | Pick from lab names
+/**
+ * The dialog for adding or editing a faculty member, opened from FacultyCard or "Add faculty".
+ * It's an edit dialog like CourseDialog. In "When they can teach", a day with no hours means
+ * they can't teach that day.
+ */
 
 import { useState } from "react";
 import Button from "../../../components/Button.jsx";
@@ -23,7 +15,6 @@ import { issuesFor } from "../../../components/issues.js";
 import AvailabilityEditor from "../AvailabilityEditor.jsx";
 import CheckboxList from "../CheckboxList.jsx";
 import PreferenceEditor from "../PreferenceEditor.jsx";
-//import { InvalidField }  from "../../../state/EventHandlers.jsx"; 
 
 const WEEKDAYS = ["MON", "TUE", "WED", "THU", "FRI"];
 
