@@ -104,7 +104,7 @@ const SETTLED = {
 /** What a pending action needs from the user, or how it was answered. */
 function PendingAction({ pending, busy, onAnswer }) {
   const { refresh } = useAppState();
-  const [save, setSave] = useState(null); // { status: "saving" | "invalid" | "failed", ... }
+  const [save, setSave] = useState(null); // { status: "saving" } or { status: "failed", error }
 
   if (pending.state !== "waiting") {
     return <p className="assistant-reply__note">{SETTLED[pending.state] ?? pending.state}</p>;
@@ -113,20 +113,20 @@ function PendingAction({ pending, busy, onAnswer }) {
   /** The editor's own save (validate, export, save dialog, mark saved), then tell the chat. */
   async function handleSave() {
     setSave({ status: "saving" });
-    const result = await Save();
-    if (typeof result === "string") {
-      setSave(null);
-      await refresh().catch(() => {});
-      onAnswer(pending.id, "saved");
-    } else if (result === null) {
-      // The user closed the save dialog.
-      setSave(null);
-      onAnswer(pending.id, "cancel");
-    } else if (Array.isArray(result)) {
-      setSave({ status: "invalid", issues: result });
-    } else {
-      setSave({ status: "failed", message: result?.message ?? "The file couldn't be written." });
+    let saved;
+    try {
+      saved = await Save();
+    } catch (error) {
+      setSave({ status: "failed", error });
+      return;
     }
+    setSave(null);
+    if (!saved) {
+      onAnswer(pending.id, "cancel"); // the user closed the save dialog
+      return;
+    }
+    await refresh().catch(() => {});
+    onAnswer(pending.id, "saved");
   }
 
   const isSave = pending.kind === "save";
@@ -168,15 +168,17 @@ function PendingAction({ pending, busy, onAnswer }) {
           Cancel
         </Button>
       </div>
-      {save?.status === "invalid" && (
-        <>
-          <p className="assistant-reply__note">Can't save yet: the configuration isn't valid.</p>
-          <IssueList issues={save.issues} />
-        </>
-      )}
-      {save?.status === "failed" && (
-        <p className="assistant-reply__note">Couldn't save: {save.message}</p>
-      )}
+      {save?.status === "failed" &&
+        (save.error.issues?.length > 0 ? (
+          <>
+            <p className="assistant-reply__note">Can't save yet: the configuration isn't valid.</p>
+            <IssueList issues={save.error.issues} />
+          </>
+        ) : (
+          <p className="assistant-reply__note">
+            Couldn't save: {save.error.message || "The file couldn't be written."}
+          </p>
+        ))}
     </div>
   );
 }

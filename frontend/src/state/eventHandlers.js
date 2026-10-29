@@ -1,3 +1,13 @@
+/**
+ * The Configuration Editor's actions. Every server call goes through `api` (client.js).
+ *
+ * The handlers follow one of two rules:
+ * - Editor actions take the setters for the messages they show. They never throw, and they
+ *   resolve to true if the change went through or false if not (the reason is on screen).
+ * - Validate and Save are also used by the chat, which shows results its own way. They
+ *   work like `api`: they resolve with the result and reject with an ApiError (or, for Save,
+ *   an Error if the file couldn't be written).
+ */
 import { api } from "../api/client.js";
 import { saveFile } from "../files.js";
 import { ConfigFileMemento, ConfigFileOriginator, ConfigFileHistory } from "./configEditorMemento"
@@ -6,17 +16,9 @@ let MEMENTO = null;
 const ORIGINATOR = new ConfigFileOriginator();
 let HISTORY = null;
 
-const ConfigStatusObj = Object.freeze({
-	NONE: "none",
-	INCOMPLETE: "incomplete",
-	INVALID: "invalid",
-	VALID: "valid"
-});
-
-/** A page-level error for ConfigEditor's ErrorMessage. */
-const pageError = (error, title, labels, onDismiss) => {
-	return { "error" : error, "title" : title, "labels" : labels, "onDismiss" : onDismiss };
-};
+/** Show an error above ConfigEditor's banner, with a button that dismisses it. */
+export const showPageError = (setError, error, title) =>
+	setError({ error, title, onDismiss: () => setError(null) });
 
 // getters to see the length of the history arrays
 export const getHistoryLength = () => {
@@ -50,9 +52,8 @@ export const redoAction = async(currDoc, filename, setError, setPendingLoad) => 
 	ORIGINATOR.set(restore);
 	ORIGINATOR.storeFile();
 
-	if(restore != undefined)
-		await sendLoad(filename, JSON.stringify(restore.getFile()), true, setError, setPendingLoad);
-
+	if(restore == undefined) return false;
+	return sendLoad(filename, JSON.stringify(restore.getFile()), true, setError, setPendingLoad);
 };
 
 export const undoAction = async(currDoc, filename, setError, setPendingLoad) => {
@@ -65,9 +66,8 @@ export const undoAction = async(currDoc, filename, setError, setPendingLoad) => 
 	ORIGINATOR.storeFile();
 
 
-	if(prevState != undefined)
-		await sendLoad(filename, JSON.stringify(prevState.getFile()), true, setError, setPendingLoad);
-
+	if(prevState == undefined) return false;
+	return sendLoad(filename, JSON.stringify(prevState.getFile()), true, setError, setPendingLoad);
 };
 
 /** Send a file's text to the server, then show what happened. */
@@ -80,7 +80,7 @@ const sendLoad = async(filename, content, discardChanges, setError, setPendingLo
 			setPendingLoad({ filename, content, changes: error.extra?.changes ?? [] });
 			return false;
 		}
-		setError(pageError(error, `Couldn't load ${filename}`, undefined, () => setError(null)));
+		showPageError(setError, error, `Couldn't load ${filename}`);
 		return false;
 	}
 
@@ -106,7 +106,7 @@ export const Load = async(event, setLoadingFile, setError, setPendingLoad) => {
 		try {
 			content = await file.text();
 		} catch {
-			setError(pageError({ message: `${file.name} couldn't be read. Check that the file still exists and you can open it.` }, `Couldn't load ${file.name}`, undefined, () => setError(null)));
+			showPageError(setError, { message: `${file.name} couldn't be read. Check that the file still exists and you can open it.` }, `Couldn't load ${file.name}`);
 			return false;
 		}
 		return await sendLoad(file.name, content, false, setError, setPendingLoad);
@@ -133,7 +133,7 @@ export const Empty_Click = async(setLoadingFile, setError, setPendingLoad) => {
 		// fetch(). send() would pass it to Python in the browser build, which doesn't serve it.
 		const response = await fetch(`${import.meta.env.BASE_URL}new_config.json`).catch(() => null);
 		if(!response?.ok) {
-			setError(pageError({ message: "The starter configuration couldn't be loaded. Reload the page and try again." }, "Couldn't start a new configuration", undefined, () => setError(null)));
+			showPageError(setError, { message: "The starter configuration couldn't be loaded. Reload the page and try again." }, "Couldn't start a new configuration");
 			return false;
 		}
 		return await sendLoad("unnamed.json", await response.text(), false, setError, setPendingLoad);
@@ -144,34 +144,23 @@ export const Empty_Click = async(setLoadingFile, setError, setPendingLoad) => {
 	}
 };
 
+/** Check the whole configuration now. Resolves to the report: `{ status, valid, issues, checked_at }`. */
 export const Validate = async() => {
-	try {
-		const { report } = await api.config.validate();
-		return { "status": report.status, "issues": report.issues };
-	} catch(err) {
-		return err;
-	}
+	const { report } = await api.config.validate();
+	return report;
 };
 
 /**
- * Validate, export, ask where to save, then tell the server it was saved.
- * Returns the saved content, null if the user closed the save dialog, the issues if the
- * configuration isn't valid, or the error if something failed.
+ * Export the configuration, ask where to save it, then tell the server it was saved.
+ * Resolves to true if saved, or false if the user closed the save dialog. An invalid
+ * configuration rejects with an ApiError whose `issues` say what to fix.
  */
 export const Save = async() => {
-	const report = await Validate();
-	if(report instanceof Error) return report;
-	if(report.status !== ConfigStatusObj.VALID) return report.issues;
-
-	try {
-		const { content, filename, revision } = await api.config.exportFile();
-		const saved = await saveFile({ suggestedName: filename, content });
-		if(!saved) return null;
-		await api.config.markSaved({ revision, filename: saved.name });
-		return content;
-	} catch(err) {
-		return err;
-	}
+	const { content, filename, revision } = await api.config.exportFile();
+	const saved = await saveFile({ suggestedName: filename, content });
+	if(!saved) return false;
+	await api.config.markSaved({ revision, filename: saved.name });
+	return true;
 };
 
 /** Send one edit from a dialog. On success close the dialog; on failure show why in it. */
@@ -205,7 +194,7 @@ export const TogglePattern = async(index, pattern, setError) => {
 	try {
 		await api.config.replace("patterns", index, { ...pattern, disabled: !pattern.disabled }, true);
 	} catch(err) {
-		setError(pageError(err, "Couldn't change the class pattern", undefined, () => setError(null)));
+		showPageError(setError, err, "Couldn't change the class pattern");
 		return false;
 	}
 	setError(null);

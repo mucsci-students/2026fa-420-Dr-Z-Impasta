@@ -36,7 +36,7 @@ import TimeSlotsDialog from "./dialogs/TimeSlotsDialog.jsx";
 import ConfirmDialog from "../../components/ConfirmDialog.jsx";
 
 import ErrorMessage from "../../components/ErrorMessage.jsx";
-import { Load, ConfirmLoad, Empty_Click, Validate, Save, ValidateAndSaveItem, DeleteItem, UpdateTimeSlot, UpdateSettings, TogglePattern, getHistoryLength, getCurrHistoryLength, redoAction, undoAction, pushToHist } from "../../state/eventHandlers";
+import { showPageError, Load, ConfirmLoad, Empty_Click, Validate, Save, ValidateAndSaveItem, DeleteItem, UpdateTimeSlot, UpdateSettings, TogglePattern, getHistoryLength, getCurrHistoryLength, redoAction, undoAction, pushToHist } from "../../state/eventHandlers";
 
 export default function ConfigEditor() {
   const { state, loading, refresh } = useAppState();
@@ -105,7 +105,7 @@ export default function ConfigEditor() {
           mark={<Penne size={40} />}
           actions={
             <>
-              <Button variant="primary" onClick={() => Empty_Click(setLoadingFile, setError, setPendingLoad)}>New</Button>
+              <Button variant="primary" onClick={async () => { if (await Empty_Click(setLoadingFile, setError, setPendingLoad)) await refresh(); }}>New</Button>
               <Button onClick={() => { fileInputRef.current.click(); }}>Load JSON...</Button>
               <input
                 ref={fileInputRef}
@@ -150,7 +150,7 @@ export default function ConfigEditor() {
         }
         actions={
           <>
-            <Button onClick={async () => { await Empty_Click(setLoadingFile, setError, setPendingLoad); await refresh(); }}>New</Button>
+            <Button onClick={async () => { if (await Empty_Click(setLoadingFile, setError, setPendingLoad)) await refresh(); }}>New</Button>
 
             <Button onClick={() => fileInputRef.current.click()}>Load JSON...</Button>
             <input
@@ -165,11 +165,29 @@ export default function ConfigEditor() {
               disabled={!canSave}
               className={canSave ? "" : "disabled-btn"}
               aria-describedby={canSave ? undefined : "save-hint"}
-              onClick={async () => { const res = await Save(); if (res) { await refresh(); } }}
+              onClick={async () => {
+                try {
+                  if (await Save()) await refresh();
+                } catch (err) {
+                  showPageError(setError, err, "Couldn't save the configuration");
+                }
+              }}
             >
               Save JSON...
             </Button>
-            <Button variant="primary" onClick={async () => { await Validate(); await refresh(); }}>Validate</Button>
+            <Button
+              variant="primary"
+              onClick={async () => {
+                try {
+                  await Validate();
+                  await refresh();
+                } catch (err) {
+                  showPageError(setError, err, "Couldn't validate the configuration");
+                }
+              }}
+            >
+              Validate
+            </Button>
 
 		<div className="undo-redo-row">
 			<Button 
