@@ -64,7 +64,7 @@ export default function DayBlocksDialog({ day, times, busy, error, onSave, onCan
     setBlockKeys((keys) => keys.filter((_, j) => j !== i));
   }
 
-  const { errorFor, errorClass, unplaced } = formIssues(error?.issues, {
+  const { errorFor, unplaced } = formIssues(error?.issues, {
     area: "time_slots",
     fields: [`times.${day}`],
   });
@@ -79,6 +79,11 @@ export default function DayBlocksDialog({ day, times, busy, error, onSave, onCan
   }
 
   const dayError = errorFor(`times.${day}`, true);
+
+  /** "input-error" if any block, on any day, has an issue with this `part` (start, end, spacing). */
+  function partClass(part) {
+    return (error?.issues ?? []).some((issue) => issue.field?.split(".")[3] === part) ? "input-error" : "";
+  }
 
   return (
     <EditDialog
@@ -101,8 +106,6 @@ export default function DayBlocksDialog({ day, times, busy, error, onSave, onCan
         {blocks.map((block, i) => {
           const rowField = blockField(blockKeys[i]);
           const rowError = rowField && errorFor(rowField);
-          /** "input-error" if this row's `part` (start, end, spacing) has an issue. */
-          const partClass = (part) => (rowField ? errorClass(`${rowField}.${part}`) : "");
           return (
             <div key={blockKeys[i]} className="blocks-editor__row">
               <input className={partClass("start")} type="time" aria-label={`Block ${i + 1} start`} value={block.start ?? ""}

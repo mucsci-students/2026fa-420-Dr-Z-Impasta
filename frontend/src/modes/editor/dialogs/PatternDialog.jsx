@@ -133,7 +133,7 @@ export default function PatternDialog({ index, pattern, options, busy, error, on
                 onChange={(e) => setMeeting(i, "day", e.target.value)}>
                 {weekdays.map((d) => <option key={d} value={d}>{d}</option>)}
               </select>
-              <input className={rowField ? errorClass(`${rowField}.duration`) : ""} type="number" min={1} aria-label={`Meeting ${i + 1} minutes`} value={m.duration ?? ""}
+              <input className={errorClass("duration")} type="number" min={1} aria-label={`Meeting ${i + 1} minutes`} value={m.duration ?? ""}
                 onChange={(e) => setMeeting(i, "duration", toNumber(e.target.value))} />
               <input type="checkbox" aria-label={`Meeting ${i + 1} is the lab`} checked={m.lab}
                 onChange={(e) => setMeeting(i, "lab", e.target.checked)} />

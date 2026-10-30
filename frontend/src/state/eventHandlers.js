@@ -2,8 +2,11 @@
  * The Configuration Editor's actions. Every server call goes through `api` (client.js).
  *
  * The handlers follow one of two rules:
- * - Editor actions take the setters for the messages they show. They never throw, and they
- *   resolve to true if the change went through or false if not (the reason is on screen).
+ * - Editor actions take the setters for the messages they show, and resolve to true if the
+ *   change went through or false if not (the reason is on screen). Known gaps, kept as they
+ *   were: when the server can't be reached, Load, ConfirmLoad, New and undo/redo reject,
+ *   and item and time-slot edits resolve to false without a message. New also rejects if
+ *   the starter file can't be fetched.
  * - Validate and Save are also used by the chat, which shows results its own way. They
  *   work like `api`: they resolve with the result and reject with an ApiError (or, for Save,
  *   an Error if the file couldn't be written).
@@ -17,8 +20,11 @@ const ORIGINATOR = new ConfigFileOriginator();
 let HISTORY = null;
 
 /** Show an error above ConfigEditor's banner, with a button that dismisses it. */
-export const showPageError = (setError, error, title) =>
+const showPageError = (setError, error, title) =>
 	setError({ error, title, onDismiss: () => setError(null) });
+
+/** The error to show, with `message` in place of the API's own text when the server can't be reached. */
+const unreachableAs = (error, message) => (error.code === "network_error" ? { message } : error);
 
 // getters to see the length of the history arrays
 export const getHistoryLength = () => {
@@ -75,6 +81,7 @@ const sendLoad = async(filename, content, discardChanges, setError, setPendingLo
 	try {
 		await api.config.load({ filename, content, discardChanges });
 	} catch(error) {
+		if(error.code === "network_error") throw error;   // not shown here
 		if(error.code === "unsaved_changes") {
 			// Ask first; ConfirmLoad sends it again if the user agrees
 			setPendingLoad({ filename, content, changes: error.extra?.changes ?? [] });
@@ -128,15 +135,18 @@ export const ConfirmLoad = async(pending, setPendingLoad, setLoadingFile, setErr
 
 export const Empty_Click = async(setLoadingFile, setError, setPendingLoad) => {
 	setLoadingFile(true);
+
+	// The starter file is served next to the GUI, not by the API, so this is a plain
+	// fetch(). send() would pass it to Python in the browser build, which doesn't serve it.
+	const content = await fetch('/new_config.json')
+		.then(response => {
+			if (!response.ok) throw new Error('Failed to load config');
+			return response.text();
+		});
+
+	const filename = "unnamed.json"
 	try {
-		// The starter file is served next to the GUI, not by the API, so this is a plain
-		// fetch(). send() would pass it to Python in the browser build, which doesn't serve it.
-		const response = await fetch(`${import.meta.env.BASE_URL}new_config.json`).catch(() => null);
-		if(!response?.ok) {
-			showPageError(setError, { message: "The starter configuration couldn't be loaded. Reload the page and try again." }, "Couldn't start a new configuration");
-			return false;
-		}
-		return await sendLoad("unnamed.json", await response.text(), false, setError, setPendingLoad);
+		return await sendLoad(filename, content, false, setError, setPendingLoad);
 	}
 	finally {
 		await new Promise(resolve => setTimeout(resolve, 2000));
@@ -159,7 +169,7 @@ export const Save = async() => {
 	const { content, filename, revision } = await api.config.exportFile();
 	const saved = await saveFile({ suggestedName: filename, content });
 	if(!saved) return false;
-	await api.config.markSaved({ revision, filename: saved.name });
+	await api.config.markSaved({ revision, filename });
 	return true;
 };
 
@@ -168,7 +178,7 @@ const applyEdit = async(request, setEditing, setLocalError) => {
 	try {
 		await request();
 	} catch(err) {
-		setLocalError(err);
+		if(err.code !== "network_error") setLocalError(err);   // an unreachable server isn't shown
 		return false;
 	}
 	setEditing(null);
@@ -194,7 +204,7 @@ export const TogglePattern = async(index, pattern, setError) => {
 	try {
 		await api.config.replace("patterns", index, { ...pattern, disabled: !pattern.disabled }, true);
 	} catch(err) {
-		showPageError(setError, err, "Couldn't change the class pattern");
+		showPageError(setError, unreachableAs(err, "The server couldn't be reached. The class pattern was not changed."), "Couldn't change the class pattern");
 		return false;
 	}
 	setError(null);
@@ -206,7 +216,7 @@ export const DeleteItem = async(deleting, setDeleting, setEditing, setLocalError
 	try {
 		await api.config.remove(deleting.area, deleting.index, force);
 	} catch(err) {
-		setLocalError(err);
+		setLocalError(unreachableAs(err, "The server couldn't be reached. Nothing was deleted."));
 		return false;   // keep the dialog open so the reason stays visible
 	}
 	setLocalError(null);
@@ -222,7 +232,7 @@ export const UpdateSettings = async(vals, setSettingsError) => {
 	try {
 		await api.config.updateSettings(vals);
 	} catch(err) {
-		setSettingsError(err);
+		setSettingsError(unreachableAs(err, "The server couldn't be reached. The change was not applied."));
 		return false;
 	}
 	setSettingsError(null);

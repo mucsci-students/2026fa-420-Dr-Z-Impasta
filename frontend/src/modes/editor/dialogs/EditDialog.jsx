@@ -38,10 +38,6 @@ export default function EditDialog({
     else onCancel?.();
   }
 
-  // Issues mean the library rejected the draft; without them (e.g. the server couldn't be
-  // reached) the error's own message says what happened.
-  const message = error?.issues?.length ? "The change was not applied." : error?.message;
-
   // The prompts are siblings of the Dialog, not children: React bubbles a nested <dialog>'s
   // Escape (cancel event) up the component tree, which would also close this one.
   return (
@@ -61,7 +57,7 @@ export default function EditDialog({
           </>
         }
       >
-        <ErrorMessage error={error && { message, issues: unplaced }} title="Not saved." />
+        <ErrorMessage error={error && { message: "The change was not applied.", issues: unplaced }} title="Not saved." />
         {children}
       </Dialog>
       <UnsavedChangesPrompt when={isDirty} />

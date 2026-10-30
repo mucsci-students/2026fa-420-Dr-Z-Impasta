@@ -176,7 +176,7 @@ function PendingAction({ pending, busy, onAnswer }) {
           </>
         ) : (
           <p className="assistant-reply__note">
-            Couldn't save: {save.error.message || "The file couldn't be written."}
+            Couldn't save: {save.error.message ?? "The file couldn't be written."}
           </p>
         ))}
     </div>

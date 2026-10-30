@@ -40,7 +40,7 @@ export function issuesFor(issues, { area, index, field }) {
  *
  * - `errorFor(field, exact)`: the messages for that field and its sub-fields (only the field
  *   itself if `exact`), joined, or undefined if there are none. Use it as a Field's `error`.
- * - `errorClass(field)`: "input-error" if the field has any, else "".
+ * - `errorClass(field)`: "input-error" if any issue, on any item, has exactly this `field`, else "".
  * - `unplaced`: the issues no field shows, for the form's banner.
  */
 export function formIssues(issues, { area, index, fields }) {
@@ -54,7 +54,7 @@ export function formIssues(issues, { area, index, fields }) {
 
   return {
     errorFor,
-    errorClass: (field) => (errorFor(field) ? "input-error" : ""),
+    errorClass: (field) => (all.some((issue) => issue.field === field) ? "input-error" : ""),
     unplaced: all.filter(
       (issue) => issue.area !== area || (index !== undefined && issue.index !== index) || !inFields(issue),
     ),
