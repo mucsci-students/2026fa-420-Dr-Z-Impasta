@@ -7,6 +7,28 @@
   margin-bottom: var(--space-2);
 }
 
+.disabled-btn {
+    background-color: #333;
+    color: #888;
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+.reloading {
+  background-color: #2563eb;
+  color: white;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    background-color: #2563eb;
+  }
+
+  50% {
+    background-color: #60a5fa;
+  }
+}
+
 .editor-row__items {
   display: flex;
   gap: var(--space-3);
@@ -63,7 +85,21 @@
   max-width: 285px;
   min-width: 190px;
   flex: 0 0 auto;            /* keep its width inside the row instead of squashing */
-  cursor: pointer;
+  display: flex;             /* a column, so the Edit button can sit at the bottom */
+  flex-direction: column;
+}
+
+/* The part just above the Edit button (always the last one). Its bottom margin differs from card
+   to card (12px under facts, 0 under a note), so it's dropped and the button sets the space. */
+.item-card > :nth-last-child(2) {
+  margin-bottom: 0;
+}
+
+.item-card__actions {
+  margin-top: auto;              /* push to the bottom, so the buttons line up across a row */
+  padding-top: var(--space-3);   /* the same space above Edit in every card */
+  display: flex;
+  justify-content: flex-end;
 }
 
 .item-card__title {
@@ -127,10 +163,6 @@
   background: transparent;
   border: 1px dashed var(--line);
   color: var(--faint);
-}
-
-.item-card:hover {
-  border-color: var(--accent);
 }
 
 .pattern-meetings {
@@ -527,4 +559,12 @@ html:has(dialog:modal) {
 
 html {
   scrollbar-gutter: stable;   /* keep the scrollbar's space even while it's hidden */
+}
+
+/* The solid red button in the editor's warning dialogs (Delete, Delete anyway, Discard and
+   load). On hover it looks like an ordinary Delete button's hover; without the text color,
+   its white text stays on the pale hover background and the button looks blank. */
+.editor .dialog--danger .btn--danger:hover:not(:disabled) {
+  border-color: var(--danger-line);
+  color: var(--danger);
 }

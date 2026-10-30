@@ -1,8 +1,14 @@
 import { loadConfiguration, validateConfig, saveConfig, exportConfig, addItem, replaceItem, deleteItem, updateTimeSlot, updateSettings } from "../components/APICommunication";
+import { ConfigFileMemento, ConfigFileOriginator, ConfigFileHistory } from "./configEditorMemento"
+
+let MEMENTO = null;
+const ORIGINATOR = new ConfigFileOriginator();
+let HISTORY = null;
 
 const ConfigStatusObj = Object.freeze({
 	NONE: "none",
 	INCOMPLETE: "incomplete",
+	INVALID: "invalid",
 	VALID: "valid"
 });
 
@@ -10,11 +16,70 @@ const Error = (error, title, labels, onDismiss) => {
 	return { "error" : error, "title" : title, "labels" : labels, "onDismiss" : onDismiss };
 };
 
+// getters to see the length of the history arrays
+export const getHistoryLength = () => {
+	if(HISTORY != null)
+		return (HISTORY.getSnapshots()).length;
+	else
+		return 0;
+};
+export const getCurrHistoryLength = () => {
+	if(HISTORY != null)
+		return (HISTORY.getCurrSnapshots()).length;
+	else
+		return 0;
+};
+
+// pushes snapshot of history to appropriate array
+export const pushToHist = (content) => {
+	HISTORY.push(new ConfigFileMemento(content));
+};
+const pushToCurr = (content) => {
+	HISTORY.pushToCurr(new ConfigFileMemento(content));
+};
+
+
+export const redoAction = async(currDoc, filename, setError, setPendingLoad) => {
+	const restore = HISTORY.popCurr();
+
+	// push snapshot of current state, before re-doing, to undo-action's history array
+	pushToHist(currDoc);
+
+	ORIGINATOR.set(restore);
+	ORIGINATOR.storeFile();
+
+	if(restore != undefined)
+		await sendLoad(filename, JSON.stringify(restore.getFile()), true, setError, setPendingLoad);
+
+};
+
+export const undoAction = async(currDoc, filename, setError, setPendingLoad) => {
+	const prevState = HISTORY.pop();
+
+	// push snapshot of current state, before undoing, to redo-action's history array
+	pushToCurr(currDoc);
+	
+	ORIGINATOR.set(prevState);
+	ORIGINATOR.storeFile();
+
+
+	if(prevState != undefined)
+		await sendLoad(filename, JSON.stringify(prevState.getFile()), true, setError, setPendingLoad);
+
+};
+
 /** Send a file's text to the server, then show what happened. */
 const sendLoad = async(filename, content, discardChanges, setError, setPendingLoad) => {
 	const res = await loadConfiguration(filename, content, discardChanges);
 	if(res.ok) {
 		setError(null);
+
+		//only set the memento objects on initial load
+		if(HISTORY == null) {
+			ORIGINATOR.set(JSON.parse(content));
+			HISTORY = new ConfigFileHistory(ORIGINATOR);
+		}
+
 		return true;
 	}
 
@@ -196,12 +261,37 @@ const handleItem = async (res, setEditing, setLocalError) => {
 
 
 const setErrors = (setLocalError, resJSON) => {
-  setLocalError(resJSON.error ?? { message: "The change was not applied." });   // { message, issues: [{ area, index, field, message }] }
+  setLocalError(resJSON.error ?? { message: "The change was not applied." });  
 };
 
-export const DeleteItem = async(deleting, setDeleting, setEditing, setLocalError) => {
+/**
+ * A class pattern's On/Off switch. Always applied (force), so patterns can be turned off in
+ * any order; if that leaves the configuration with problems, the banner lists them. A
+ * failure is shown at the top of the page (`setError`), since no dialog is open.
+ */
+export const TogglePattern = async(index, pattern, setError) => {
+	const failed = (error) =>
+		setError(Error(error, "Couldn't change the class pattern", undefined, () => setError(null)));
 	try {
-		const res = await deleteItem(deleting.area, deleting.index);
+		const res = await replaceItem("patterns", index, { ...pattern, disabled: !pattern.disabled }, true);
+		if(!res.ok) {
+			const { error } = await res.json();
+			failed(error ?? { message: "The class pattern was not changed." });
+			return false;
+		}
+		setError(null);
+		return true;
+	} catch {
+		failed({ message: "The server couldn't be reached. The class pattern was not changed." });
+		return false;
+	}
+};
+
+/** `force`: the user confirmed the delete after the dialog warned what it breaks. */
+export const DeleteItem = async(deleting, setDeleting, setEditing, setLocalError, force = false) => {
+	try {
+		const res = await deleteItem(deleting.area, deleting.index, force);
+			
 		if(!res.ok) {
 			const { error } = await res.json();
 			setLocalError(error ?? { message: "Nothing was deleted." });
@@ -241,3 +331,5 @@ export const UpdateSettings = async(vals, setSettingsError) => {
 		return false;
 	}
 };
+
+

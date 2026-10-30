@@ -1,11 +1,12 @@
 /**
- * One course section in the Courses row. Clicking it opens CourseDialog.
+ * One course section in the Courses row. Its Edit button opens CourseDialog.
  * `label` is the server's section label ("CMSC 140.01"); the part after course_id is the section.
  * Labs and required features are hidden when empty; faculty null shows as "Any".
  */
 
 import { plural } from "../../../format.js";
 import { MODALITY_NAMES } from "../labels.js";
+import EditButton from "./EditButton.jsx";
 
 /** A course section: identity, credits, capacity, resources, faculty, conflicts, and requirements. */
 export default function CourseCard({ course, label, onEdit }) {
@@ -20,12 +21,7 @@ export default function CourseCard({ course, label, onEdit }) {
   const reserveRoomDuringLab = course.reserve_room_during_lab ? "Yes" : "No";
 
   return (
-    <article
-      className="item-card"
-      onClick={onEdit}
-      onKeyDown={(e) => { if (e.key === "Enter") onEdit?.() }}
-      tabIndex={0}
-    >
+    <article className="item-card">
       <div className="item-card__header">
         <h3 className="item-card__title">
           {course.course_id} <span className="item-card__section">{section}</span>
@@ -64,6 +60,7 @@ export default function CourseCard({ course, label, onEdit }) {
         <dt>Reserve Room During Lab</dt>
         <dd>{reserveRoomDuringLab}</dd>
       </dl>
+      <EditButton label={label} onEdit={onEdit} />
     </article>
   );
 }

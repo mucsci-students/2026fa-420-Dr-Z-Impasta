@@ -63,6 +63,8 @@ frontend/src/
     editor/ConfigEditor.jsx          Configuration Editor
     generator/ScheduleGenerator.jsx  Schedule Generator
     viewer/ScheduleViewer.jsx        Schedule Viewer
+  chat/               "Ask Dr. ZImpasta": the chat panel (ChatAssistant.jsx), its entries
+                      (ChatEntry.jsx), and /api/chat (useChat.js); see assistant.md
   styles/             tokens.css (colors, spacing, fonts from the mockups) and component CSS
 frontend/scripts/     build-browser.mjs and test-browser.mjs, for the browser version
 ```
@@ -124,9 +126,11 @@ the fields with `issuesFor(error.issues, { area, index, field })`, keep the draf
 nothing has changed on the server. While a draft differs from the applied item, render
 `<UnsavedChangesPrompt when={isDirty} />`.
 
-**Deletes preview first.** Call `api.config.deleteImpact(area, index)`. If `can_delete` is
-false, show `blocking` (and `problems`) and change nothing. Otherwise list `cascades` in a
-`ConfirmDialog destructive` and call `api.config.remove(area, index)` on confirm.
+**Deletes preview first.** Call `api.config.deleteImpact(area, index)` and list `cascades` in a
+`ConfirmDialog destructive`. If `can_delete` is false, the dialog is a warning: also show
+`blocking` and `problems`, label the button "Delete anyway", and send the delete with
+`force=true` on confirm; the configuration may become `invalid` until the user fixes it. Only
+when `can_force` is false too is the delete impossible; then show `problems` and change nothing.
 
 **Unsaved changes on New and Load.** Call `api.config.load({ filename, content })` with the
 file from `pickFile()`. If the error `code` is `unsaved_changes`, `error.extra.changes` lists

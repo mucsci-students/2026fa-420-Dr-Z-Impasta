@@ -1,7 +1,9 @@
 /**
  * Opens when Delete is pressed in an edit dialog. Shows one of: a spinner while the preview loads,
- * "Couldn't check this delete", "Can't delete X yet" (sections that would lose their only room,
- * lab, or faculty member), or "Delete X?" with everything else the delete removes.
+ * "Couldn't check this delete", "Delete X anyway?" (a warning: sections would lose their only
+ * room, lab, or faculty member, or the configuration would have problems to fix; the user can
+ * still delete), "Can't delete X" (the rare delete the server can't keep at all), or "Delete X?"
+ * with everything else the delete removes.
  */
 
 import Button from "../../../components/Button.jsx";
@@ -28,7 +30,8 @@ const REMOVED_FROM = {
 /**
  * Shows a delete's impact preview and asks to confirm. `impact` is the reply from
  * api.config.deleteImpact(area, index), or null while it loads. `loadError` is a failure
- * to fetch it; `error` is a failed delete. Nothing is deleted until `onConfirm`.
+ * to fetch it; `error` is a failed delete. Nothing is deleted until `onConfirm`; when
+ * `impact.can_delete` is false the caller sends the delete with force.
  */
 export default function DeleteDialog({ impact, loadError, busy, error, onConfirm, onCancel }) {
   if (loadError) {
@@ -52,45 +55,47 @@ export default function DeleteDialog({ impact, loadError, busy, error, onConfirm
     );
   }
 
-  if (!impact.can_delete) {
+  if (!impact.can_delete && !impact.can_force) {
     return (
       <Dialog
         open
         tone="danger"
-        title={`Can't delete ${impact.label} yet`}
+        title={`Can't delete ${impact.label}`}
         onClose={onCancel}
         actions={<Button onClick={onCancel} data-autofocus>Close</Button>}
       >
-        {impact.blocking.length > 0 && (
-          <>
-            <p>These sections depend on it. Edit them to use something else first:</p>
-            <ul className="impact-list">
-              {impact.blocking.map((ref) => (
-                <li key={`${ref.area}-${ref.index}-${ref.field}`}>
-                  <strong>{ref.label}</strong>: it's the {ONLY_AS[ref.field] ?? ref.field}
-                </li>
-              ))}
-            </ul>
-          </>
-        )}
+        <p>Deleting it would leave something the configuration can't keep. Fix these first:</p>
         <IssueList issues={impact.problems} />
         <p className="muted">Nothing was deleted.</p>
       </Dialog>
     );
   }
 
+  const warning = !impact.can_delete;   // it can still be deleted, but it breaks something
   return (
     <ConfirmDialog
       open
       destructive
-      title={`Delete ${impact.label}?`}
-      confirmLabel="Delete"
+      title={warning ? `Delete ${impact.label} anyway?` : `Delete ${impact.label}?`}
+      confirmLabel={warning ? "Delete anyway" : "Delete"}
       busy={busy}
       onConfirm={onConfirm}
       onCancel={onCancel}
     >
       <ErrorMessage error={error} title="Not deleted." />
-      {impact.cascades.length > 0 ? (
+      {impact.blocking.length > 0 && (
+        <>
+          <p>These sections will be left without it:</p>
+          <ul className="impact-list">
+            {impact.blocking.map((ref) => (
+              <li key={`${ref.area}-${ref.index}-${ref.field}`}>
+                <strong>{ref.label}</strong>: it's the {ONLY_AS[ref.field] ?? ref.field}
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+      {impact.cascades.length > 0 && (
         <>
           <p>It will also be removed from:</p>
           <ul className="impact-list">
@@ -101,10 +106,15 @@ export default function DeleteDialog({ impact, loadError, busy, error, onConfirm
             ))}
           </ul>
         </>
-      ) : (
-        <p>Nothing else refers to it.</p>
       )}
-      <IssueList issues={impact.problems} />
+      {impact.blocking.length === 0 && impact.cascades.length === 0 && <p>Nothing else refers to it.</p>}
+      {impact.problems.length > 0 && (
+        <>
+          <p>The configuration will have problems to fix:</p>
+          <IssueList issues={impact.problems} />
+          <p className="muted">You can't save it or generate schedules until they're fixed.</p>
+        </>
+      )}
     </ConfirmDialog>
   );
 }

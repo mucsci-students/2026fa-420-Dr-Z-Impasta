@@ -1,10 +1,11 @@
 /**
- * One class pattern in the Class Patterns row. Clicking the card opens PatternDialog; the On/Off
- * switch saves right away through `onToggle` (stopPropagation keeps it from opening the dialog).
+ * One class pattern in the Class Patterns row. Its Edit button opens PatternDialog; the On/Off
+ * switch saves right away through `onToggle`.
  * A meeting's own start_time overrides the pattern's.
  */
 
 import Badge from "../../../components/Badge.jsx";
+import EditButton from "./EditButton.jsx";
 
 /** A class pattern: credits, on/off, its meetings (day, length, lab, delivery, start), and start time. */
 export default function PatternCard({ pattern, onEdit, onToggle }) {
@@ -15,20 +16,10 @@ export default function PatternCard({ pattern, onEdit, onToggle }) {
       : "Any start time";
 
   return (
-    <article
-      className={`item-card ${pattern.disabled ? "item-card--disabled" : ""}`}
-      tabIndex={0}
-      onClick={onEdit}
-      onKeyDown={(e) => {
-        if (e.target === e.currentTarget && (e.key === "Enter" || e.key === " ")) {
-          e.preventDefault();
-          onEdit?.();
-        }
-      }}
-    >
+    <article className={`item-card ${pattern.disabled ? "item-card--disabled" : ""}`}>
       <div className="item-card__header">
         <h3 className="item-card__title">{pattern.credits} credits</h3>
-        <label className="toggle" onClick={(e) => e.stopPropagation()}>
+        <label className="toggle">
           <span>{pattern.disabled ? "Off" : "On"}</span>
           <input
             type="checkbox"
@@ -52,6 +43,7 @@ export default function PatternCard({ pattern, onEdit, onToggle }) {
         ))}
       </ul>
       <p className="item-card__note">{startText}</p>
+      <EditButton label={`${pattern.credits}-credit pattern`} onEdit={onEdit} />
     </article>
   );
 }
