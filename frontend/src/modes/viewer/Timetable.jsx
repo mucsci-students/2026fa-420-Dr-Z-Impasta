@@ -5,7 +5,8 @@
  */
 import { DAYS, END_HOUR, START_HOUR, formatMinutes } from "./scheduleData.js";
 
-const HOUR_HEIGHT = 52; // px per hour; keep in sync with nothing else — it's all inline
+// px per hour; it's all inline. 72 gives a 50-minute class (60px) room for its three lines.
+const HOUR_HEIGHT = 72;
 const DAY_START = START_HOUR * 60;
 const DAY_END = END_HOUR * 60;
 
@@ -74,8 +75,12 @@ function eventStyle({ event, lane, lanes }) {
   };
 }
 
-/** Render weekday events in overlap lanes and report meetings outside the visible grid. */
-export default function Timetable({ events, groupBy }) {
+/**
+ * Render weekday events in overlap lanes and report meetings outside the visible grid.
+ * Each block shows the course and section, the days and time it meets, and the room
+ * and instructor, whichever way the viewer is grouped.
+ */
+export default function Timetable({ events }) {
   const hours = [];
   for (let hour = START_HOUR; hour < END_HOUR; hour += 1) hours.push(hour);
 
@@ -115,27 +120,27 @@ export default function Timetable({ events, groupBy }) {
               >
                 {layoutDay(placeable.filter((event) => event.day === day)).map((item) => {
                   const { event } = item;
-                  const detail =
-                    groupBy === "faculty" ? event.place : event.faculty;
                   const time = `${formatMinutes(event.start)}–${formatMinutes(event.end)}`;
+                  const when = [event.days, time].filter(Boolean).join(" · ");
+                  const where = [event.place, event.faculty].filter(Boolean).join(" · ");
+                  const name = `${event.courseId}.${event.sectionId}${event.isLab ? " Lab" : ""}`;
 
                   return (
                     <div
                       key={event.id}
                       className={`timetable__event${event.isLab ? " timetable__event--lab" : ""}`}
                       style={eventStyle(item)}
-                      title={[`${event.courseId}.${event.sectionId}`, detail, time]
-                        .filter(Boolean)
-                        .join(" · ")}
+                      title={[name, when, where].filter(Boolean).join("\n")}
                     >
-                      <strong>
-                          {event.courseId}
-                          {event.sectionId && (<span className="timetable__section"> 
-                          .{event.sectionId}</span>)}
-                          <span className="timetable__range"> {time}</span>
-                        </strong>
-                      {event.isLab && <span className="timetable__detail">Lab</span>}
-                      {detail && <span className="timetable__detail">{detail}</span>}
+                      <strong className="timetable__course">
+                        {event.courseId}
+                        {event.sectionId && (
+                          <span className="timetable__section"> .{event.sectionId}</span>
+                        )}
+                        {event.isLab && <span className="timetable__kind"> · Lab</span>}
+                      </strong>
+                      <span className="timetable__detail timetable__when">{when}</span>
+                      {where && <span className="timetable__detail">{where}</span>}
                     </div>
                   );
                 })}
