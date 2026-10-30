@@ -1,5 +1,5 @@
 import { loadConfiguration, validateConfig, saveConfig, exportConfig, addItem, replaceItem, deleteItem, updateTimeSlot, updateSettings } from "../components/APICommunication";
-import { ConfigFileMemento, ConfigFileOriginator, ConfigFileHistory } from "./configEditorMemento"
+import { ConfigFileOriginator, ConfigFileHistory } from "./configEditorMemento"
 
 let MEMENTO = null;
 const ORIGINATOR = new ConfigFileOriginator();
@@ -30,41 +30,44 @@ export const getCurrHistoryLength = () => {
 		return 0;
 };
 
+// Snapshots are made and restored only by the originator (the Memento pattern): it turns
+// the configuration into a memento with storeFile() and back with restore(), and HISTORY
+// (the caretaker) keeps the mementos without looking inside them.
+
 // pushes snapshot of history to appropriate array
 export const pushToHist = (content) => {
-	HISTORY.push(new ConfigFileMemento(content));
+	ORIGINATOR.set(content);
+	HISTORY.push(ORIGINATOR.storeFile());
 };
 const pushToCurr = (content) => {
-	HISTORY.pushToCurr(new ConfigFileMemento(content));
+	ORIGINATOR.set(content);
+	HISTORY.pushToCurr(ORIGINATOR.storeFile());
 };
 
 
 export const redoAction = async(currDoc, filename, setError, setPendingLoad) => {
-	const restore = HISTORY.popCurr();
+	const memento = HISTORY.popCurr();
+	if(memento == undefined)
+		return;
 
 	// push snapshot of current state, before re-doing, to undo-action's history array
 	pushToHist(currDoc);
 
-	ORIGINATOR.set(restore);
-	ORIGINATOR.storeFile();
-
-	if(restore != undefined)
-		await sendLoad(filename, JSON.stringify(restore.getFile()), true, setError, setPendingLoad);
+	ORIGINATOR.restore(memento);
+	await sendLoad(filename, JSON.stringify(ORIGINATOR.doc), true, setError, setPendingLoad);
 
 };
 
 export const undoAction = async(currDoc, filename, setError, setPendingLoad) => {
-	const prevState = HISTORY.pop();
+	const memento = HISTORY.pop();
+	if(memento == undefined)
+		return;
 
 	// push snapshot of current state, before undoing, to redo-action's history array
 	pushToCurr(currDoc);
-	
-	ORIGINATOR.set(prevState);
-	ORIGINATOR.storeFile();
 
-
-	if(prevState != undefined)
-		await sendLoad(filename, JSON.stringify(prevState.getFile()), true, setError, setPendingLoad);
+	ORIGINATOR.restore(memento);
+	await sendLoad(filename, JSON.stringify(ORIGINATOR.doc), true, setError, setPendingLoad);
 
 };
 

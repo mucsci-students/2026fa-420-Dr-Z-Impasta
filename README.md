@@ -297,8 +297,8 @@ of schedules, each a list of course assignments.
 
 ## Design patterns
 
-The application uses four design patterns in working code. MVC is described above; the
-other three are below.
+The application uses five design patterns in working code. MVC is described above; the
+others are below.
 
 | Pattern | Problem it solves | Where |
 | --- | --- | --- |
@@ -306,6 +306,7 @@ other three are below.
 | Command | Run many different user actions through one path that parses, checks, runs, and reports them | `src/zimpasta/command.py`, `src/zimpasta/commands/`, `src/zimpasta/controller/assistant/tools.py` |
 | Strategy | Run schedule generation in the background on the server (threads) and in the browser (no threads) with the same job | `src/zimpasta/model/generation_job.py` |
 | Adapter | Use OpenAI through one small interface the app owns, instead of depending on the SDK everywhere | `src/zimpasta/controller/assistant/client.py` |
+| Memento | Undo and redo edits in the Configuration Editor by restoring earlier snapshots of the configuration | `frontend/src/state/configEditorMemento.js`, `frontend/src/state/eventHandlers.js` |
 
 ### Model-View-Controller
 
@@ -411,6 +412,35 @@ without changing either side. It is the only code that imports `openai`, so swap
 provider or the model touches one file. Covered by
 `tests/controller/assistant/test_openai_client.py` (the adapter against a stand-in SDK)
 and `test_session.py` (the client against the fake).
+
+### Memento
+
+**Problem.** The Configuration Editor needs **Undo** and **Redo**: going back to the
+configuration as it was before an edit, and forward again. That needs snapshots of the
+configuration that can be kept and restored later, without the code that stores them
+depending on what is inside.
+
+**Participants** (`frontend/src/state/configEditorMemento.js`).
+- **Originator:** `ConfigFileOriginator` holds the current configuration document. It makes
+  a snapshot of it with `storeFile()` and returns to one with `restore(memento)`.
+- **Memento:** `ConfigFileMemento` is one snapshot: a deep copy (`structuredClone`) of the
+  document, so later edits can't change it.
+- **Caretaker:** `ConfigFileHistory` keeps two stacks of mementos, one for undo and one for
+  redo, and never reads or changes their contents.
+
+**How they interact** (`frontend/src/state/eventHandlers.js`, used by the buttons in
+`modes/editor/ConfigEditor.jsx`).
+1. When an editor dialog saves an edit, `pushToHist()` first gives the current document to
+   the originator and pushes its `storeFile()` memento onto the undo stack.
+2. **Undo** pops a memento from the undo stack and saves the current document onto the redo
+   stack the same way. The originator then restores the memento, and the restored document
+   is loaded through the API, so the scheduler library validates it again. **Redo** does
+   the reverse.
+3. The buttons are disabled when their stack has nothing to restore.
+
+**Why it fits.** Only the originator creates and reads snapshots, and the caretaker stores
+them as opaque objects. The editor gets undo and redo without exposing how the
+configuration is stored, and a restored state is always one the library accepted before.
 
 ## Layout
 
