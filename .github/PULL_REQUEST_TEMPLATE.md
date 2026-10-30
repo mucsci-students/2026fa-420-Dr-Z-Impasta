@@ -1,6 +1,6 @@
 ## High-level description
 
-<!-- What does this pull request accomplish? -->
+with this feature it adds multiple lines of code for gui and makes some minor edits with edits/adds a timeline of class in tabels and i was also able to add button for changing theams for day and night.
 
 ## Details
 

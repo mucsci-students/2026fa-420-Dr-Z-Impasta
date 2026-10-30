@@ -23,7 +23,7 @@
   top: -40px;
   padding: 6px 10px;
   background: var(--ink);
-  color: #fff;
+  color: var(--on-ink);
   border-radius: var(--radius);
 }
 
