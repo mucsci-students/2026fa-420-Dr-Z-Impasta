@@ -235,8 +235,8 @@ second view on the same Model.
 A user action flows View → `frontend/src/api/client.js` → `/api` route → one
 `AppController` method → the Model, and the result flows back the same way. The
 Configuration Editor's actions are in `frontend/src/state/eventHandlers.js`, which calls
-`client.js` like everything else. Components never
-validate scheduler data or run workflows themselves; the library validates in the Model, and
+`client.js` like everything else. Components never validate scheduler data or run workflows
+themselves; the library validates in the Model, and
 multi-step workflows (load with unsaved changes, generate then publish results to the viewer,
 delete with cascades) live in the Controller, where pytest covers them. The API is documented
 in [docs/web-api.md](docs/web-api.md); the View in [docs/gui.md](docs/gui.md).
@@ -294,6 +294,153 @@ of schedules, each a list of course assignments.
   Export always writes a list of schedules, even for one schedule, so exports load back.
 - Files written by the library's own `scheduler` command, by the Sprint 1 shell's
   `schedules export`, and by this GUI are interchangeable (course-constraint-scheduler 3.x).
+
+## Design patterns
+
+The application uses five design patterns in working code. MVC is described above; the
+others are below.
+
+| Pattern | Problem it solves | Where |
+| --- | --- | --- |
+| Model-View-Controller | Keep scheduler rules out of the interfaces, so the GUI, the shell, and the AI assistant share one source of truth | `src/zimpasta/model/`, `src/zimpasta/controller/`, `frontend/` |
+| Command | Run many different user actions through one path that parses, checks, runs, and reports them | `src/zimpasta/command.py`, `src/zimpasta/commands/`, `src/zimpasta/controller/assistant/tools.py` |
+| Strategy | Run schedule generation in the background on the server (threads) and in the browser (no threads) with the same job | `src/zimpasta/model/generation_job.py` |
+| Adapter | Use OpenAI through one small interface the app owns, instead of depending on the SDK everywhere | `src/zimpasta/controller/assistant/client.py` |
+| Memento | Undo and redo edits in the Configuration Editor by restoring earlier snapshots of the configuration | `frontend/src/state/configEditorMemento.js`, `frontend/src/state/eventHandlers.js` |
+
+### Model-View-Controller
+
+**Problem.** The scheduler library must stay the only judge of what a valid configuration
+is. Three interfaces (the GUI, the shell, the AI assistant) change the same configuration,
+and none of them should repeat its rules.
+
+**Participants.**
+- **Model** (`src/zimpasta/model/`): `ConfigWorkspace` holds the configuration and applies
+  each edit only if the library accepts the whole result. `GenerationJob` runs the solver.
+  `ScheduleSet` holds the schedules the viewer shows.
+- **Controller** (`src/zimpasta/controller/`): `AppController` has one method per user
+  action and coordinates the Model. `routes.py` exposes those methods as `/api`.
+- **View** (`frontend/src/`): React pages that display state and collect input, and call
+  the Controller only through `api/client.js`.
+
+**How they interact.** A click becomes an `api.*` call, the call reaches one `AppController`
+method, the method asks the Model, and the result travels back as JSON for the View to
+show. The shell and the AI assistant drive the same Model, so a change made in any
+interface obeys the same rules.
+
+**Why it fits.** The Model knows nothing about HTTP or rendering, and the View never
+validates scheduler data. Each part can change without the others, and the Model and
+Controller are tested with pytest without a browser.
+
+### Command
+
+**Problem.** The shell has many actions (load, save, add, modify, delete, run, export,
+...) that must each be parsed, completed interactively when arguments are missing, and run
+the same way. The AI assistant has the same problem: the model asks for an action by name
+with JSON arguments, which must be checked before anything runs.
+
+**Participants.**
+- **Command:** `CommandSpec` in `src/zimpasta/command.py` packages one action: its verb and
+  noun, its arguments, its `handler`, and its interactive `builder`. In the assistant, each
+  `Tool` in `controller/assistant/tools.py` packages a name, a pydantic argument model, and
+  a handler.
+- **Concrete commands:** the `SPECS` in each module of `src/zimpasta/commands/`, and the
+  eight tools in `TOOLS` (`edit_configuration`, `save_configuration`,
+  `generate_schedules`, ...).
+- **Invoker:** `evaluate()` in `command.py` resolves a typed line through the `Registry`,
+  parses it into an `Invocation`, asks the builder for anything missing, then calls the
+  handler. `ToolRegistry.dispatch()` checks a tool call's arguments against its model, runs
+  the handler, and always returns a `ToolResult`.
+- **Receivers:** the `Session` and the Model for the shell; `AppController` for the tools.
+
+**How they interact.** The REPL and command-line mode both build an invocation and hand it
+to `evaluate()`. The assistant hands each tool call from OpenAI to `dispatch()`. Neither
+caller knows what a command does; it only knows how to invoke one.
+
+**Why it fits.** Each request is an object that carries its own arguments and knows its
+receiver, and one invoker runs any of them. Adding a command means adding a spec or a tool;
+the shell loop and the chat loop don't change. Covered by `tests/test_command.py` and
+`tests/controller/assistant/test_tools.py`.
+
+### Strategy
+
+**Problem.** Generating schedules can take minutes, so it runs in the background while the
+GUI keeps answering requests. On the server that means a worker thread. The hosted browser
+version runs Python in Pyodide, which can't start threads, so the same job has to run on
+the event loop instead.
+
+**Participants.**
+- **Context:** `GenerationJob` in `src/zimpasta/model/generation_job.py`. It owns the run:
+  checking the settings, progress, cancel, and turning the outcome into a status.
+- **Strategy interface:** a runner with `start(work)` and `wait(timeout)`.
+- **Concrete strategies:** `ThreadRunner` runs the work on a daemon thread. `EventLoopRunner`
+  runs it as an asyncio task that pauses between schedules, so other requests are answered
+  in between.
+- **Chosen by:** `AppController` uses `ThreadRunner` by default (`zimpasta --gui` and the
+  shell); `create_browser_app()` in `src/zimpasta/browser.py` passes `EventLoopRunner`.
+
+**How they interact.** `GenerationJob.start()` builds the run as a step-by-step generator
+(one schedule per step, from `generation_steps()`) and gives it to its runner, which
+decides how and when the steps execute.
+
+**Why it fits.** The job's behavior is identical in both versions; only the interchangeable
+way of executing it differs, and it is chosen when the job is created. Covered by
+`tests/model/test_generation_job.py`, including runs and cancellation with each runner.
+
+### Adapter
+
+**Problem.** The AI assistant needs a language model, but the OpenAI SDK has its own
+request format, response objects, and exception classes. Tests must run without the
+network, and the rest of the app shouldn't depend on OpenAI's API.
+
+**Participants.**
+- **Target:** `AIClient` in `src/zimpasta/controller/assistant/client.py`, a small
+  interface: `respond(instructions, input, tools, previous_id)` returns an `AIReply` (text
+  and `ToolCall`s) or raises `AIError`.
+- **Adaptee:** the OpenAI SDK's Responses API (`openai.OpenAI().responses.create`).
+- **Adapter:** `OpenAIClient` translates a request into the SDK's arguments, the SDK's
+  response into an `AIReply`, and its exceptions (bad key, rate limit, timeout, unknown
+  model, ...) into an `AIError` with a message the user can act on.
+- **Client:** `Assistant` in `controller/assistant/session.py`, which only knows `AIClient`.
+
+**How they interact.** `Assistant` calls `respond()` for each round of a chat message. In
+the app that is an `OpenAIClient`; in tests it is `FakeAIClient` (`tests/helpers.py`),
+which plays back scripted replies through the same interface.
+
+**Why it fits.** The adapter converts one interface into the one the client expects,
+without changing either side. It is the only code that imports `openai`, so swapping the
+provider or the model touches one file. Covered by
+`tests/controller/assistant/test_openai_client.py` (the adapter against a stand-in SDK)
+and `test_session.py` (the client against the fake).
+
+### Memento
+
+**Problem.** The Configuration Editor needs **Undo** and **Redo**: going back to the
+configuration as it was before an edit, and forward again. That needs snapshots of the
+configuration that can be kept and restored later, without the code that stores them
+depending on what is inside.
+
+**Participants** (`frontend/src/state/configEditorMemento.js`).
+- **Originator:** `ConfigFileOriginator` holds the current configuration document. It makes
+  a snapshot of it with `storeFile()` and returns to one with `restore(memento)`.
+- **Memento:** `ConfigFileMemento` is one snapshot: a deep copy (`structuredClone`) of the
+  document, so later edits can't change it.
+- **Caretaker:** `ConfigFileHistory` keeps two stacks of mementos, one for undo and one for
+  redo, and never reads or changes their contents.
+
+**How they interact** (`frontend/src/state/eventHandlers.js`, used by the buttons in
+`modes/editor/ConfigEditor.jsx`).
+1. When an editor dialog saves an edit, `pushToHist()` first gives the current document to
+   the originator and pushes its `storeFile()` memento onto the undo stack.
+2. **Undo** pops a memento from the undo stack and saves the current document onto the redo
+   stack the same way. The originator then restores the memento, and the restored document
+   is loaded through the API, so the scheduler library validates it again. **Redo** does
+   the reverse.
+3. The buttons are disabled when their stack has nothing to restore.
+
+**Why it fits.** Only the originator creates and reads snapshots, and the caretaker stores
+them as opaque objects. The editor gets undo and redo without exposing how the
+configuration is stored, and a restored state is always one the library accepted before.
 
 ## Layout
 
