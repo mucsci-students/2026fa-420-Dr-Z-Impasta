@@ -234,9 +234,9 @@ second view on the same Model.
 
 A user action flows View → `frontend/src/api/client.js` → `/api` route → one
 `AppController` method → the Model, and the result flows back the same way. The
-Configuration Editor sends its actions through `frontend/src/state/eventHandlers.js` and
-`frontend/src/components/APICommunication.jsx` instead. Components never
-validate scheduler data or run workflows themselves; the library validates in the Model, and
+Configuration Editor's actions are in `frontend/src/state/eventHandlers.js`, which calls
+`client.js` like everything else. Components never validate scheduler data or run workflows
+themselves; the library validates in the Model, and
 multi-step workflows (load with unsaved changes, generate then publish results to the viewer,
 delete with cascades) live in the Controller, where pytest covers them. The API is documented
 in [docs/web-api.md](docs/web-api.md); the View in [docs/gui.md](docs/gui.md).
@@ -498,8 +498,8 @@ frontend/           the View: React + Vite, JavaScript (see docs/gui.md)
     main.jsx, router.jsx, App.jsx, modes.js   entry, routes, frame, the three modes
     api/client.js     every API call
     api/backend.js    the server, or Python in a Web Worker (api/browser/) for build:browser
-    state/            app state polling, useAction, toasts, EventHandlers.js (editor actions)
-    components/       Button, Card, Dialog, ..., APICommunication.jsx (editor API calls)
+    state/            app state polling, useAction, toasts, eventHandlers.js (editor actions)
+    components/       Button, Card, Dialog, ...
     layout/           header, connection banner, error pages
     modes/editor|generator|viewer/   one folder per mode
     styles/           design tokens and component styles from the mockups

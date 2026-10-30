@@ -161,15 +161,16 @@ export default function ConfigEditor() {
             />
 
 
+            {/* Save and Validate don't show their failures here */}
             <Button
               disabled={!canSave}
               className={canSave ? "" : "disabled-btn"}
               aria-describedby={canSave ? undefined : "save-hint"}
-              onClick={async () => { const res = await Save(); if (res) { await refresh(); } }}
+              onClick={async () => { await Save().catch(() => {}); await refresh(); }}
             >
               Save JSON...
             </Button>
-            <Button variant="primary" onClick={async () => { await Validate(); await refresh(); }}>Validate</Button>
+            <Button variant="primary" onClick={async () => { await Validate().catch(() => {}); await refresh(); }}>Validate</Button>
 
 		<div className="undo-redo-row">
 			<Button 
