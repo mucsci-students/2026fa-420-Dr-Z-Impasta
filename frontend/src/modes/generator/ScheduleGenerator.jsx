@@ -40,7 +40,7 @@ const OUTCOME_TONES = {
   solver_error: "warning",
   failed: "danger",
   cancelled: "neutral",
-};
+}
 
 export default function ScheduleGenerator() {
   const { state, loading, refresh } = useAppState();
@@ -127,8 +127,6 @@ export default function ScheduleGenerator() {
 
   const maxLimit = options?.generation?.max_schedules ?? null;
   const optimizerOptions = options?.optimizer_flags ?? [];
-  const generationTarget = limit === "" ? configured?.limit : Number(limit);
-  const hasGenerationTarget = Number.isFinite(generationTarget) && generationTarget > 0;
 
   const shownFlags = optimizerFlags ?? configured?.optimizer_flags ?? [];
   const overriding = optimizerFlags !== null;
@@ -176,7 +174,9 @@ export default function ScheduleGenerator() {
                   max={maxLimit ?? undefined}
                   value={limit}
                   disabled={running || startGeneration.busy}
-                  onChange={(event) => setLimit(event.target.value)}
+                  onChange={(event) => {
+                    setLimit(event.target.value);
+                  }}
                   placeholder={configured ? `Configured: ${configured.limit}` : "Use configured limit"}
                 />
               </Field>
@@ -269,8 +269,8 @@ export default function ScheduleGenerator() {
                   <p>{plural(generation.found, "schedule")} found.</p>
                   <LoadingBar     //Loading bar component that takes a label, a current value, and the max value
                     label="Generating schedules"
-                    value={hasGenerationTarget ? generation.found : undefined}
-                    max={hasGenerationTarget ? generationTarget : undefined}
+                    value={generation.found}
+                    max={generation.settings?.limit ?? 100}
                   />
                 </div>
               )}
