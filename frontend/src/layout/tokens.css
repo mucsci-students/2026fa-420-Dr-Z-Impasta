@@ -1,0 +1,112 @@
+/* Design tokens from the Sprint 2 mockups. Use these variables, not raw colors.
+ *
+ * Every color has a dark-theme value in the [data-theme="dark"] block below, so anything
+ * built from these variables works in both themes. src/theme.js sets data-theme on <html>:
+ * from the header's theme button, or from the system setting when that's set to Auto. */
+:root {
+  color-scheme: light;
+  --font-sans: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+
+  --ink: #1b1c1e;
+  --ink-2: #4a4c50;
+  --muted: #75777b;
+  --faint: #a3a5a8;
+
+  --page: #f5f5f3;
+  --surface: #ffffff;
+  --surface-2: #fafaf8;
+  --surface-3: #eeeeea;
+  --line: #e2e2dd;
+  --line-strong: #cfcfc8;
+
+  --accent: oklch(0.52 0.12 255);
+  --accent-strong: oklch(0.42 0.12 255);
+  --accent-soft: oklch(0.95 0.025 255);
+
+  --success: oklch(0.42 0.11 150);
+  --success-dot: oklch(0.52 0.11 150);
+  --success-soft: oklch(0.96 0.025 150);
+  --warning: oklch(0.42 0.1 75);
+  --warning-dot: oklch(0.62 0.12 75);
+  --warning-soft: oklch(0.96 0.03 85);
+  --danger: oklch(0.48 0.15 25);
+  --danger-line: oklch(0.85 0.05 25);
+  --danger-soft: oklch(0.97 0.015 25);
+
+  --radius-sm: 4px;
+  --radius: 6px;
+  --radius-lg: 8px;
+  --shadow-modal: 0 20px 50px rgba(0, 0, 0, 0.22);
+  --shadow-float: 0 12px 30px rgba(0, 0, 0, 0.12);
+  --overlay: rgba(27, 28, 30, 0.42);
+  --shadow-raised: 0 1px 2px rgba(0, 0, 0, 0.08);
+
+  --on-accent: #fff; /* text on solid --accent and --danger fills */
+  --on-ink: #fff; /* text on solid --ink fills: tooltips, the skip link */
+  --thumb: #fff; /* switch thumbs */
+
+  /* Timetable blocks in the Schedule Viewer */
+  --event-lecture-bg: #e7effb;
+  --event-lecture-line: #a9c1ea;
+  --event-lab-bg: #e6f4ea;
+  --event-lab-line: #a3d2b1;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+
+  --focus: 0 0 0 3px oklch(0.52 0.12 255 / 0.35);
+}
+
+/* Dark theme: the same names, darker surfaces and lighter text. Accent and status colors
+   get lighter so they stay readable on dark surfaces, which is why text on a solid accent
+   fill (--on-accent) turns dark. */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  --ink: #e6e6e3;
+  --ink-2: #c1c2be;
+  --muted: #979894;
+  --faint: #6c6d69;
+
+  --page: #141514;
+  --surface: #1d1e1d;
+  --surface-2: #222322;
+  --surface-3: #2b2c2a;
+  --line: #333431;
+  --line-strong: #474844;
+
+  --accent: oklch(0.72 0.11 255);
+  --accent-strong: oklch(0.8 0.1 255);
+  --accent-soft: oklch(0.3 0.05 255);
+
+  --success: oklch(0.8 0.12 150);
+  --success-dot: oklch(0.72 0.13 150);
+  --success-soft: oklch(0.29 0.045 150);
+  --warning: oklch(0.84 0.11 80);
+  --warning-dot: oklch(0.76 0.13 75);
+  --warning-soft: oklch(0.31 0.05 80);
+  --danger: oklch(0.75 0.13 25);
+  --danger-line: oklch(0.46 0.09 25);
+  --danger-soft: oklch(0.29 0.055 25);
+
+  --shadow-modal: 0 20px 50px rgba(0, 0, 0, 0.55);
+  --shadow-float: 0 12px 30px rgba(0, 0, 0, 0.45);
+  --overlay: rgba(0, 0, 0, 0.6);
+  --shadow-raised: 0 1px 2px rgba(0, 0, 0, 0.4);
+
+  --on-accent: #0f1218;
+  --on-ink: #141514;
+  --thumb: #f0f0ed;
+
+  --event-lecture-bg: oklch(0.3 0.05 255);
+  --event-lecture-line: oklch(0.46 0.08 255);
+  --event-lab-bg: oklch(0.29 0.045 150);
+  --event-lab-line: oklch(0.46 0.08 150);
+
+  --focus: 0 0 0 3px oklch(0.72 0.11 255 / 0.45);
+}
