@@ -608,6 +608,11 @@ body.chat-resizing {
   gap: var(--space-2);
 }
 
+.assistant-reply__follow-up--running {
+  flex-direction: column;
+  align-items: stretch;
+}
+
 .assistant-reply__note {
   display: inline-flex;
   align-items: center;
