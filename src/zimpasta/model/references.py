@@ -83,8 +83,13 @@ class DeleteImpact:
     problems: tuple = ()
     """Library ``Issue``s the delete would still cause after cascading (filled by the workspace)."""
 
+    can_force: bool = True
+    """Whether the user can still delete it after a warning. False when the delete would
+    leave an item invalid on its own, which the workspace can't keep (filled by the workspace)."""
+
     @property
     def can_delete(self) -> bool:
+        """Whether the delete is clean: nothing loses its only option and nothing breaks."""
         return not self.blocking and not self.problems
 
     def to_dict(self) -> dict:
@@ -93,6 +98,7 @@ class DeleteImpact:
             "index": self.index,
             "label": self.label,
             "can_delete": self.can_delete,
+            "can_force": self.can_force,
             "blocking": [reference.to_dict() for reference in self.blocking],
             "cascades": [reference.to_dict() for reference in self.cascades],
             "problems": [problem.to_dict() for problem in self.problems],
@@ -164,7 +170,7 @@ def apply_delete(document: dict, area: str, index: int) -> dict:
     """A copy of ``document`` without item ``index`` and without its optional references.
 
     Call :func:`delete_impact` first; blocking references are removed here too, which
-    leaves a document the library will reject.
+    can leave a document the library rejects (a forced delete).
     """
     result = copy.deepcopy(document)
     if area != "patterns" and not (area == "courses" and _shared_course_id(result, index)):

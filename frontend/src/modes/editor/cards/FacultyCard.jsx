@@ -1,15 +1,20 @@
-// Description: Name; credits (12 cr, or 12–14 cr when minimum_credits ≠ maximum_credits); Mo–Fr
-// availability chips; Mandatory (hidden when empty); Limits (unique_course_limit, maximum_days);
-// Prefers (course names, hidden when empty); Room prefs (room_preferences, hidden when empty);
-// Lab prefs (lab_preferences, hidden when empty).
+/**
+ * One faculty member in the Faculty row. Its Edit button opens FacultyDialog.
+ * Credits show as "12 cr", or "12–14 cr" when the minimum and maximum differ. Mandatory days
+ * and each preference list are hidden when empty.
+ */
 
 import AvailabilityChips from "../AvailabilityChips.jsx";
+import EditButton from "./EditButton.jsx";
 
 const WEEKDAYS = ["MON", "TUE", "WED", "THU", "FRI"];
 
-/** { "CMSC 362": 5, "CMSC 161": 4 } → "CMSC 362 (5), CMSC 161 (4)", or "" when empty. */
+/**
+ * { "CMSC 362": 5, "CMSC 161": 4 } → "CMSC 362 (5), CMSC 161 (4)", or "" when empty.
+ * Spaces inside an entry are non-breaking, so the list wraps only between entries.
+ */
 function preferenceText(prefs) {
-  return Object.entries(prefs).map(([name, score]) => `${name} (${score})`).join(", ");
+  return Object.entries(prefs).map(([name, score]) => `${name} (${score})`.replaceAll(" ", "\u00A0")).join(", ");
 }
 
 /** A faculty member: credit range, weekly availability, mandatory days, limits, and preferences. */
@@ -26,12 +31,7 @@ export default function FacultyCard({ faculty, onEdit }) {
   const maximumDays = faculty.maximum_days;
 
   return (
-    <article
-      className="item-card"
-      onClick={onEdit}
-      onKeyDown={(e) => { if (e.key === "Enter") onEdit?.(); }}
-      tabIndex={0}
-    >
+    <article className="item-card">
       <div className="item-card__header">
         <h3 className="item-card__title">{faculty.name}</h3>
         <span className="item-card__credits">{credits}</span>
@@ -67,6 +67,7 @@ export default function FacultyCard({ faculty, onEdit }) {
           </>
         )}
       </dl>
+      <EditButton label={faculty.name} onEdit={onEdit} />
     </article>
   );
 }

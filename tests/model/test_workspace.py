@@ -289,6 +289,50 @@ def test_mark_saved_clears_changes_up_to_that_revision(workspace):
     assert workspace.changes == ()
 
 
+def test_changes_that_cancel_out_leave_nothing_to_save(workspace):
+    workspace.add("rooms", ROOM)
+    workspace.remove("rooms", 1)
+
+    assert not workspace.dirty
+    assert workspace.changes == ()
+    assert workspace.snapshot()["dirty"] is False
+    workspace.load_text(json.dumps(workspace.document()), filename="other.json")  # no prompt
+
+
+def test_undoing_the_latest_change_drops_only_that_change(workspace):
+    workspace.update_settings({"limit": 4})
+    workspace.add("rooms", ROOM)
+    workspace.remove("rooms", 1)
+
+    assert [change.summary for change in workspace.changes] == ["Settings: limit 3 → 4"]
+    workspace.update_settings({"limit": 3})  # the loaded value
+    assert workspace.changes == ()
+
+
+def test_returning_to_the_saved_state_counts_as_saved(workspace):
+    workspace.update_settings({"limit": 4})
+    exported = workspace.export_text()
+    workspace.mark_saved(exported.revision, "saved.json")
+
+    workspace.update_settings({"limit": 6})
+    assert workspace.dirty
+    workspace.update_settings({"limit": 4})
+
+    assert not workspace.dirty
+
+
+def test_saving_an_exported_revision_after_another_edit(workspace):
+    workspace.update_settings({"limit": 4})
+    exported = workspace.export_text()
+    workspace.update_settings({"limit": 6})
+
+    workspace.mark_saved(exported.revision)
+    assert [change.summary for change in workspace.changes] == ["Settings: limit 4 → 6"]
+
+    workspace.update_settings({"limit": 4})  # back to what the file has
+    assert not workspace.dirty
+
+
 def test_validate_reports_current_state(workspace):
     report = workspace.validate()
 
@@ -446,6 +490,104 @@ def test_a_valid_configuration_can_not_become_incomplete(workspace):
     with pytest.raises(DeleteBlocked):
         workspace.remove("courses", 0)
     assert workspace.counts()["sections"] == 1
+
+
+def only_room_of(section: dict, room: str) -> dict:
+    return {**section, "room": [room]}
+
+
+def test_a_forced_delete_can_leave_the_configuration_invalid(example_workspace):
+    ws = example_workspace
+    roddy = [room["name"] for room in ws.items("rooms")].index("Roddy 136")
+    impact = ws.delete_impact("rooms", roddy)
+    assert not impact.can_delete and impact.can_force
+    assert len(impact.blocking) == 3
+    assert impact.problems  # the sections left without a room
+
+    change, _ = ws.remove("rooms", roddy, force=True)
+
+    assert ws.status is ConfigStatus.INVALID
+    assert change.summary.startswith("Removed room Roddy 136 and ")
+    assert {problem.code for problem in ws.issues} == {"course_pattern_room_requirement_mismatch"}
+    assert all(
+        not section["room"]
+        for section in (ws.item("courses", ref.index) for ref in impact.blocking)
+    )
+    with pytest.raises(NotValid) as caught:
+        ws.export_text()
+    assert caught.value.message.startswith("The configuration has problems to fix first.")
+
+
+def test_an_invalid_configuration_is_fixed_one_edit_at_a_time(example_workspace):
+    ws = example_workspace
+    roddy = [room["name"] for room in ws.items("rooms")].index("Roddy 136")
+    _, impact = ws.remove("rooms", roddy, force=True)
+    broken = [ref.index for ref in impact.blocking]
+    other_room = ws.items("rooms")[0]["name"]
+
+    # An edit that adds a problem is accepted too, and the issues list it. (The library
+    # checks in stages, so this unknown room hides the earlier problems until it's fixed.)
+    ws.add("courses", only_room_of(ws.item("courses", 0), "Nowhere"))
+    assert ws.status is ConfigStatus.INVALID
+    assert "unknown_course_room" in {problem.code for problem in ws.issues}
+    nowhere = len(ws.items("courses")) - 1
+
+    # A delete that adds a problem still warns first.
+    labs = [lab["name"] for lab in ws.items("labs")]
+    warned = ws.delete_impact("labs", labs.index("Linux"))
+    assert not warned.can_delete and warned.can_force
+
+    # An item that is invalid on its own is still refused.
+    with pytest.raises(EditRejected):
+        ws.add("rooms", {"name": "", "capacity": 3})
+
+    ws.remove("courses", nowhere, force=True)  # warns: it brings back the hidden problems
+    assert {problem.code for problem in ws.issues} == {"course_pattern_room_requirement_mismatch"}
+    # Fixing the sections one by one keeps it invalid until the last one.
+    for position, index in enumerate(broken):
+        ws.replace("courses", index, only_room_of(ws.item("courses", index), other_room))
+        last = position == len(broken) - 1
+        assert ws.status is (ConfigStatus.VALID if last else ConfigStatus.INVALID)
+    assert ws.issues == ()
+
+
+def test_a_forced_delete_of_the_only_room_can_be_completed_again(workspace):
+    workspace.remove("rooms", 0, force=True)
+    assert workspace.status is ConfigStatus.INCOMPLETE
+
+    # The library couldn't check the sections without rooms; adding a room reveals them.
+    workspace.add("rooms", ROOM)
+    assert workspace.status is ConfigStatus.INVALID
+
+    for index in range(2):
+        workspace.replace(
+            "courses", index, only_room_of(workspace.item("courses", index), "Room 201")
+        )
+    assert workspace.status is ConfigStatus.VALID
+
+
+def test_a_forced_delete_that_leaves_an_item_invalid_is_refused(workspace):
+    workspace.add("rooms", {**ROOM, "features": ["projector"]})
+    section = only_room_of(workspace.item("courses", 0), "Room 201")
+    workspace.replace("courses", 0, {**section, "required_room_features": ["projector"]})
+    before = workspace.document()
+
+    impact = workspace.delete_impact("rooms", 1)
+    assert not impact.can_force
+
+    with pytest.raises(DeleteBlocked):
+        workspace.remove("rooms", 1, force=True)
+    assert workspace.document() == before
+
+
+def test_a_new_configuration_is_still_checked_normally_after_loading(workspace):
+    workspace.remove("rooms", 0, force=True)
+    workspace.new(discard_changes=True)
+    workspace.add("rooms", ROOM)
+    workspace.add("faculty", FACULTY)
+
+    with pytest.raises(EditRejected):
+        workspace.add("courses", course(rooms=("Room 999",)))
 
 
 def test_renaming_updates_references(workspace):
