@@ -1,3 +1,7 @@
+/**
+ * The availability editor in FacultyDialog and ResourceDialog. The cards show the result with AvailabilityChips.
+ */
+
 import { useId, useRef } from "react";
 import Button from "../../components/Button.jsx";
 import { DAY_NAMES } from "./labels.js";

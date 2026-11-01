@@ -1,11 +1,14 @@
-// Description: Generation limit (limit); optimizer flag chips. Default limit of 10?
+/**
+ * The Global Settings card. Unlike the other cards it has no dialog: each change is sent as
+ * soon as it's made, and a rejected change shows its error inside the card.
+ */
 
 import { useState } from "react";
 import Card from "../../../components/Card.jsx";
 import ErrorMessage from "../../../components/ErrorMessage.jsx";
 import Field from "../../../components/Field.jsx";
 import HelpTip from "../../../components/HelpTip.jsx";
-import { issuesFor } from "../../../components/issues.js";
+import { formIssues } from "../../../components/issues.js";
 import { FLAG_NAMES } from "../labels.js";
 import CardRow from "./CardRow.jsx";
 
@@ -58,20 +61,11 @@ export default function SettingsCard({ settings, flags, busy, error, onApply }) 
     if (limit !== (settings.limit ?? null)) onApply?.({ limit });
   }
 
-  /** The library's message for one field. */
-  function errorFor(field) {
-    const found = issuesFor(error?.issues, { area: "settings", field });
-    return found.length > 0 ? found.map((issue) => issue.message).join(" ") : undefined;
-  }
-
+  const { errorFor, unplaced } = formIssues(error?.issues, {
+    area: "settings",
+    fields: ["limit", "optimizer_flags"],
+  });
   const flagsError = errorFor("optimizer_flags");
-
-  // Problems with nowhere to appear on this card; the banner lists them instead
-  const FIELDS = ["limit", "optimizer_flags"];
-  const unplaced = (error?.issues ?? []).filter((issue) =>
-    issue.area !== "settings" ||
-    !FIELDS.some((f) => issue.field === f || issue.field?.startsWith(`${f}.`)),
-  );
 
   return (
     <CardRow title="Global Settings">

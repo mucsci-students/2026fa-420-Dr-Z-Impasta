@@ -1,4 +1,7 @@
-/** Readable names for the library's values. */
+/**
+ * Display names for the library's values, e.g. "in_person" → "In person". Callers usually write
+ * `NAMES[value] ?? value`, so a value missing here still shows as itself.
+ */
 export const MODALITY_NAMES = { in_person: "In person", online: "Online", hybrid: "Hybrid" };
 export const DELIVERY_NAMES = { in_person: "In person", online: "Online" };
 export const DAY_NAMES = { MON: "Monday", TUE: "Tuesday", WED: "Wednesday", THU: "Thursday", FRI: "Friday", SAT: "Saturday", SUN: "Sunday" };

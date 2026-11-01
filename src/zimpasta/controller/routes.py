@@ -179,8 +179,10 @@ def get_item(app: App, area: str, index: int) -> dict:
 
 
 @router.put("/config/{area}/{index}")
-def replace_item(app: App, area: str, index: int, item: JsonObject) -> dict:
-    return app.replace_item(area, index, item)
+def replace_item(app: App, area: str, index: int, item: JsonObject, force: bool = False) -> dict:
+    """Replace the item. ``?force=true`` applies it even if the configuration then has
+    problems (it becomes ``invalid``); an item that is invalid on its own is still refused."""
+    return app.replace_item(area, index, item, force=force)
 
 
 @router.get("/config/{area}/{index}/impact")
@@ -190,8 +192,10 @@ def delete_impact(app: App, area: str, index: int) -> dict:
 
 
 @router.delete("/config/{area}/{index}")
-def delete_item(app: App, area: str, index: int) -> dict:
-    return app.delete_item(area, index)
+def delete_item(app: App, area: str, index: int, force: bool = False) -> dict:
+    """Delete the item. ``?force=true`` deletes it even when the impact preview warns
+    (``can_delete`` false, ``can_force`` true); the configuration may become invalid."""
+    return app.delete_item(area, index, force=force)
 
 
 # -------------------------------------------------------------- generation

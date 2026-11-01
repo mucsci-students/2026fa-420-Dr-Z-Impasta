@@ -24,6 +24,8 @@ export function configStatus(config) {
       return { tone: "neutral", label: "No configuration loaded" };
     case "incomplete":
       return { tone: "warning", label: "Incomplete" };
+    case "invalid":
+      return { tone: "danger", label: "Has problems" };
     default:
       if (config.dirty && config.changes.length) {
         return { tone: "warning", label: `Unsaved changes (${config.changes.length})` };

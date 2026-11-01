@@ -1,3 +1,7 @@
+/**
+ * Used by FacultyDialog for course, room, and lab preferences.
+ */
+
 import Button from "../../components/Button.jsx";
 
 /**

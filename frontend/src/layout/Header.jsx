@@ -2,11 +2,13 @@ import { NavLink } from "react-router";
 import { Farfalle } from "../components/PastaMarks.jsx";
 import Spinner from "../components/Spinner.jsx";
 import StatusPill from "../components/StatusPill.jsx";
+import ThemeToggle from "../components/ThemeToggle.jsx";
 import { configStatus } from "../format.js";
 import { MODES } from "../modes.js";
 import { useAppState } from "../state/appStateContext.js";
 
-/** The top bar on every page: the app name, the three modes, and the configuration's status. */
+/** The top bar on every page: the app name, the three modes, the configuration's status,
+ * and the light/dark theme switch. */
 export default function Header() {
   const { state } = useAppState();
   const config = state?.config;
@@ -46,6 +48,7 @@ export default function Header() {
         <StatusPill tone={status.tone} aria-label={`Configuration status: ${status.label}`}>
           {status.label}
         </StatusPill>
+        <ThemeToggle />
       </div>
     </header>
   );

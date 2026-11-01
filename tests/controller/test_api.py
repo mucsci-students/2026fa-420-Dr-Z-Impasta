@@ -129,6 +129,18 @@ def test_blocked_delete_returns_the_impact(loaded):
     assert [ref["label"] for ref in body["impact"]["blocking"]] == ["CS 101.01", "CS 102.01"]
 
 
+def test_a_forced_delete_goes_ahead_after_the_warning(loaded):
+    impact = loaded.get("/api/config/rooms/0/impact").json()
+    assert impact["can_delete"] is False and impact["can_force"] is True
+
+    removed = loaded.delete("/api/config/rooms/0", params={"force": "true"})
+
+    assert removed.status_code == 200
+    assert removed.json()["change"]["action"] == "removed"
+    assert removed.json()["state"]["status"] == "incomplete"
+    assert loaded.get("/api/config/rooms").json()["items"] == []
+
+
 def test_nothing_open(client):
     error(client.get("/api/config/rooms"), 409, "no_configuration")
     error(client.get("/api/config/export"), 409, "no_configuration")
@@ -265,3 +277,15 @@ def test_unexpected_errors_are_friendly(controller, monkeypatch):
 
     assert "boom" not in body["message"]
     assert body["reference"] in body["message"]
+
+
+def test_a_forced_replace_is_applied_even_if_the_configuration_breaks(loaded):
+    section = loaded.get("/api/config/courses/0").json()["item"]
+    section["room"] = ["Nowhere"]
+    error(loaded.put("/api/config/courses/0", json=section), 422, "edit_rejected")
+
+    applied = loaded.put("/api/config/courses/0", json=section, params={"force": "true"})
+
+    assert applied.status_code == 200
+    assert applied.json()["state"]["status"] == "invalid"
+    assert applied.json()["state"]["issues"]

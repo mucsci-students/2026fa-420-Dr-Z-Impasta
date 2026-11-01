@@ -1,3 +1,7 @@
+/**
+ * Used by CourseDialog (rooms, labs, faculty, conflicts) and FacultyDialog (mandatory days).
+ */
+
 /** Pick any number of names from `options`. `value` is the list of picked names. */
 export default function CheckboxList({ legend, options, value, onChange, empty = "None to choose from", error }) {
 

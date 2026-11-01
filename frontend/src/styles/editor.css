@@ -4,17 +4,13 @@
   display: flex;
   align-items: baseline;
   gap: var(--space-2);
-  margin-bottom: var(--space-3);
+  margin-bottom: var(--space-2);
 }
 
 .undo-redo-row {
-/*	flex-basis: 100%;
 	display: flex;
-	justify-content: flex-end;
-	gap: 8px;
-	*/
+	gap: var(--space-2);
 }
-
 .disabled-btn {
     background-color: #333;
     color: #888;
@@ -39,16 +35,35 @@
 
 .editor-row__items {
   display: flex;
-  gap: var(--space-4);
-  overflow-x: auto;              /* scrolls sideways when there are many cards */
+  gap: var(--space-3);
+  overflow-x: auto;                /* scrolls sideways when there are many cards */
+  scroll-snap-type: x mandatory;   /* stop scrolling with a card's left edge at the row's left edge */
+  position: relative;              /* so a card's offsetLeft is measured from the row (CardRow's arrows use it) */
+  padding-bottom: var(--space-2);
+}
+
+/* Every tile in a row: the "+ Add" tile and each card */
+.editor-row__items > * {
+  scroll-snap-align: start;
+  transition: opacity 0.15s;       /* fade in and out instead of popping */
+}
+
+/* CardRow.jsx marks tiles that are only partly in view, so the row only shows whole cards */
+.editor-row__items > [data-partial] {
+  opacity: 0;                      /* opacity, not visibility, so Tab can still reach it and scroll it into view */
+  pointer-events: none;            /* can't click a card you can't see */
 }
 
 .editor-row__add {
-    border: 1px dashed var(--line-strong);
+    border: 1px dashed;
     border-radius: var(--radius-lg);
     color: var(--accent);
-    min-width: 100px;
+    min-width: 100px;       /* narrower than a card, but never squeezed into a sliver */
     cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: var(--space-1);
 }
 
 .editor-row {
@@ -71,10 +86,24 @@
   border: 1px solid var(--line);
   border-radius: var(--radius-lg);
   padding: var(--space-4);
-  max-width: 285px;         /* May change so that each card has their own fixed width */
+  max-width: 285px;
   min-width: 190px;
   flex: 0 0 auto;            /* keep its width inside the row instead of squashing */
-  cursor: pointer;
+  display: flex;             /* a column, so the Edit button can sit at the bottom */
+  flex-direction: column;
+}
+
+/* The part just above the Edit button (always the last one). Its bottom margin differs from card
+   to card (12px under facts, 0 under a note), so it's dropped and the button sets the space. */
+.item-card > :nth-last-child(2) {
+  margin-bottom: 0;
+}
+
+.item-card__actions {
+  margin-top: auto;              /* push to the bottom, so the buttons line up across a row */
+  padding-top: var(--space-3);   /* the same space above Edit in every card */
+  display: flex;
+  justify-content: flex-end;
 }
 
 .item-card__title {
@@ -134,18 +163,14 @@
   font-size: 11px;
 }
 
-.avail__day--off {
+.avail__day--off {         /* a day with no hours: outlined instead of filled */
   background: transparent;
   border: 1px dashed var(--line);
   color: var(--faint);
 }
 
-.item-card:hover {
-  border-color: var(--accent);
-}
-
 .pattern-meetings {
-  list-style: none;
+  list-style: none;        /* <ul> has bullets and indentation by default */
   padding: 0;
   margin: var(--space-3) 0;
   display: grid;
@@ -161,7 +186,7 @@
 .pattern-meetings__day {
   font-family: var(--font-mono);
   font-weight: 500;
-  width: 36px;
+  width: 36px;             /* same width for every day, so the meeting rows line up */
 }
 
 .item-card__note {
@@ -184,11 +209,11 @@
 }
 
 .toggle input {
-  appearance: none;
-  position: relative;
+  appearance: none;                /* draw a switch instead of the browser's checkbox */
+  position: relative;              /* the thumb below is placed inside it */
   width: 36px;
   height: 20px;
-  min-height: 0;
+  min-height: 0;                   /* undo base.css's 32px input height */
   padding: 0;
   border: none;
   margin: 0;
@@ -216,12 +241,12 @@
 }
 
 .toggle input:checked::after {
-  transform: translateX(18px);
+  transform: translateX(18px);     /* slide the thumb to the right end */
 }
 
 .toggle input:focus-visible {
   outline: none;
-  box-shadow: var(--focus);
+  box-shadow: var(--focus);        /* the app's focus ring, which follows the rounded track */
 }
 
 .tag-input {
@@ -241,7 +266,7 @@
   font-size: 12px;
 }
 
-.tag-input__chip button {
+.tag-input__chip button {         /* the × that removes a tag: plain text, no button look */
   border: none;
   background: none;
   padding: 0;
@@ -251,8 +276,8 @@
 }
 
 .tag-input input {
-  flex: 1;
-  min-width: 140px;
+  flex: 1;                         /* the text box takes the rest of the line after the chips */
+  min-width: 140px;                /* and drops to its own line when less than this is left */
 }
 
 .checkbox {
@@ -271,7 +296,19 @@
   gap: var(--space-3);
 }
 
-.checkbox-list {
+/* A time field with an "Any time" button beside it (PatternDialog's start time) */
+.time-field {
+  display: flex;
+  align-items: flex-end;   /* line the button up with the input, not the label */
+  gap: var(--space-2);
+}
+
+.time-field > .field {
+  flex: 1;                 /* the input takes the remaining width */
+  min-width: 0;            /* let it shrink inside its half of the form grid */
+}
+
+.checkbox-list {                  /* a fieldset, without the box */
   border: none;
   padding: 0;
   margin: 0;
@@ -284,7 +321,7 @@
   font-weight: 500;
   padding: 0;
   margin-bottom: var(--space-2);
-  width: 100%;
+  width: 100%;                      /* its own line above the checkboxes */
 }
 
 .checkbox-list .field__error {
@@ -316,7 +353,7 @@
 .meetings-editor__head,
 .meetings-editor__row {
   display: grid;
-  grid-template-columns: 90px 80px 40px 120px 110px 24px;   /* one column per field, the same in every row */
+  grid-template-columns: 90px 80px 40px 120px 110px auto;   /* one column per field, the same in every row; the last holds "Any" and × */
   gap: var(--space-2);
   align-items: center;
 }
@@ -327,10 +364,18 @@
   font-size: 12px;
 }
 
+/* The last cell of a meeting row: the "Any" button (when the meeting has its own time), then × */
+.meetings-editor__end {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
 .meetings-editor__row input[type="checkbox"] {
   min-height: 0;          /* undo base.css's input height */
 }
 
+/* The × that removes a row: plain text, no button look */
 .meetings-editor__remove,
 .pref-editor__remove,
 .avail-editor__remove,
@@ -383,14 +428,17 @@
 
 .editor-row__actions {
   margin-left: auto;      /* push the header's buttons to the right */
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
 }
 
 .day-tile {
-  min-width: 150px;
+  min-width: 150px;       /* day tiles hold less than other cards, so they can be narrower */
 }
 
 .day-tile__blocks {
-  list-style: none;
+  list-style: none;       /* <ul> has bullets and indentation by default */
   padding: 0;
   margin: var(--space-3) 0 0;
   display: grid;
@@ -439,10 +487,10 @@
 }
 
 .settings-card .field--inline .field__error {
-  flex-basis: 100%;
+  flex-basis: 100%;                 /* its own line under the label and box */
 }
 
-.flag-list {
+.flag-list {                        /* a fieldset, without the box */
   border: none;
   padding: 0;
   margin: 0;
@@ -452,7 +500,7 @@
 }
 
 .flag-list .field__error {
-  flex-basis: 100%;
+  flex-basis: 100%;                 /* its own row under the chips */
 }
 
 .flag-chip {
@@ -463,9 +511,10 @@
   border: 1px solid var(--line);
   border-radius: 999px;
   font-size: 12px;
+  height: 40px;
 }
 
-.flag-chip:has(input:checked) {
+.flag-chip:has(input:checked) {     /* highlight the whole chip when its flag is on */
   background: var(--accent-soft);
   border-color: var(--accent);
   color: var(--accent-strong);
@@ -475,7 +524,6 @@
   min-height: 0;          /* undo base.css's input height and padding */
   height: 12px;
   padding: 0;
-  margin: 20;
 }
 
 .flag-chip label {
@@ -487,4 +535,40 @@
 
 .input-error {
 	border: 2px solid red;
+}
+
+/* Let the "?" tooltips in the card rows and editor dialogs pop out instead of being clipped.
+   Each tooltip is anchored to its own "?" so it follows page and row scrolling.
+   Overrides .help-tip__text in components.css. */
+@supports (anchor-scope: all) {
+  .help-tip { anchor-scope: --help-tip; }          /* each "?" only anchors its own tooltip */
+  .help-tip__button { anchor-name: --help-tip; }
+
+  .editor-row .help-tip__text,
+  .dialog .help-tip__text {
+    position: fixed;                               /* not clipped by the row's or dialog's scrolling */
+    position-anchor: --help-tip;
+    top: auto;
+    bottom: calc(anchor(top) + 6px);               /* 6px above the "?" */
+    left: anchor(center);                          /* centered on the "?" ... */
+    transform: translateX(-50%);                   /* ... by shifting back half its own width */
+    position-try-fallbacks: flip-block;            /* show it below the "?" when there's no room above */
+  }
+}
+
+/* While a dialog is open, only the dialog scrolls */
+html:has(dialog:modal) {
+  overflow: hidden;
+}
+
+html {
+  scrollbar-gutter: stable;   /* keep the scrollbar's space even while it's hidden */
+}
+
+/* The solid red button in the editor's warning dialogs (Delete, Delete anyway, Discard and
+   load). On hover it looks like an ordinary Delete button's hover; without the text color,
+   its white text stays on the pale hover background and the button looks blank. */
+.editor .dialog--danger .btn--danger:hover:not(:disabled) {
+  border-color: var(--danger-line);
+  color: var(--danger);
 }
