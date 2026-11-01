@@ -60,6 +60,19 @@ class ImportRequest(BaseModel):
     content: str
 
 
+class ChatRequest(BaseModel):
+    message: str = Field(min_length=1, max_length=4000)
+    """What the user typed into the chat."""
+
+
+class AnswerRequest(BaseModel):
+    answer: Literal["confirm", "cancel", "saved"]
+    """``confirm`` or ``cancel`` a confirmation; ``saved`` or ``cancel`` for a save."""
+
+    filename: str | None = Field(default=None, max_length=255)
+    """For ``saved``: the name the file was saved as."""
+
+
 def _download(content: str, filename: str, media_type: str, **headers: str) -> Response:
     return Response(
         content=content.encode("utf-8"),
@@ -166,8 +179,10 @@ def get_item(app: App, area: str, index: int) -> dict:
 
 
 @router.put("/config/{area}/{index}")
-def replace_item(app: App, area: str, index: int, item: JsonObject) -> dict:
-    return app.replace_item(area, index, item)
+def replace_item(app: App, area: str, index: int, item: JsonObject, force: bool = False) -> dict:
+    """Replace the item. ``?force=true`` applies it even if the configuration then has
+    problems (it becomes ``invalid``); an item that is invalid on its own is still refused."""
+    return app.replace_item(area, index, item, force=force)
 
 
 @router.get("/config/{area}/{index}/impact")
@@ -177,8 +192,10 @@ def delete_impact(app: App, area: str, index: int) -> dict:
 
 
 @router.delete("/config/{area}/{index}")
-def delete_item(app: App, area: str, index: int) -> dict:
-    return app.delete_item(area, index)
+def delete_item(app: App, area: str, index: int, force: bool = False) -> dict:
+    """Delete the item. ``?force=true`` deletes it even when the impact preview warns
+    (``can_delete`` false, ``can_force`` true); the configuration may become invalid."""
+    return app.delete_item(area, index, force=force)
 
 
 # -------------------------------------------------------------- generation
@@ -232,3 +249,29 @@ def clear_schedules(app: App) -> dict:
 def schedule_view(app: App, number: int, group: Literal["room", "faculty"] = "room") -> dict:
     """One schedule, grouped by room and lab or by faculty member."""
     return app.schedule_view(number, group)
+
+
+# --------------------------------------------------------------- assistant
+
+
+@router.get("/chat")
+def chat_transcript(app: App) -> dict:
+    """The chat transcript, whether the assistant is available, and whether it is busy."""
+    return app.chat()
+
+
+@router.post("/chat")
+def chat_send(app: App, request: ChatRequest) -> dict:
+    """Send one message. The reply lists the transcript entries it added."""
+    return app.chat_send(request.message)
+
+
+@router.post("/chat/pending/{pending_id}")
+def chat_answer(app: App, pending_id: str, request: AnswerRequest) -> dict:
+    """Confirm or cancel a pending action, or report that a prepared save finished."""
+    return app.chat_answer(pending_id, request.answer, request.filename)
+
+
+@router.delete("/chat")
+def chat_clear(app: App) -> dict:
+    return app.chat_clear()

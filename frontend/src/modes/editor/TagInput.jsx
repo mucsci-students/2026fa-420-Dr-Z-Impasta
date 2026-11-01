@@ -1,3 +1,7 @@
+/**
+ * Used for features: a room's or lab's in ResourceDialog, and a course's required ones in CourseDialog.
+ */
+
 import { useState } from "react";
 
 /** A list of short tags (e.g. features): chips with ×, plus a box to type a new one. */

@@ -15,6 +15,7 @@ from collections.abc import Callable, Mapping
 from datetime import datetime
 from pathlib import PurePath
 
+from zimpasta.controller.assistant import AIClient, Assistant, client_from_environment
 from zimpasta.model import catalog
 from zimpasta.model.generate import DEFAULT_SOLVER_TIMEOUT_MS, GenerationResult, generation_steps
 from zimpasta.model.generation_job import EventLoopRunner, GenerationJob, JobStatus, ThreadRunner
@@ -33,9 +34,15 @@ class AppController:
         solver_timeout_ms: int | None = DEFAULT_SOLVER_TIMEOUT_MS,
         runner: ThreadRunner | EventLoopRunner | None = None,
         max_schedules: int | None = None,
+        ai_client_factory: Callable[[], AIClient] | None = client_from_environment,
+        ai_unavailable_reason: str | None = None,
     ) -> None:
         """``runner`` and ``max_schedules`` are for the browser version (``zimpasta.browser``):
-        generation on the event loop, and at most ``max_schedules`` per run."""
+        generation on the event loop, and at most ``max_schedules`` per run.
+
+        ``ai_client_factory`` creates the AI assistant's connection when it is first used;
+        tests pass a fake. ``None`` means this version has no assistant, for the reason in
+        ``ai_unavailable_reason``."""
         self._clock = clock
         self._lock = threading.RLock()
         self.workspace = ConfigWorkspace(clock=clock)
@@ -48,11 +55,18 @@ class AppController:
             runner=runner,
             max_limit=max_schedules,
         )
+        self.assistant = Assistant(
+            self,
+            client_factory=ai_client_factory,
+            clock=clock,
+            unavailable_reason=ai_unavailable_reason,
+        )
 
     # -------------------------------------------------------------------- state
 
     def state(self) -> dict:
-        """What the header and every mode need to render: config, generation, schedules."""
+        """What the header and every mode need to render: config, generation, schedules,
+        and whether the AI chat is available, busy, or has new entries."""
         with self._lock:
             summary = self.schedules.summary()
             return {
@@ -61,6 +75,7 @@ class AppController:
                 "schedules": {
                     key: summary[key] for key in ("count", "source", "name", "created_at")
                 },
+                "assistant": self.assistant.summary(),
             }
 
     # ------------------------------------------------------------ configuration
@@ -131,15 +146,15 @@ class AppController:
             "index": len(self.workspace.items(area)) - 1,
         }
 
-    def replace_item(self, area: str, index: int, item: object) -> dict:
-        change = self.workspace.replace(area, index, item)
+    def replace_item(self, area: str, index: int, item: object, *, force: bool = False) -> dict:
+        change = self.workspace.replace(area, index, item, force=force)
         return {**self.configuration(), "change": change.to_dict(), "index": index}
 
     def delete_impact(self, area: str, index: int) -> dict:
         return self.workspace.delete_impact(area, index).to_dict()
 
-    def delete_item(self, area: str, index: int) -> dict:
-        change, impact = self.workspace.remove(area, index)
+    def delete_item(self, area: str, index: int, *, force: bool = False) -> dict:
+        change, impact = self.workspace.remove(area, index, force=force)
         return {**self.configuration(), "change": change.to_dict(), "impact": impact.to_dict()}
 
     def update_time_slots(self, values: Mapping) -> dict:
@@ -203,6 +218,23 @@ class AppController:
         with self._lock:
             self.schedules.clear()
             return self.schedules.summary()
+
+    # ---------------------------------------------------------------- assistant
+
+    def chat(self) -> dict:
+        """The chat transcript and whether the assistant can be used."""
+        return self.assistant.transcript()
+
+    def chat_send(self, message: str) -> dict:
+        """Answer one chat message, carrying out the actions it asks for through the tools."""
+        return self.assistant.send(message)
+
+    def chat_answer(self, pending_id: str, answer: str, filename: str | None = None) -> dict:
+        """Confirm or cancel a pending action, or report that a prepared save finished."""
+        return self.assistant.answer(pending_id, answer, filename)
+
+    def chat_clear(self) -> dict:
+        return self.assistant.clear()
 
 
 def _file_name(name: str) -> str:
