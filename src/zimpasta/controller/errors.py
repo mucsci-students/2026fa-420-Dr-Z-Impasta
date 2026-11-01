@@ -97,30 +97,35 @@ async def _model_error(request: Request, error: Exception) -> JSONResponse:
         extra["impact"] = error.impact.to_dict()
     return _respond(
         _status_for(error),
-        error.code,
-        error.message,
+        getattr(error, "code", ""),
+        getattr(error, "message", ""),
         issues=getattr(error, "issues", ()),
         **extra,
     )
 
 
-async def _bad_request(request: Request, error: RequestValidationError) -> JSONResponse:
-    details = [
-        {
-            "location": ".".join(str(part) for part in detail.get("loc", ())),
-            "message": detail.get("msg", "Invalid value."),
-        }
-        for detail in error.errors()
-    ]
-    first = details[0]["message"] if details else "Invalid request."
-    return _respond(400, "bad_request", f"The request was not understood: {first}", details=details)
+async def _bad_request(request: Request, error: RequestValidationError | Exception) -> JSONResponse:
+    if isinstance(error, RequestValidationError):
+        details = [
+            {
+                "location": ".".join(str(part) for part in detail.get("loc", ())),
+                "message": detail.get("msg", "Invalid value."),
+            }
+            for detail in error.errors()
+        ]
+        first = details[0]["message"] if details else "Invalid request."
+        return _respond(400, "bad_request", f"The request was not understood: {first}", details=details)
+    else:
+        return _respond(400, "bad_request", "The request was not understood")
 
 
-async def _http_error(request: Request, error: HTTPException) -> JSONResponse:
-    code = "not_found" if error.status_code == 404 else "http_error"
-    message = "There is no such API endpoint." if error.status_code == 404 else str(error.detail)
-    return _respond(error.status_code, code, message)
-
+async def _http_error(request: Request, error: HTTPException | Exception) -> JSONResponse:
+    if isinstance(error, HTTPException):
+        code = "not_found" if error.status_code == 404 else "http_error"
+        message = "There is no such API endpoint." if error.status_code == 404 else str(error.detail)
+        return _respond(error.status_code, code, message)
+    else:
+        return _respond(400, "error", str(error))
 
 async def _unexpected(request: Request, error: Exception) -> JSONResponse:
     reference = uuid.uuid4().hex[:8]
