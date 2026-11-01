@@ -5,17 +5,13 @@
  * Faculty "Any" saves null: anyone whose course preferences include this course can teach it.
  */
 
-import { useState } from "react";
-import Button from "../../../components/Button.jsx";
-import ConfirmDialog from "../../../components/ConfirmDialog.jsx";
-import Dialog from "../../../components/Dialog.jsx";
-import ErrorMessage from "../../../components/ErrorMessage.jsx";
 import Field from "../../../components/Field.jsx";
-import UnsavedChangesPrompt from "../../../components/UnsavedChangesPrompt.jsx";
-import { issuesFor } from "../../../components/issues.js";
+import { formIssues } from "../../../components/issues.js";
 import CheckboxList from "../CheckboxList.jsx";
 import TagInput from "../TagInput.jsx";
 import { MODALITY_NAMES } from "../labels.js";
+import EditDialog from "./EditDialog.jsx";
+import { useDraft } from "./useDraft.js";
 
 const NEW_COURSE = {
   course_id: "",
@@ -58,142 +54,92 @@ export default function CourseDialog({
   onCancel,
   onDelete
 }) {
-
   const isNew = index === null;
   const original = { ...NEW_COURSE, ...course };   // fill defaults the document may omit
-  const [draft, setDraft] = useState(original);
-  const isDirty = JSON.stringify(draft) !== JSON.stringify(original);
-  const [confirmingDiscard, setConfirmingDiscard] = useState(false);
+  const { draft, set, isDirty } = useDraft(original);
   const modalities = options?.modalities?.length ? options.modalities : Object.keys(MODALITY_NAMES);
-  // Problems that have no field in this dialog to appear under; the banner lists them instead
-  const FIELDS = [ "course_id", "section_id", "credits", "capacity", "modality", "room", "required_room_features", "lab", "required_lab_features", "reserve_room_during_lab", "faculty", "conflicts" ];
-  const unplaced = (error?.issues ?? []).filter((issue) =>
-    issue.area !== "courses" ||
-    (index !== null && issue.index !== index) ||
-    !FIELDS.some((f) => issue.field === f || issue.field?.startsWith(`${f}.`)),
-  );
-
-  /** Cancel, Escape, or ×: ask first if there are unsaved edits. */
-  function requestClose() {
-    if (isDirty) setConfirmingDiscard(true);
-    else onCancel?.();
-  }
-
-  /** Change one field of the draft. */
-  function set(field, value) {
-    setDraft((d) => ({ ...d, [field]: value }));
-  }
-
-  /** The library's message for one field, if the last Save was rejected. */
-  function errorFor(field) {
-    const found = issuesFor(error?.issues, { area: "courses", index: index ?? undefined, field });
-    return found.length > 0 ? found.map((issue) => issue.message).join(" ") : undefined;
-  }
-
-
-  /** A function to assign the input field the 'input-error' class if it contains invalid data */
-  function classNameFunc(field) {
-    if ((error?.issues ?? []).some((issue) => issue.field === field)) {
-      return "input-error";
-    } else {
-      return "";
-    }
-  }
+  const { errorFor, errorClass, unplaced } = formIssues(error?.issues, {
+    area: "courses",
+    index: index ?? undefined,
+    fields: [
+      "course_id", "section_id", "credits", "capacity", "modality", "room", "required_room_features",
+      "lab", "required_lab_features", "reserve_room_during_lab", "faculty", "conflicts",
+    ],
+  });
 
   // A course can't conflict with itself; keep any saved IDs even if no course has them now.
   const conflictOptions = [...new Set([...courseIds, ...draft.conflicts])].filter((id) => id !== draft.course_id);
 
-  // The prompts are siblings of the Dialog, not children; see ResourceDialog.
   return (
-    <>
-      <Dialog
-        open
-        title={isNew ? "Add course" : `Edit ${label ?? original.course_id}`}
-        onClose={requestClose}
-        actions={
-          <>
-            {!isNew && (
-              <Button variant="danger" onClick={onDelete} disabled={busy}>Delete</Button>
-            )}
-            <Button onClick={requestClose} disabled={busy}>Cancel</Button>
-            <Button variant="primary" busy={busy} onClick={() => onSave?.(draft)}>
-              {isNew ? "Add course" : "Save"}
-            </Button>
-          </>
-        }
-      >
-        <ErrorMessage error={error && { message: "The change was not applied.", issues: unplaced }} title="Not saved." />
-
-        <div className="form-grid">
-          <Field label="Course ID" required help="Repeating an ID adds another section." error={errorFor("course_id")}>
-            <input className={classNameFunc("course_id")} value={draft.course_id} onChange={(e) => set("course_id", e.target.value)} placeholder="CMSC 140" data-autofocus />
-          </Field>
-          <Field label="Section" help="Leave blank to number sections automatically (.01, .02…)." error={errorFor("section_id")}>
-            <input className={classNameFunc("section_id")} value={draft.section_id ?? ""} onChange={(e) => set("section_id", e.target.value === "" ? null : e.target.value)} />
-          </Field>
-          <Field label="Credits" required error={errorFor("credits")}>
-            <input className={classNameFunc("credits")} type="number" min={1} value={draft.credits ?? ""} onChange={(e) => set("credits", toNumber(e.target.value))} />
-          </Field>
-          <Field label="Capacity" required help="Most students the section can hold." error={errorFor("capacity")}>
-            <input className={classNameFunc("capacity")} type="number" min={1} value={draft.capacity ?? ""} onChange={(e) => set("capacity", toNumber(e.target.value))} />
-          </Field>
-        </div>
-
-        <Field label="Modality" error={errorFor("modality")}>
-          <select value={draft.modality} onChange={(e) => set("modality", e.target.value)}>
-            {modalities.map((m) => (
-              <option key={m} value={m}>{MODALITY_NAMES[m] ?? m}</option>
-            ))}
-          </select>
+    <EditDialog
+      title={isNew ? "Add course" : `Edit ${label ?? original.course_id}`}
+      what="this course"
+      isDirty={isDirty}
+      error={error}
+      unplaced={unplaced}
+      busy={busy}
+      saveLabel={isNew ? "Add course" : "Save"}
+      onSave={() => onSave?.(draft)}
+      onCancel={onCancel}
+      onDelete={isNew ? undefined : onDelete}
+    >
+      <div className="form-grid">
+        <Field label="Course ID" required help="Repeating an ID adds another section." error={errorFor("course_id")}>
+          <input className={errorClass("course_id")} value={draft.course_id} onChange={(e) => set("course_id", e.target.value)} placeholder="CMSC 140" data-autofocus />
         </Field>
-
-        <CheckboxList legend="Rooms" options={rooms} value={draft.room} onChange={(v) => set("room", v)} empty="No rooms yet" error={errorFor("room")} fieldName="room" />
-        <Field label="Required room features" help="Only rooms with every tag can hold this course." error={errorFor("required_room_features")}>
-          <TagInput value={draft.required_room_features} onChange={(tags) => set("required_room_features", tags)} suggestions={roomFeatures} />
+        <Field label="Section" help="Leave blank to number sections automatically (.01, .02…)." error={errorFor("section_id")}>
+          <input className={errorClass("section_id")} value={draft.section_id ?? ""} onChange={(e) => set("section_id", e.target.value === "" ? null : e.target.value)} />
         </Field>
+        <Field label="Credits" required error={errorFor("credits")}>
+          <input className={errorClass("credits")} type="number" min={1} value={draft.credits ?? ""} onChange={(e) => set("credits", toNumber(e.target.value))} />
+        </Field>
+        <Field label="Capacity" required help="Most students the section can hold." error={errorFor("capacity")}>
+          <input className={errorClass("capacity")} type="number" min={1} value={draft.capacity ?? ""} onChange={(e) => set("capacity", toNumber(e.target.value))} />
+        </Field>
+      </div>
 
-        <CheckboxList legend="Labs" className={classNameFunc("lab")} options={labs} value={draft.lab} onChange={(v) => set("lab", v)} empty="No labs yet" error={errorFor("lab")} fieldName="lab" />
-        {draft.lab.length > 0 && (
-          <>
-            <Field label="Required lab features" help="Only labs with every tag can hold the lab meeting." error={errorFor("required_lab_features")}>
-              <TagInput value={draft.required_lab_features} onChange={(tags) => set("required_lab_features", tags)} suggestions={labFeatures} />
-            </Field>
-            <label className="checkbox">
-              <input type="checkbox" checked={draft.reserve_room_during_lab} onChange={(e) => set("reserve_room_during_lab", e.target.checked)} />
-              Keep the room reserved during the lab
-            </label>
-          </>
-        )}
+      <Field label="Modality" error={errorFor("modality")}>
+        <select value={draft.modality} onChange={(e) => set("modality", e.target.value)}>
+          {modalities.map((m) => (
+            <option key={m} value={m}>{MODALITY_NAMES[m] ?? m}</option>
+          ))}
+        </select>
+      </Field>
 
-        <fieldset className="checkbox-list">
-          <legend>Faculty</legend>
+      <CheckboxList legend="Rooms" options={rooms} value={draft.room} onChange={(v) => set("room", v)} empty="No rooms yet" error={errorFor("room")} fieldName="room" />
+      <Field label="Required room features" help="Only rooms with every tag can hold this course." error={errorFor("required_room_features")}>
+        <TagInput value={draft.required_room_features} onChange={(tags) => set("required_room_features", tags)} suggestions={roomFeatures} />
+      </Field>
+
+      <CheckboxList legend="Labs" className={errorClass("lab")} options={labs} value={draft.lab} onChange={(v) => set("lab", v)} empty="No labs yet" error={errorFor("lab")} fieldName="lab" />
+      {draft.lab.length > 0 && (
+        <>
+          <Field label="Required lab features" help="Only labs with every tag can hold the lab meeting." error={errorFor("required_lab_features")}>
+            <TagInput value={draft.required_lab_features} onChange={(tags) => set("required_lab_features", tags)} suggestions={labFeatures} />
+          </Field>
           <label className="checkbox">
-            <input type="radio" name="faculty-mode" checked={draft.faculty === null} onChange={() => set("faculty", null)} />
-            Any (from faculty course preferences)
+            <input type="checkbox" checked={draft.reserve_room_during_lab} onChange={(e) => set("reserve_room_during_lab", e.target.checked)} />
+            Keep the room reserved during the lab
           </label>
-          <label className={`checkbox ${classNameFunc("faculty")}`}>
-            <input className={classNameFunc("faculty")} type="radio" name="faculty-mode" checked={draft.faculty !== null} onChange={() => set("faculty", original.faculty ?? [])} />
-            Specific
-          </label>
-        </fieldset>
-        {draft.faculty !== null && (
-          <CheckboxList legend="Who can teach it" options={faculty} value={draft.faculty} onChange={(v) => set("faculty", v)} empty="No faculty yet" error={errorFor("faculty")} fieldName="faculty" />
-        )}
+        </>
+      )}
 
-        <CheckboxList legend="Conflicts" options={conflictOptions} value={draft.conflicts} onChange={(v) => set("conflicts", v)} empty="No other courses" error={errorFor("conflicts")} />
-      </Dialog>
-      <UnsavedChangesPrompt when={isDirty} />
-      <ConfirmDialog
-        open={confirmingDiscard}
-        title="Discard changes?"
-        destructive
-        confirmLabel="Discard"
-        cancelLabel="Keep editing"
-        onConfirm={onCancel}
-        onCancel={() => setConfirmingDiscard(false)}
-      >
-        <p>Your changes to this course haven't been saved.</p>
-      </ConfirmDialog>
-    </>
+      <fieldset className="checkbox-list">
+        <legend>Faculty</legend>
+        <label className="checkbox">
+          <input type="radio" name="faculty-mode" checked={draft.faculty === null} onChange={() => set("faculty", null)} />
+          Any (from faculty course preferences)
+        </label>
+        <label className={`checkbox ${errorClass("faculty")}`}>
+          <input className={errorClass("faculty")} type="radio" name="faculty-mode" checked={draft.faculty !== null} onChange={() => set("faculty", original.faculty ?? [])} />
+          Specific
+        </label>
+      </fieldset>
+      {draft.faculty !== null && (
+        <CheckboxList legend="Who can teach it" options={faculty} value={draft.faculty} onChange={(v) => set("faculty", v)} empty="No faculty yet" error={errorFor("faculty")} fieldName="faculty" />
+      )}
+
+      <CheckboxList legend="Conflicts" options={conflictOptions} value={draft.conflicts} onChange={(v) => set("conflicts", v)} empty="No other courses" error={errorFor("conflicts")} />
+    </EditDialog>
   );
 }
