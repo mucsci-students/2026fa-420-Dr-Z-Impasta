@@ -17,12 +17,23 @@ export const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
 export const START_HOUR = 8;
 export const END_HOUR = 20;
 
+/** Short codes for the days line on timetable blocks, e.g. "MWF" or "TTh". */
+const DAY_CODES = ["M", "T", "W", "Th", "F"];
+
 /** Format minutes after midnight as HH:MM, or return TBA for missing or NaN values. */
 export function formatMinutes(minutes) {
   if (minutes == null || Number.isNaN(minutes)) return "TBA";
   const hours = String(Math.floor(minutes / 60)).padStart(2, "0");
   const mins = String(minutes % 60).padStart(2, "0");
   return `${hours}:${mins}`;
+}
+
+/** Turn day numbers (1 = Monday … 5 = Friday) into a compact string like "MWF". */
+export function formatDays(dayNumbers) {
+  return [...dayNumbers]
+    .sort((a, b) => a - b)
+    .map((day) => DAY_CODES[day - 1])
+    .join("");
 }
 
 const GROUP_TYPES = {
@@ -39,9 +50,38 @@ function placeOf(meeting) {
   return (meeting.kind === "lab" ? meeting.lab : meeting.room) ?? "";
 }
 
+/**
+ * Which part of a section a meeting belongs to. A section's lectures and its lab
+ * meet on different days, so each gets its own days list ("MF" vs "W").
+ */
+function sectionPartKey(meeting) {
+  return `${meeting.course_id}.${meeting.section}:${meeting.kind === "lab" ? "lab" : "lecture"}`;
+}
+
+/**
+ * Every weekday each section part meets on, across all groups in the schedule —
+ * so a block still lists the section's other days when they are in another room.
+ */
+function daysBySectionPart(groups) {
+  const days = new Map();
+  for (const group of groups) {
+    for (const meeting of group.meetings ?? []) {
+      const day = meeting.day_number;
+      if (!(day >= 1 && day <= DAYS.length)) continue;
+      const key = sectionPartKey(meeting);
+      if (!days.has(key)) days.set(key, new Set());
+      days.get(key).add(day);
+    }
+  }
+  return days;
+}
+
 /** The server's groups as cards, each with the events the timetable and table show. */
 export function toGroups(view) {
-  return (view?.groups ?? []).map((group) => ({
+  const groups = view?.groups ?? [];
+  const sectionDays = daysBySectionPart(groups);
+
+  return groups.map((group) => ({
     key: `${group.kind}:${group.name}`,
     name: group.name,
     type: GROUP_TYPES[group.kind] ?? "Unassigned",
@@ -55,6 +95,7 @@ export function toGroups(view) {
       isLab: meeting.kind === "lab",
       isOnline: meeting.delivery === "online",
       day: DAYS[meeting.day_number - 1] ?? null,
+      days: formatDays(sectionDays.get(sectionPartKey(meeting)) ?? []),
       start: meeting.start,
       end: meeting.end,
     })),
