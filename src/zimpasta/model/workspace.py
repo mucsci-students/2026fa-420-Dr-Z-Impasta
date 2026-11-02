@@ -19,15 +19,38 @@ Status
     configuration. An incomplete configuration cannot be saved or used for generation.
 ``valid``
     The library accepts the whole configuration. From here an edit is committed only if
-    the result is still valid, so a valid configuration never becomes invalid.
+    the result is still valid. The exceptions are a delete the user confirms despite the
+    warning (``remove(..., force=True)``) and a forced replace (``replace(..., force=True)``,
+    used by a class pattern's On/Off switch), which may leave it incomplete or invalid.
+``invalid``
+    The library rejects the configuration, but every item is still valid on its own; only
+    problems between items remain, such as a section left without a room. Reached only
+    by a forced delete or replace. While invalid, any edit that keeps every item valid on its own is
+    committed, even one that adds problems; ``issues`` always lists what is still wrong.
+    A delete that would add problems still needs ``force``, so the user sees a warning
+    first. An invalid configuration cannot be saved or used for generation.
+
+    A forced change can also leave the configuration incomplete (deleting the last room,
+    say). The library then skips its checks between items, so the edit that completes the
+    configuration again is committed even if those checks now find problems; the
+    configuration becomes invalid and lists them.
+
+Warnings
+--------
+A valid configuration can still have no schedule at all, for example after disabling the
+only class pattern that puts a faculty member on their mandatory day. After every change
+the workspace runs the library's quick static checks (:mod:`zimpasta.model.feasibility`)
+and keeps what they find in ``warnings``. Warnings never block an edit.
 
 Unsaved changes
 ---------------
-Each committed change bumps ``revision`` and adds a :class:`Change` to a journal.
-``mark_saved`` records which revision the user saved; ``dirty`` is true while newer
-changes exist. ``new`` and ``load_text`` refuse to discard unsaved changes unless called
-with ``discard_changes=True``, raising :class:`UnsavedChanges` with the journal so the
-view can list what would be lost.
+Each committed change bumps ``revision`` and adds a :class:`Change` to a journal, unless
+it brings the configuration back to how it was: then the changes it undid leave the
+journal (turning a pattern off and on again leaves nothing to save, and so does adding a
+room and deleting it). ``mark_saved`` records which revision the user saved; ``dirty`` is
+true while the configuration differs from the saved one. ``new`` and ``load_text`` refuse
+to discard unsaved changes unless called with ``discard_changes=True``, raising
+:class:`UnsavedChanges` with the journal so the view can list what would be lost.
 
 Items are addressed by area (``rooms``, ``labs``, ``courses``, ``faculty``,
 ``patterns``) and position, because course ids repeat across sections.
@@ -37,7 +60,8 @@ import copy
 import dataclasses
 import json
 import threading
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Generator, Mapping
+from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import datetime
 from enum import StrEnum
@@ -56,6 +80,7 @@ from scheduler.config import ClassPattern
 
 from zimpasta.model import references as refs
 from zimpasta.model.defaults import empty_configuration
+from zimpasta.model.feasibility import schedule_problems
 from zimpasta.model.issues import COLLECTIONS, Issue, issue, issues_from_error
 
 AREAS: tuple[str, ...] = tuple(COLLECTIONS)
@@ -84,6 +109,7 @@ _SUMMARY_FIELDS = 3
 class ConfigStatus(StrEnum):
     NONE = "none"
     INCOMPLETE = "incomplete"
+    INVALID = "invalid"
     VALID = "valid"
 
 
@@ -148,11 +174,13 @@ class DeleteBlocked(WorkspaceError):
 class NotValid(WorkspaceError):
     code = "configuration_incomplete"
 
-    def __init__(self, issues: tuple[Issue, ...]) -> None:
-        super().__init__(
-            "The configuration is not complete yet. " + " ".join(i.message for i in issues),
-            issues=issues,
+    def __init__(self, issues: tuple[Issue, ...], *, invalid: bool = False) -> None:
+        intro = (
+            "The configuration has problems to fix first."
+            if invalid
+            else "The configuration is not complete yet."
         )
+        super().__init__(intro + " " + " ".join(i.message for i in issues), issues=issues)
 
 
 @dataclass(frozen=True)
@@ -202,7 +230,7 @@ class ExportedConfig:
 @dataclass(frozen=True)
 class _Evaluation:
     status: ConfigStatus | None
-    """``None`` when the library rejects the document outright."""
+    """``None`` when an item is not valid even on its own, so the document can't be kept."""
 
     config: CombinedConfig | None
     issues: tuple[Issue, ...]
@@ -216,15 +244,25 @@ class ConfigWorkspace:
     def __init__(self, *, clock: Callable[[], datetime] = datetime.now) -> None:
         self._lock = threading.RLock()
         self._clock = clock
-        self._status = ConfigStatus.NONE
+        self._status: ConfigStatus = ConfigStatus.NONE
         self._document: dict | None = None
         self._config: CombinedConfig | None = None
         self._issues: tuple[Issue, ...] = ()
+        self._warnings: tuple[Issue, ...] = ()
         self._name: str | None = None
         self._revision = 0
         self._saved_revision = 0
+        self._saved_document: dict | None = None
+        """The configuration as last saved or loaded, to tell when edits return to it."""
         self._changes: list[Change] = []
+        self._states: list[dict] = []
+        """The document after each change in ``_changes``, in the same order."""
+        self._exported: tuple[int, dict] | None = None
+        """The revision and document last exported, which ``mark_saved`` usually names."""
         self._validated_at: datetime | None = None
+        self._forced = False
+        """Whether a forced change left the configuration not valid (cleared once valid).
+        True whenever the status is ``invalid``."""
 
     # ------------------------------------------------------------------ reading
 
@@ -242,8 +280,14 @@ class ConfigWorkspace:
         return self._revision
 
     @property
+    def saved_revision(self) -> int:
+        """The newest revision the user has saved to a file."""
+        return self._saved_revision
+
+    @property
     def dirty(self) -> bool:
-        return self._revision != self._saved_revision
+        """Whether the configuration differs from the saved one (see "Unsaved changes")."""
+        return bool(self._changes)
 
     @property
     def changes(self) -> tuple[Change, ...]:
@@ -256,8 +300,13 @@ class ConfigWorkspace:
 
     @property
     def issues(self) -> tuple[Issue, ...]:
-        """What keeps an incomplete configuration from being valid; empty otherwise."""
+        """What keeps an incomplete or invalid configuration from being valid; empty otherwise."""
         return self._issues
+
+    @property
+    def warnings(self) -> tuple[Issue, ...]:
+        """What keeps a valid configuration from having any schedule (see "Warnings")."""
+        return self._warnings
 
     def document(self) -> dict | None:
         """A copy of the configuration as a ``CombinedConfig`` JSON document."""
@@ -307,6 +356,7 @@ class ConfigWorkspace:
                 "dirty": self.dirty,
                 "changes": [change.to_dict() for change in self._changes],
                 "issues": [problem.to_dict() for problem in self._issues],
+                "warnings": [problem.to_dict() for problem in self._warnings],
                 "validated_at": (
                     self._validated_at.isoformat(timespec="seconds") if self._validated_at else None
                 ),
@@ -393,13 +443,14 @@ class ConfigWorkspace:
             if self._status is ConfigStatus.NONE:
                 raise NoConfiguration()
             if self._config is None:
-                raise NotValid(self._issues)
+                raise NotValid(self._issues, invalid=self._status is ConfigStatus.INVALID)
             return self._config
 
     def export_text(self) -> ExportedConfig:
         """The configuration serialized by the library, ready to be written as UTF-8 JSON."""
         with self._lock:
             config = self.require_valid()
+            self._exported = (self._revision, copy.deepcopy(self._require_document()))
             return ExportedConfig(
                 content=config.model_dump_json(indent=2) + "\n",
                 filename=self._name or DEFAULT_FILENAME,
@@ -412,8 +463,15 @@ class ConfigWorkspace:
             self._require_document()
             if not 0 <= revision <= self._revision:
                 raise WorkspaceError(f"Revision {revision} does not exist.")
+            saved = self._document_at(revision)
+            if saved is not None:
+                self._saved_document = saved
             self._saved_revision = max(self._saved_revision, revision)
-            self._changes = [change for change in self._changes if change.revision > revision]
+            kept = [i for i, change in enumerate(self._changes) if change.revision > revision]
+            self._changes = [self._changes[i] for i in kept]
+            self._states = [self._states[i] for i in kept]
+            if self._document == self._saved_document:
+                self._changes, self._states = [], []
             if filename:
                 self._name = filename
 
@@ -431,8 +489,12 @@ class ConfigWorkspace:
                 lambda doc: ("added", area, f"Added {self._noun(area, doc, index)}"),
             )
 
-    def replace(self, area: str, index: int, item: object) -> Change:
-        """Replace item ``index`` of ``area``. A new name also renames references to it."""
+    def replace(self, area: str, index: int, item: object, *, force: bool = False) -> Change:
+        """Replace item ``index`` of ``area``. A new name also renames references to it.
+
+        With ``force`` the change is committed even if it leaves the configuration
+        incomplete or invalid (see "Status"), as long as the item is valid on its own.
+        """
         with self._lock:
             document = self._require_document()
             old = self._item(document, area, index)
@@ -451,7 +513,7 @@ class ConfigWorkspace:
                     summary += f" ({count} {'reference' if count == 1 else 'references'} updated)"
                 return "edited", area, summary
 
-            return self._commit(candidate, describe)
+            return self._commit(candidate, describe, force=force)
 
     def delete_impact(self, area: str, index: int) -> refs.DeleteImpact:
         """What deleting item ``index`` of ``area`` would block, remove, or break."""
@@ -459,25 +521,44 @@ class ConfigWorkspace:
             document = self._require_document()
             self._item(document, area, index)
             impact = refs.delete_impact(document, area, index)
-            if impact.blocking:
-                return impact
             evaluation = self._evaluate(refs.apply_delete(document, area, index))
-            if not self._acceptable(evaluation.status):
-                impact = dataclasses.replace(impact, problems=self._blocking(evaluation.issues))
+            if not self._acceptable(evaluation):
+                problems = self._blocking(evaluation.issues)
+            elif evaluation.status is not ConfigStatus.VALID and self._forced:
+                # Already broken: edits are accepted anyway, but a delete still warns about
+                # any problem it adds.
+                problems = self._new_problems(evaluation.issues)
+            else:
+                problems = ()
+            if problems:
+                impact = dataclasses.replace(
+                    impact, problems=problems, can_force=evaluation.status is not None
+                )
             return impact
 
-    def remove(self, area: str, index: int) -> tuple[Change, refs.DeleteImpact]:
-        """Delete item ``index`` of ``area`` and its optional references, if nothing blocks it."""
+    def remove(
+        self, area: str, index: int, *, force: bool = False
+    ) -> tuple[Change, refs.DeleteImpact]:
+        """Delete item ``index`` of ``area`` and its references to it.
+
+        Without ``force`` the delete is refused when it would leave a section without its
+        only room, lab, or faculty member, or make the configuration invalid. With
+        ``force`` (the user saw the warning and confirmed) it goes ahead anyway, and the
+        configuration may become incomplete or invalid. A delete that would leave an item
+        invalid on its own is refused either way.
+        """
         with self._lock:
             impact = self.delete_impact(area, index)
-            if not impact.can_delete:
+            if not (impact.can_delete or (force and impact.can_force)):
                 raise DeleteBlocked(impact)
             candidate = refs.apply_delete(self._require_document(), area, index)
             summary = f"Removed {refs.AREA_NOUNS[area]} {impact.label}"
-            if impact.cascades:
-                count = len(impact.cascades)
-                summary += f" and {count} {'reference' if count == 1 else 'references'} to it"
-            change = self._commit(candidate, lambda doc: ("removed", area, summary))
+            references = len(impact.blocking) + len(impact.cascades)
+            if references:
+                summary += (
+                    f" and {references} {'reference' if references == 1 else 'references'} to it"
+                )
+            change = self._commit(candidate, lambda doc: ("removed", area, summary), force=force)
             return change, impact
 
     def update_time_slots(self, values: Mapping[str, object]) -> Change:
@@ -487,6 +568,49 @@ class ConfigWorkspace:
     def update_settings(self, values: Mapping[str, object]) -> Change:
         """Change the generation limit and optimizer flags."""
         return self._update_section(None, "settings", SETTINGS_FIELDS, values)
+
+    @contextmanager
+    def transaction(self) -> Generator[None]:
+        """Make several edits as one: if any of them raises, undo all of them.
+
+        Each edit inside is still validated by the library as it is made, so the result
+        is valid whenever the block finishes. The lock is held throughout, so nothing
+        else changes the configuration in between. Used for combined edits requested
+        through the AI assistant.
+        """
+        with self._lock:
+            saved = (
+                self._status,
+                self._document,
+                self._config,
+                self._issues,
+                self._warnings,
+                self._name,
+                self._revision,
+                self._saved_revision,
+                list(self._changes),
+                list(self._states),
+                self._validated_at,
+                self._forced,
+            )
+            try:
+                yield
+            except BaseException:
+                (
+                    self._status,
+                    self._document,
+                    self._config,
+                    self._issues,
+                    self._warnings,
+                    self._name,
+                    self._revision,
+                    self._saved_revision,
+                    self._changes,
+                    self._states,
+                    self._validated_at,
+                    self._forced,
+                ) = saved
+                raise
 
     # ---------------------------------------------------------------- internals
 
@@ -513,29 +637,74 @@ class ConfigWorkspace:
                 lambda doc: ("updated", area, f"{noun}: {_diff(before, {**before, **values})}"),
             )
 
-    def _commit(self, candidate: dict, describe) -> Change:
+    def _commit(self, candidate: dict, describe, *, force: bool = False) -> Change:
         evaluation = self._evaluate(candidate)
-        if not self._acceptable(evaluation.status):
+        if not self._acceptable(evaluation, force=force):
             issues = self._blocking(evaluation.issues)
             raise EditRejected(_rejection_message(issues), issues=issues)
         action, area, summary = describe(evaluation.document)
         self._revision += 1
+        self._forced = evaluation.status is not ConfigStatus.VALID and (force or self._forced)
         self._apply(evaluation)
         change = Change(self._revision, action, area, summary)
-        self._changes.append(change)
+        self._record(change)
         return change
 
+    def _record(self, change: Change) -> None:
+        """Add ``change`` to the journal, or, if it brings the configuration back to an
+        earlier state, drop the changes it undid instead."""
+        if self._document == self._saved_document:
+            self._changes, self._states = [], []
+            return
+        for position, state in enumerate(self._states):
+            if state == self._document:
+                del self._changes[position + 1 :]
+                del self._states[position + 1 :]
+                return
+        self._changes.append(change)
+        self._states.append(copy.deepcopy(self._require_document()))
+
+    def _document_at(self, revision: int) -> dict | None:
+        """The document as it was at ``revision``, if the workspace still knows it."""
+        if revision == self._revision:
+            return copy.deepcopy(self._document)
+        if self._exported is not None and self._exported[0] == revision:
+            return copy.deepcopy(self._exported[1])
+        for change, state in zip(self._changes, self._states, strict=True):
+            if change.revision == revision:
+                return copy.deepcopy(state)
+        return None
+
     def _blocking(self, issues: tuple[Issue, ...]) -> tuple[Issue, ...]:
-        """The problems that caused a rejection, without an incomplete configuration's
-        standing "add at least one ..." notes, which are not the edit's fault."""
-        if self._status is not ConfigStatus.INCOMPLETE:
+        """The problems that caused a rejection, without the ones the configuration
+        already had (an incomplete configuration's "add at least one ..." notes, or an
+        invalid configuration's problems), which are not the edit's fault."""
+        if self._status is ConfigStatus.INCOMPLETE:
+            causes = tuple(problem for problem in issues if not problem.is_missing_required_item)
+        elif self._status is ConfigStatus.INVALID:
+            causes = self._new_problems(issues)
+        else:
             return issues
-        causes = tuple(problem for problem in issues if not problem.is_missing_required_item)
         return causes or issues
 
-    def _acceptable(self, status: ConfigStatus | None) -> bool:
+    def _new_problems(self, issues: tuple[Issue, ...]) -> tuple[Issue, ...]:
+        """The problems in ``issues`` that the configuration doesn't already have.
+
+        Compared by code and message, not position, because a delete shifts indexes.
+        """
+        known = {(problem.code, problem.message) for problem in self._issues}
+        return tuple(problem for problem in issues if (problem.code, problem.message) not in known)
+
+    def _acceptable(self, evaluation: _Evaluation, *, force: bool = False) -> bool:
+        status = evaluation.status
         if status is ConfigStatus.VALID:
             return True
+        if status is None:
+            return False
+        if force:
+            return True
+        if self._forced:
+            return True  # already broken by a forced delete; see "Status" above
         return status is ConfigStatus.INCOMPLETE and self._status is ConfigStatus.INCOMPLETE
 
     def _evaluate(self, document: dict) -> _Evaluation:
@@ -545,21 +714,31 @@ class ConfigWorkspace:
             issues = tuple(issues_from_error(error))
             if issues and all(problem.is_missing_required_item for problem in issues):
                 return _Evaluation(ConfigStatus.INCOMPLETE, None, issues, _canonical(document))
-            return _Evaluation(None, None, issues, None)
+            try:
+                canonical = _canonical(document)
+            except ValidationError:
+                return _Evaluation(None, None, issues, None)  # an item is invalid on its own
+            return _Evaluation(ConfigStatus.INVALID, None, issues, canonical)
         return _Evaluation(ConfigStatus.VALID, config, (), json.loads(config.model_dump_json()))
 
     def _reset(self, evaluation: _Evaluation, *, name: str | None) -> None:
         self._revision += 1
         self._saved_revision = self._revision
-        self._changes = []
+        self._changes, self._states = [], []
+        self._exported = None
         self._name = name
+        self._forced = False
         self._apply(evaluation)
+        self._saved_document = copy.deepcopy(self._document)
 
     def _apply(self, evaluation: _Evaluation) -> None:
+        if evaluation.status is None:
+            raise RuntimeError("A rejected document can't be applied.")  # callers check first
         self._status = evaluation.status
         self._document = evaluation.document
         self._config = evaluation.config
         self._issues = evaluation.issues
+        self._warnings = schedule_problems(evaluation.config) if evaluation.config else ()
         self._validated_at = self._clock()
 
     def _guard_unsaved(self, discard_changes: bool) -> None:

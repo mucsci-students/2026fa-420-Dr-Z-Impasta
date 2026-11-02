@@ -14,6 +14,9 @@ Pyodide has no threads, which changes two things:
   (:class:`~zimpasta.model.generation_job.EventLoopRunner`) and is limited to
   :data:`MAX_SCHEDULES` per run, since the page's Python is busy while it solves.
 
+The AI assistant is off here (:data:`NO_ASSISTANT`): its OpenAI key must never reach the
+browser, and ``openai`` isn't installed in Pyodide.
+
 Nothing else imports this module, and importing it loads nothing else: the worker reads
 :data:`REQUIREMENTS` before they are installed.
 """
@@ -34,12 +37,17 @@ WITHOUT_DEPENDENCIES = ("course-constraint-scheduler==3.0.0",)
 """Installed without dependencies: the library also requires ``uvicorn[standard]`` for its
 own server, which has no WebAssembly build and isn't used here."""
 
+NO_ASSISTANT = (
+    "The AI assistant isn't available in the browser version, because the OpenAI key can't "
+    "be sent to the browser. Run the app locally with `uv run zimpasta --gui` to use it."
+)
+
 _app = None
 
 
 async def install() -> None:
     """Install :data:`REQUIREMENTS` into Pyodide."""
-    import micropip  # only exists on Pyodide
+    import micropip  # ty: ignore[unresolved-import]  (only exists on Pyodide)
 
     await micropip.install(list(REQUIREMENTS))
     await micropip.install(list(WITHOUT_DEPENDENCIES), deps=False)
@@ -50,7 +58,7 @@ def start() -> None:
     global _app
     import anyio.to_thread
 
-    anyio.to_thread.run_sync = run_inline
+    anyio.to_thread.run_sync = run_inline  # ty: ignore[invalid-assignment]
     _app = create_browser_app()
 
 
@@ -59,7 +67,14 @@ def create_browser_app():
     from zimpasta.controller import AppController, create_app
     from zimpasta.model.generation_job import EventLoopRunner
 
-    return create_app(AppController(runner=EventLoopRunner(), max_schedules=MAX_SCHEDULES))
+    return create_app(
+        AppController(
+            runner=EventLoopRunner(),
+            max_schedules=MAX_SCHEDULES,
+            ai_client_factory=None,
+            ai_unavailable_reason=NO_ASSISTANT,
+        )
+    )
 
 
 async def run_inline(func, *args, **_options):

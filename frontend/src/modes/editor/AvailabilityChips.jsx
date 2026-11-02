@@ -1,4 +1,6 @@
-// Description: Mo–Fr chips showing each day's available time ranges, or "off".
+/**
+ * Read-only availability on FacultyCard and ResourceCard. The dialogs edit it with AvailabilityEditor.
+ */
 
 const DAYS = [
   ["MON", "Mo"],

@@ -105,9 +105,11 @@ export const api = {
     list: (area) => get(`/config/${area}`),
     item: (area, index) => get(`/config/${area}/${index}`),
     add: (area, item) => post(`/config/${area}`, item),
-    replace: (area, index, item) => put(`/config/${area}/${index}`, item),
+    /** `force` applies the change even if the configuration then has problems. */
+    replace: (area, index, item, force = false) =>
+      put(`/config/${area}/${index}${force ? "?force=true" : ""}`, item),
     deleteImpact: (area, index) => get(`/config/${area}/${index}/impact`),
-    remove: (area, index) => del(`/config/${area}/${index}`),
+    remove: (area, index, force = false) => del(`/config/${area}/${index}${force ? "?force=true" : ""}`),
     updateTimeSlots: (values) => put("/config/time-slots", values),
     updateSettings: (values) => put("/config/settings", values),
   },
@@ -129,5 +131,17 @@ export const api = {
     exportFile: ({ which = "all", format = "json" } = {}) =>
       get(`/schedules/export${query({ which: String(which), format })}`),
     clear: () => del("/schedules"),
+  },
+
+  /** The AI assistant's chat. See docs/assistant.md for the entry and pending shapes. */
+  chat: {
+    /** `{ entries, busy, available, reason, model }` */
+    transcript: () => get("/chat"),
+    /** Resolves when the assistant has finished: `{ added, state }`. */
+    send: (message) => post("/chat", { message }),
+    /** `answer` is "confirm" or "cancel" for a confirmation, "saved" or "cancel" for a save. */
+    answer: (pendingId, answer, filename) =>
+      post(`/chat/pending/${encodeURIComponent(pendingId)}`, { answer, filename: filename ?? null }),
+    clear: () => del("/chat"),
   },
 };

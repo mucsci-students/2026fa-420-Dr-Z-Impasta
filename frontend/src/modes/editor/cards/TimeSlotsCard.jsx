@@ -1,13 +1,12 @@
-// Description: One tile per weekday listing its blocks (start–end, spacing).
-//
-// Missing From Mockup: Max time gap (max_time_gap, default 30) and Min overlap
-// (min_time_overlap, default 45). The mockup hides them behind "Advanced timing options…", so add
-// a small line like Gap 30m · Overlap 45m in the header or under the tiles. Then they're visible
-// without opening the dialog.
+/**
+ * The Time Slots card. A day tile's Edit button opens DayBlocksDialog for that day;
+ * "Advanced timing options…" opens TimeSlotsDialog.
+ */
 
 import Button from "../../../components/Button.jsx";
 import { DAY_NAMES } from "../labels.js";
 import CardRow from "./CardRow.jsx";
+import EditButton from "./EditButton.jsx";
 
 /**
  * The time grid: a tile per weekday with its blocks, and the two timing options in the header.
@@ -27,19 +26,7 @@ export default function TimeSlotsCard({ timeSlots, days, onEditDay, onEditTiming
       {days.map((day) => {
         const blocks = timeSlots.times[day] ?? [];
         return (
-          <article
-            key={day}
-            className="item-card day-tile"
-            tabIndex={0}
-            aria-label={`${DAY_NAMES[day] ?? day} time blocks`}
-            onClick={() => onEditDay?.(day)}
-            onKeyDown={(e) => {
-              if (e.target === e.currentTarget && (e.key === "Enter" || e.key === " ")) {
-                e.preventDefault();
-                onEditDay?.(day);
-              }
-            }}
-          >
+          <article key={day} className="item-card day-tile">
             <h3 className="item-card__title">{DAY_NAMES[day] ?? day}</h3>
             {blocks.length === 0 ? (
               <p className="item-card__note">No blocks</p>
@@ -55,6 +42,7 @@ export default function TimeSlotsCard({ timeSlots, days, onEditDay, onEditTiming
                 ))}
               </ul>
             )}
+            <EditButton label={`${DAY_NAMES[day] ?? day} time blocks`} onEdit={() => onEditDay?.(day)} />
           </article>
         );
       })}
