@@ -1,16 +1,15 @@
 /*
- * Schedule Viewer styles.
- * Swap the --viewer-* values for the team's tokens in src/styles if they exist,
- * or move this file into src/styles and import it with the others.
+ * Schedule Viewer styles. Every color comes from the team's tokens (src/styles/tokens.css),
+ * so the viewer follows the light and dark themes.
  */
- .schedule-viewer {
-  --viewer-line: #e3e1dc;
-  --viewer-muted: #6b6b6b;
-  --viewer-accent: #3b5fa8;
-  --viewer-lecture-bg: #e7effb;
-  --viewer-lecture-border: #a9c1ea;
-  --viewer-lab-bg: #e6f4ea;
-  --viewer-lab-border: #a3d2b1;
+.schedule-viewer {
+  --viewer-line: var(--line);
+  --viewer-muted: var(--muted);
+  --viewer-accent: var(--accent);
+  --viewer-lecture-bg: var(--event-lecture-bg);
+  --viewer-lecture-border: var(--event-lecture-line);
+  --viewer-lab-bg: var(--event-lab-bg);
+  --viewer-lab-border: var(--event-lab-line);
 }
 
 .schedule-viewer__actions {
@@ -57,7 +56,7 @@
   display: inline-flex;
   padding: 2px;
   border-radius: 7px;
-  background: #ecebe7;
+  background: var(--surface-3);
 }
 
 .segmented__option {
@@ -72,10 +71,10 @@
 }
 
 .segmented__option--active {
-  background: #fff;
+  background: var(--surface);
   color: inherit;
   font-weight: 600;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
+  box-shadow: var(--shadow-raised);
 }
 
 /* Resource cards */
@@ -97,13 +96,13 @@
   padding: 10px 14px;
   border: 1px solid var(--viewer-line);
   border-radius: 8px;
-  background: #fff;
+  background: var(--surface);
   font: inherit;
   cursor: pointer;
 }
 
 .resource-card:hover {
-  border-color: #c9c6bf;
+  border-color: var(--line-strong);
 }
 
 .resource-card--selected {
@@ -175,7 +174,7 @@
   border: 1px solid var(--viewer-line);
   border-radius: 8px;
   overflow-x: auto;
-  background: #fff;
+  background: var(--surface);
 }
 
 .timetable__grid {
@@ -232,16 +231,28 @@
   border-color: var(--viewer-lab-border);
 }
 
-.timetable__section {
+.timetable__course {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.timetable__section,
+.timetable__kind {
   font-weight: 400;
   color: var(--viewer-muted);
 }
 
 .timetable__detail {
-  color: #444;
+  color: var(--ink-2);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+/* Days and time line: digits line up from block to block. */
+.timetable__when {
+  font-variant-numeric: tabular-nums;
 }
 
 /* Table */
@@ -255,7 +266,7 @@
   width: 100%;
   border-collapse: collapse;
   font-size: 13px;
-  background: #fff;
+  background: var(--surface);
 }
 
 .schedule-table th,
@@ -275,13 +286,24 @@
   border-bottom: 0;
 }
 
+/* "Still generating" note while a run adds schedules in the background */
+.viewer-progress {
+  margin: 0 0 12px;
+  padding: 10px 14px;
+  border: 1px solid var(--event-lecture-line);
+  border-radius: 8px;
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+  font-size: 14px;
+}
+
 /* Errors from server actions */
 .viewer-error {
   margin: 0 0 12px;
   padding: 10px 14px;
-  border: 1px solid #e8b4b0;
+  border: 1px solid var(--danger-line);
   border-radius: 8px;
-  background: #fdf0ef;
-  color: #8a2b22;
+  background: var(--danger-soft);
+  color: var(--danger);
   font-size: 14px;
 }

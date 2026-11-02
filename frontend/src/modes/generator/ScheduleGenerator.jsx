@@ -19,6 +19,7 @@ import Card from "../../components/Card.jsx";
 import EmptyState from "../../components/EmptyState.jsx";
 import ErrorMessage from "../../components/ErrorMessage.jsx";
 import Field from "../../components/Field.jsx";
+import LoadingBar from "../../components/LoadingBar.jsx";
 import HelpTip from "../../components/HelpTip.jsx";
 import PageHeader from "../../components/PageHeader.jsx";
 import { Rotelle } from "../../components/PastaMarks.jsx";
@@ -39,7 +40,7 @@ const OUTCOME_TONES = {
   solver_error: "warning",
   failed: "danger",
   cancelled: "neutral",
-};
+}
 
 export default function ScheduleGenerator() {
   const { state, loading, refresh } = useAppState();
@@ -173,7 +174,9 @@ export default function ScheduleGenerator() {
                   max={maxLimit ?? undefined}
                   value={limit}
                   disabled={running || startGeneration.busy}
-                  onChange={(event) => setLimit(event.target.value)}
+                  onChange={(event) => {
+                    setLimit(event.target.value);
+                  }}
                   placeholder={configured ? `Configured: ${configured.limit}` : "Use configured limit"}
                 />
               </Field>
@@ -264,7 +267,11 @@ export default function ScheduleGenerator() {
               {generation.running && (
                 <div>
                   <p>{plural(generation.found, "schedule")} found.</p>
-                  <Spinner label="Generating schedules" />
+                  <LoadingBar     //Loading bar component that takes a label, a current value, and the max value
+                    label="Generating schedules"
+                    value={generation.found}
+                    max={generation.settings?.limit ?? 100}
+                  />
                 </div>
               )}
 

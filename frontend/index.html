@@ -4,7 +4,21 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="color-scheme" content="light dark" />
     <title>Dr. ZImpasta</title>
+    <script>
+      // Pick the theme before the page draws, so a dark page never flashes white.
+      // Same rule as src/theme.js: a saved "light" or "dark", otherwise the system setting.
+      (function () {
+        var saved = null;
+        try {
+          saved = localStorage.getItem("zimpasta-theme");
+        } catch (error) {}
+        var systemDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+        var dark = saved === "dark" || (saved !== "light" && systemDark);
+        document.documentElement.dataset.theme = dark ? "dark" : "light";
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>
