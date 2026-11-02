@@ -49,9 +49,9 @@ def install(app: FastAPI, static_dir: Path | None = BUILT_GUI) -> None:
         if not built:
             return HTMLResponse(NOT_BUILT, status_code=503, headers=_NO_CACHE)
         if path:
-            if(root is not None and path is not None):
+            if root is not None and path is not None:
                 candidate = (root / path).resolve()
                 if candidate.is_file() and candidate.is_relative_to(root):
                     return FileResponse(candidate)
-      
+
         return FileResponse(str(index), headers=_NO_CACHE)

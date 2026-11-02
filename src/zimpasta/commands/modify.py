@@ -166,7 +166,9 @@ MODIFY_SPECS = (
 )
 
 
-def id_key_choices(kind: str) -> tuple[tuple[str, ...], tuple[str, ...]] | tuple[str, tuple[str,...]]:
+def id_key_choices(
+    kind: str,
+) -> tuple[tuple[str, ...], tuple[str, ...]] | tuple[str, tuple[str, ...]]:
     """Shows the valid input options for different kinds & fields"""
 
     match kind:
@@ -337,10 +339,11 @@ def update_config_config(
                     former_val = nested_obj[inner_key]
 
                     if key == "times":
-                        value = str(TimeRange.from_string
-                        (
+                        value = str(
+                            TimeRange.from_string(
                                 TypeAdapter(TimeRangeString).validate_python(str(value).strip())
-                                ))
+                            )
+                        )
                     else:
                         data_type = type(former_val)
                         value = data_type(value)

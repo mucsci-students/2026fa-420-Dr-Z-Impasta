@@ -32,7 +32,9 @@ def weekdays() -> tuple[str, ...]:
 @cache
 def optimizer_flag_descriptions() -> dict[str, str]:
     """One sentence per optimizer flag, from the library's member docstrings."""
-    fallback : dict[str, str] = {flag.value: flag.value.replace("_", " ").capitalize() for flag in OptimizerFlags}
+    fallback: dict[str, str] = {
+        flag.value: flag.value.replace("_", " ").capitalize() for flag in OptimizerFlags
+    }
     try:
         tree = ast.parse(textwrap.dedent(inspect.getsource(OptimizerFlags)))
     except (OSError, TypeError, SyntaxError):
