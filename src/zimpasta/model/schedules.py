@@ -369,7 +369,7 @@ def _parse_schedules(data: object, filename: str) -> list[list[Assignment]]:
         try:
             validated = _SCHEDULE.validate_python(candidate)
         except ValidationError as error:
-            issues.extend(_schedule_issue(prefix, detail) for detail in error.errors())
+            issues.extend(_schedule_issue(prefix, dict(detail)) for detail in error.errors())
             continue
         issues.extend(_format_issues(prefix, validated))
         schedules.append(json.loads(json.dumps(validated)))
@@ -450,5 +450,6 @@ def _number(value: object) -> int:
         raise ScheduleNotFound(f"{value!r} is not a schedule number.")
     try:
         return int(value)
+
     except (TypeError, ValueError):
         raise ScheduleNotFound(f"{value!r} is not a schedule number.") from None
