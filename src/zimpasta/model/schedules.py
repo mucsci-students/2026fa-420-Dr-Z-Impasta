@@ -26,6 +26,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import PurePath
+from typing import cast
 
 from pydantic import TypeAdapter, ValidationError
 from scheduler.json_types import CourseInstanceJSON
@@ -371,7 +372,7 @@ def _parse_schedules(data: object, filename: str) -> list[list[Assignment]]:
         except ValidationError as error:
             issues.extend(_schedule_issue(prefix, dict(detail)) for detail in error.errors())
             continue
-        issues.extend(_format_issues(prefix, validated))
+        issues.extend(_format_issues(prefix, cast(list[dict], validated)))
         schedules.append(json.loads(json.dumps(validated)))
     if issues:
         count = len(issues)

@@ -18,6 +18,7 @@ from types import SimpleNamespace
 from scheduler import CombinedConfig
 from scheduler.diagnostics import DiagnosticEngine
 from scheduler.problem import SchedulingProblem
+from scheduler.solver import SolverEngine
 
 from zimpasta.model.issues import COLLECTIONS, Issue
 
@@ -42,7 +43,11 @@ def schedule_problems(config: CombinedConfig) -> tuple[Issue, ...]:
     must not block an edit.
     """
     try:
-        engine = DiagnosticEngine(SchedulingProblem.from_config(config), _NO_SOLVER)
+        problem = SchedulingProblem.from_config(config)
+        solver_engine = SolverEngine(problem)
+
+        engine = DiagnosticEngine(SchedulingProblem.from_config(config), solver_engine._artifacts)
+
         domains = engine._candidate_domains()
         findings = engine._preflight_findings(domains, engine._capacity_analysis())
     except Exception:
