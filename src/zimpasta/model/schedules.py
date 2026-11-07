@@ -449,8 +449,9 @@ def _clock_text(minutes: int) -> str:
 def _number(value: object) -> int:
     if isinstance(value, bool):
         raise ScheduleNotFound(f"{value!r} is not a schedule number.")
+
     try:
-        if isinstance(value, (int)):
+        if isinstance(value, (int, float, str)):
             return int(value)
 
         raise TypeError(f"Expected int, got {type(value).__name__}")

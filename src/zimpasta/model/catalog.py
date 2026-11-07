@@ -39,7 +39,7 @@ def optimizer_flag_descriptions() -> dict[str, str]:
         tree = ast.parse(textwrap.dedent(inspect.getsource(OptimizerFlags)))
     except (OSError, TypeError, SyntaxError):
         return fallback
-    body = getattr(tree.body[0], "body", "")
+    body = getattr(tree.body[0], "body", [])
     descriptions = dict(fallback)
     for statement, following in zip(body, body[1:], strict=False):
         if not (isinstance(statement, ast.Assign) and isinstance(following, ast.Expr)):
