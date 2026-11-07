@@ -69,7 +69,9 @@ def test_default_time_slots_are_valid_for_the_library():
 def test_empty_configuration_only_lacks_required_items():
     ws = ConfigWorkspace()
     ws.new()
-    assert ws.document()["time_slot_config"] == default_time_slot_config()
+    doc = ws.document()
+    assert doc is not None
+    assert doc["time_slot_config"] == default_time_slot_config()
     assert empty_configuration()["config"]["rooms"] == []
 
 

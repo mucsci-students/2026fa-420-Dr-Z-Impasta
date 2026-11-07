@@ -450,7 +450,10 @@ def _number(value: object) -> int:
     if isinstance(value, bool):
         raise ScheduleNotFound(f"{value!r} is not a schedule number.")
     try:
-        return int(value)
+        if isinstance(value, (int)):
+            return int(value)
+
+        raise TypeError(f"Expected int, got {type(value).__name__}")
 
     except (TypeError, ValueError):
         raise ScheduleNotFound(f"{value!r} is not a schedule number.") from None
