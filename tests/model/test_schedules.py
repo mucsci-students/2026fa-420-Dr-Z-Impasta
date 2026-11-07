@@ -113,6 +113,38 @@ def test_exported_set_loads_back(real_schedules):
     assert again.summary()["name"] == "saved.json"
 
 
+def test_a_run_in_progress_adds_its_schedules_one_at_a_time(real_schedules):
+    schedules = generated_set(real_schedules, name="old.json")
+
+    schedules.start_generated(
+        real_schedules[0], limit=5, optimizer_flags=["same_room"], config_name="new.json"
+    )
+    assert schedules.count == 1  # the first new schedule replaces the earlier ones
+    summary = schedules.summary()
+    assert (summary["name"], summary["limit"], summary["optimizer_flags"]) == (
+        "new.json",
+        5,
+        ["same_room"],
+    )
+
+    assert schedules.add_generated(real_schedules[1]) is True
+    assert schedules.count == 2
+    assert schedules.schedule(2) == generated_set(real_schedules).schedule(2)
+
+
+def test_a_run_never_adds_to_schedules_loaded_or_cleared_since_it_started(real_schedules):
+    schedules = ScheduleSet()
+    schedules.start_generated(real_schedules[0], limit=2, optimizer_flags=[])
+    schedules.import_text(json.dumps(generated_set(real_schedules).schedules()), filename="a.json")
+
+    assert schedules.add_generated(real_schedules[1]) is False
+    assert (schedules.count, schedules.source) == (2, "imported")
+
+    schedules.clear()
+    assert schedules.add_generated(real_schedules[1]) is False
+    assert schedules.count == 0
+
+
 # ---------------------------------------------------------------- import
 
 

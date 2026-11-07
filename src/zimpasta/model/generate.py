@@ -32,6 +32,9 @@ _REASON_TEXT = {
 Schedule = list[CourseInstance]
 ProgressCallback = Callable[[int, int], None]
 """Called as ``callback(found_so_far, limit)`` after each schedule arrives."""
+ScheduleCallback = Callable[[Schedule, int], None]
+"""Called as ``callback(schedule, number)`` as soon as each schedule is found, counting from 1,
+so it can be shown before the rest of the run finishes."""
 
 
 class SchedulerLike(Protocol):
@@ -191,6 +194,7 @@ def generation_steps(
     optimizer_flags: Sequence[OptimizerFlags | str] | None = None,
     solver_timeout_ms: int | None = DEFAULT_SOLVER_TIMEOUT_MS,
     on_progress: ProgressCallback | None = None,
+    on_schedule: ScheduleCallback | None = None,
     should_stop: Callable[[], bool] | None = None,
     scheduler_factory: SchedulerFactory = Scheduler,
     config_path: Path | None = None,
@@ -210,6 +214,8 @@ def generation_steps(
         optimizer_flags: the exact flags for this run; overrides ``optimize``.
         solver_timeout_ms: per-check Z3 timeout; ``None`` disables it.
         on_progress: called after each schedule so a slow solve can show progress.
+        on_schedule: called with each schedule as soon as it is found (before
+            ``on_progress``), so it can be shown while the run continues.
         should_stop: checked after each step; returning true ends the run as
             :class:`GenerationCancelled`. The solver can't be interrupted mid-schedule.
         scheduler_factory: injection point for tests; must accept the ``Scheduler`` signature.
@@ -229,6 +235,8 @@ def generation_steps(
         scheduler = scheduler_factory(run_config, solver_timeout_ms=solver_timeout_ms)
         for schedule in scheduler.get_models():
             schedules.append(schedule)
+            if on_schedule is not None:
+                on_schedule(schedule, len(schedules))
             if on_progress is not None:
                 on_progress(len(schedules), run_config.limit)
             yield len(schedules)

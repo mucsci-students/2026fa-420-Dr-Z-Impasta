@@ -22,7 +22,7 @@ import copy
 import csv
 import io
 import json
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import PurePath
@@ -31,7 +31,7 @@ from pydantic import TypeAdapter, ValidationError
 from scheduler.json_types import CourseInstanceJSON
 from scheduler.models import CourseInstance, Day
 
-from zimpasta.model.generate import GenerationResult
+from zimpasta.model.generate import GenerationResult, Schedule
 from zimpasta.model.issues import Issue
 
 Assignment = dict
@@ -87,7 +87,11 @@ def to_assignment(instance: CourseInstance) -> Assignment:
 
 
 class ScheduleSet:
-    """The current schedules and where they came from. Replaced as a whole, never merged."""
+    """The current schedules and where they came from.
+
+    Replaced as a whole, never merged, with one exception: while a run is in progress its
+    schedules arrive one at a time (:meth:`start_generated`, then :meth:`add_generated`).
+    """
 
     def __init__(self, *, clock: Callable[[], datetime] = datetime.now) -> None:
         self._clock = clock
@@ -96,6 +100,8 @@ class ScheduleSet:
         self._name: str | None = None
         self._created_at: datetime | None = None
         self._details: dict = {}
+        self._growing = False
+        """True between a run's first schedule and anything else replacing the set."""
 
     @property
     def count(self) -> int:
@@ -128,6 +134,42 @@ class ScheduleSet:
                 "completion_reason": result.completion_reason,
             },
         )
+
+    def start_generated(
+        self,
+        schedule: Schedule,
+        *,
+        limit: int,
+        optimizer_flags: Sequence[str],
+        config_name: str | None = None,
+    ) -> None:
+        """Replace the schedules with the first one of a run that is still going.
+
+        The run's next schedules are added with :meth:`add_generated` as they are found,
+        and :meth:`replace_generated` sets the complete list when the run succeeds.
+        """
+        self._set(
+            [[to_assignment(instance) for instance in schedule]],
+            source="generated",
+            name=config_name,
+            details={
+                "limit": limit,
+                "optimizer_flags": list(optimizer_flags),
+                "completion_reason": None,
+            },
+        )
+        self._growing = True
+
+    def add_generated(self, schedule: Schedule) -> bool:
+        """Add the next schedule of the run in progress, after the ones already here.
+
+        Returns ``False`` and adds nothing if the schedules were imported, cleared, or
+        replaced since the run's first schedule, so a run never mixes into other schedules.
+        """
+        if not self._growing:
+            return False
+        self._schedules.append([to_assignment(instance) for instance in schedule])
+        return True
 
     def import_text(self, text: str, *, filename: str) -> int:
         """Replace the schedules with those in a JSON file, if it is valid. Returns the count.
@@ -217,6 +259,7 @@ class ScheduleSet:
     # ----------------------------------------------------------- internals
 
     def _set(self, schedules, *, source, name, details) -> None:
+        self._growing = False
         self._schedules = schedules
         self._source = source
         self._name = name
