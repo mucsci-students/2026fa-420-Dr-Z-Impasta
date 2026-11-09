@@ -3,12 +3,8 @@
  *
  * Runs the scheduler on the last validated configuration.
  * Run-specific settings are sent as overrides and never change the saved configuration.
- */
-/**
- * Schedule Generator (mode 02).
- *
- * Runs the scheduler on the last validated configuration.
- * Run-specific settings are sent as overrides and never change the saved configuration.
+ * Schedules can be opened in the viewer as soon as the first one is ready; the rest
+ * keep generating in the background.
  */
 
 import { useEffect, useState } from "react";
@@ -275,10 +271,15 @@ export default function ScheduleGenerator() {
                 </div>
               )}
 
-              {generation.state === "succeeded" && schedules.count > 0 && (
+              {/* Each schedule reaches the viewer as soon as it is found, so the viewer can be
+                  opened mid-run. `found` counts only this run's schedules; a cancelled or
+                  stopped run keeps the ones it found. */}
+              {generation.found > 0 && schedules.count > 0 && (
                 <p>
                   <Link className="btn btn--primary" to="/viewer">
-                    View schedules
+                    {running
+                      ? `View the ${plural(generation.found, "schedule")} ready so far`
+                      : "View schedules"}
                   </Link>
                 </p>
               )}
