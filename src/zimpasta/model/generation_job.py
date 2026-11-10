@@ -33,7 +33,13 @@ Outcomes
 ``failed``        anything unexpected. The message is friendly; ``detail`` has specifics.
 ``cancelled``     stopped on request after the schedule in progress finished.
 
-Only ``succeeded`` changes results. Every other outcome leaves earlier results as they were.
+Results as they arrive
+----------------------
+With ``on_schedule``, each schedule is handed over as soon as it is found, so the viewer
+can show schedule 1 while the rest are still being solved. Earlier results are replaced
+only when the first new schedule arrives: a run that finds nothing leaves them as they
+were, and a run cancelled or stopped by an error keeps the schedules it found. On
+``succeeded``, ``on_success`` then receives the complete set.
 """
 
 import asyncio
@@ -59,6 +65,7 @@ from zimpasta.model.generate import (
     GenerationSuccess,
     InvalidConfiguration,
     NoFeasibleSchedule,
+    Schedule,
     describe_reason,
     generation_steps,
 )
@@ -266,6 +273,8 @@ def _run_all(work: Iterator[object]) -> None:
 
 
 SuccessHandler = Callable[[GenerationResult, JobStatus], None]
+ScheduleHandler = Callable[[Schedule, int, JobStatus], None]
+"""Called as ``handler(schedule, number, status)`` as each schedule is found, counting from 1."""
 
 
 class GenerationJob:
@@ -276,6 +285,7 @@ class GenerationJob:
         *,
         generator: Callable[..., GenerationSteps] = generation_steps,
         on_success: SuccessHandler | None = None,
+        on_schedule: ScheduleHandler | None = None,
         clock: Callable[[], datetime] = datetime.now,
         solver_timeout_ms: int | None = DEFAULT_SOLVER_TIMEOUT_MS,
         runner: ThreadRunner | EventLoopRunner | None = None,
@@ -283,6 +293,7 @@ class GenerationJob:
     ) -> None:
         self._generator = generator
         self._on_success = on_success
+        self._on_schedule = on_schedule
         self._clock = clock
         self._solver_timeout_ms = solver_timeout_ms
         self._runner = runner or ThreadRunner()
@@ -363,10 +374,18 @@ class GenerationJob:
                     message = f"Generating... {found} of {limit} schedules found."
                 self._status = replace(self._status, found=found, message=message)
 
+    def _schedule_found(self, schedule: Schedule, number: int) -> None:
+        """Hand one schedule to ``on_schedule`` without waiting for the run to finish."""
+        if self._on_schedule is not None:
+            self._on_schedule(schedule, number, self.status())
+
     def _work(
         self, config: CombinedConfig, settings: RunSettings, cancel: threading.Event
     ) -> Iterator[int]:
         """The whole run, one schedule per step, ending with the outcome recorded."""
+        # Only ask for each schedule when someone wants it, so generators written
+        # without ``on_schedule`` (test doubles, older callers) keep working.
+        streaming = {"on_schedule": self._schedule_found} if self._on_schedule else {}
         try:
             outcome = yield from self._generator(
                 config,
@@ -375,14 +394,24 @@ class GenerationJob:
                 solver_timeout_ms=self._solver_timeout_ms,
                 on_progress=self._progress,
                 should_stop=cancel.is_set,
+                **streaming,
             )
         except Exception as error:  # the generator already classifies solver errors
             outcome = GenerationFailed(f"{type(error).__name__}: {error}", error)
         self._finish(outcome)
 
+    def _kept(self, found: int) -> str:
+        """For a run that stopped early: which schedules the viewer still has."""
+        if self._on_schedule is None or found == 0:
+            return ""
+        if found == 1:
+            return " The schedule found before then is kept."
+        return f" The {found} schedules found before then are kept."
+
     def _finish(self, outcome: GenerationOutcome) -> None:
         with self._lock:
             status = replace(self._status, finished_at=self._clock())
+        kept = self._kept(status.found)
         match outcome:
             case GenerationSuccess(result=result):
                 count = result.count
@@ -430,13 +459,14 @@ class GenerationJob:
                     status,
                     state=JobState.CANCELLED,
                     found=found,
-                    message="Generation cancelled. Earlier results are unchanged.",
+                    message="Generation cancelled."
+                    + (self._kept(found) or " Earlier results are unchanged."),
                 )
             case GenerationFailed(message=detail, exception=error) if _from_solver(error):
                 status = replace(
                     status,
                     state=JobState.SOLVER_ERROR,
-                    message="The scheduler reported an error while solving.",
+                    message="The scheduler reported an error while solving." + kept,
                     detail=detail,
                 )
             case GenerationFailed(message=detail):
@@ -445,7 +475,7 @@ class GenerationJob:
                     state=JobState.FAILED,
                     message=(
                         "Something went wrong while generating schedules. The configuration "
-                        "and earlier results are unchanged."
+                        + (f"is unchanged.{kept}" if kept else "and earlier results are unchanged.")
                     ),
                     detail=detail,
                 )

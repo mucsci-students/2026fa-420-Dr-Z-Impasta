@@ -1,6 +1,7 @@
 """Test doubles shared across the suite."""
 
 import json
+import threading
 from collections.abc import Iterable, Iterator
 from pathlib import Path
 
@@ -178,3 +179,39 @@ def calling(*calls: ToolCall, reply_id: str = "reply-1") -> AIReply:
 
 def saying(text: str, reply_id: str = "reply-final") -> AIReply:
     return AIReply(id=reply_id, text=text)
+
+
+class GatedFactory(FakeSchedulerFactory):
+    """A fake scheduler that yields one schedule each time the test calls ``step()``.
+
+    Lets a test look at a run in the middle: after ``step()``, the run has found one more
+    schedule and is waiting for the next ``step()``.
+    """
+
+    def __init__(self, schedules: Iterable[Schedule], *, timeout: float = 10) -> None:
+        super().__init__(schedules, reason="solution_space_exhausted")
+        self.timeout = timeout
+        self.gate = threading.Semaphore(0)
+        self.waiting = threading.Event()
+
+    def __call__(self, config: CombinedConfig, *, solver_timeout_ms: int | None = None):
+        inner = super().__call__(config, solver_timeout_ms=solver_timeout_ms)
+        factory = self
+
+        class Gated:
+            _enumeration_completion_reason = None
+
+            def get_models(self):
+                for schedule in inner.get_models():
+                    factory.waiting.set()
+                    assert factory.gate.acquire(timeout=factory.timeout)
+                    yield schedule
+                self._enumeration_completion_reason = inner._enumeration_completion_reason
+
+        return Gated()
+
+    def step(self) -> None:
+        """Release one schedule and wait until the run is waiting for the next one."""
+        assert self.waiting.wait(self.timeout)
+        self.waiting.clear()
+        self.gate.release()

@@ -1,13 +1,12 @@
 """Background schedule generation: overrides, outcomes, progress, busy guard, cancel."""
 
-import threading
 from functools import partial
 
 import anyio
 import pytest
 from scheduler import CombinedConfig
 
-from tests.helpers import FakeSchedulerFactory
+from tests.helpers import FakeSchedulerFactory, GatedFactory
 from zimpasta.model.generate import REASON_EXHAUSTED, REASON_TIMEOUT, generation_steps
 from zimpasta.model.generation_job import (
     EventLoopRunner,
@@ -29,36 +28,6 @@ class Recorder:
 
     def __call__(self, result, status):
         self.calls.append((result, status))
-
-
-class GatedFactory(FakeSchedulerFactory):
-    """A fake scheduler that yields one schedule each time the test calls ``step()``."""
-
-    def __init__(self, schedules):
-        super().__init__(schedules, reason=REASON_EXHAUSTED)
-        self.gate = threading.Semaphore(0)
-        self.waiting = threading.Event()
-
-    def __call__(self, config, *, solver_timeout_ms=None):
-        inner = super().__call__(config, solver_timeout_ms=solver_timeout_ms)
-        factory = self
-
-        class Gated:
-            _enumeration_completion_reason = None
-
-            def get_models(self):
-                for schedule in inner.get_models():
-                    factory.waiting.set()
-                    assert factory.gate.acquire(timeout=TIMEOUT)
-                    yield schedule
-                self._enumeration_completion_reason = inner._enumeration_completion_reason
-
-        return Gated()
-
-    def step(self):
-        assert self.waiting.wait(TIMEOUT)
-        self.waiting.clear()
-        self.gate.release()
 
 
 def job_with(factory, recorder=None):
@@ -251,6 +220,73 @@ def test_cancel_stops_after_the_current_schedule_and_keeps_old_results(config, r
     assert status.state is JobState.CANCELLED
     assert status.found == 1
     assert recorder.calls == []
+
+
+def streaming_job(factory, recorder=None, seen=None):
+    """A job that hands each schedule over as it is found, recording (number, running)."""
+    seen = [] if seen is None else seen
+    return GenerationJob(
+        generator=partial(generation_steps, scheduler_factory=factory),
+        on_success=recorder,
+        on_schedule=lambda schedule, number, status: seen.append((number, status.running)),
+    )
+
+
+def test_each_schedule_is_handed_over_while_the_run_continues(config, real_schedules):
+    factory = GatedFactory(real_schedules)
+    seen = []
+    recorder = Recorder()
+    job = streaming_job(factory, recorder, seen)
+    job.start(config, limit=2)
+
+    factory.step()
+    factory.waiting.wait(TIMEOUT)  # schedule 1 is done; the run is solving schedule 2
+    assert seen == [(1, True)]
+    assert job.status().running
+
+    factory.step()
+    assert job.wait(TIMEOUT).state is JobState.SUCCEEDED
+    assert seen == [(1, True), (2, True)]
+    assert recorder.calls[0][0].count == 2  # the complete set still arrives at the end
+
+
+def test_a_cancelled_run_keeps_the_schedules_it_handed_over(config, real_schedules):
+    factory = GatedFactory(real_schedules)
+    recorder = Recorder()
+    job = streaming_job(factory, recorder)
+    job.start(config, limit=2)
+
+    job.cancel()
+    factory.step()
+    status = job.wait(TIMEOUT)
+
+    assert status.state is JobState.CANCELLED
+    assert status.message == "Generation cancelled. The schedule found before then is kept."
+    assert recorder.calls == []
+
+
+def test_an_error_after_some_schedules_says_they_are_kept(config, real_schedules):
+    class BreaksAfterOne:
+        def __call__(self, config, *, solver_timeout_ms=None):
+            class Breaks:
+                _enumeration_completion_reason = None
+
+                def get_models(self):
+                    yield real_schedules[0]
+                    raise RuntimeError("disk on fire")
+
+            return Breaks()
+
+    job = streaming_job(BreaksAfterOne())
+    job.start(config, limit=2)
+    status = job.wait(TIMEOUT)
+
+    assert status.state is JobState.FAILED
+    assert status.message == (
+        "Something went wrong while generating schedules. The configuration is unchanged. "
+        "The schedule found before then is kept."
+    )
+    assert "disk on fire" in status.detail
 
 
 def test_cancel_when_idle_does_nothing():

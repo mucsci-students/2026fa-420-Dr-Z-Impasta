@@ -103,6 +103,10 @@ export default function ScheduleViewer() {
   } = useSchedules({ number: index + 1, group: groupBy, refreshKey });
 
   const scheduleCount = scheduleView?.count ?? 0;
+  const generating = state?.generation?.state === "running";
+  // Schedules this run has found. Until the first one, the viewer still has the earlier ones.
+  const found = state?.generation?.found ?? 0;
+  const runLimit = state?.generation?.settings?.limit;
   const groups = useMemo(() => toGroups(scheduleView), [scheduleView]);
   const currentGroup = groups.find((group) => group.key === selectedKey) ?? groups[0] ?? null;
 
@@ -162,7 +166,9 @@ export default function ScheduleViewer() {
   );
 
   // --- Early returns ---
-  if (loading || schedulesLoading) {
+  // The spinner is only for the first load. Later reloads (a new schedule finished while
+  // generating, for example) keep the schedule on screen instead of blanking the page.
+  if (loading || (schedulesLoading && !scheduleView)) {
     return (
       <>
         <PageHeader title="Schedules" />
@@ -193,7 +199,6 @@ export default function ScheduleViewer() {
   }
 
   if (!scheduleCount) {
-    const generating = state?.generation?.state === "running";
     const canGenerate = QUICK_GENERATE && state?.config?.status === "valid";
 
     return (
@@ -276,6 +281,14 @@ export default function ScheduleViewer() {
     <>
       <PageHeader title="Schedules" subtitle={plural(scheduleCount, "schedule")} />
       {errorMessage}
+
+      {generating && (
+        <p className="viewer-progress" role="status">
+          {found > 0
+            ? `Still generating: ${found}${runLimit ? ` of ${runLimit}` : ""} ready. New schedules are added to the list as they finish.`
+            : "Generating new schedules. These are the earlier ones until the first new schedule is ready."}
+        </p>
+      )}
 
       <Card
         className="schedule-viewer"

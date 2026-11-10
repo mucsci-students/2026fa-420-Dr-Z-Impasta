@@ -157,9 +157,13 @@ Poll `GET /api/generation` (every half second is plenty) while `running` is true
  "finished_at": null, "detail": null, "completion_reason": null, "cancel_requested": false}
 ```
 
-`state` ends as `succeeded` (the schedules are now in `/api/schedules`), `infeasible`,
-`solver_error`, `failed` (`detail` has specifics), or `cancelled`. Only `succeeded`
-replaces the schedules. Cancelling takes effect after the schedule in progress.
+`state` ends as `succeeded`, `infeasible`, `solver_error`, `failed` (`detail` has
+specifics), or `cancelled`. Each schedule is added to `/api/schedules` as soon as it is
+found, so the viewer can show schedule 1 while the rest are solved: the run's first
+schedule replaces the earlier ones, and `found` counts the run's schedules so far. A run
+that finds nothing leaves the earlier schedules as they were; a run that is cancelled or
+stops with an error keeps the schedules it found. Cancelling takes effect after the
+schedule in progress.
 
 In the browser version, Python is busy while it solves a schedule, so requests made then
 (including these polls) are answered when that schedule is done, typically 5 to 20

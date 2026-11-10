@@ -17,7 +17,12 @@ from pathlib import PurePath
 
 from zimpasta.controller.assistant import AIClient, Assistant, client_from_environment
 from zimpasta.model import catalog
-from zimpasta.model.generate import DEFAULT_SOLVER_TIMEOUT_MS, GenerationResult, generation_steps
+from zimpasta.model.generate import (
+    DEFAULT_SOLVER_TIMEOUT_MS,
+    GenerationResult,
+    Schedule,
+    generation_steps,
+)
 from zimpasta.model.generation_job import EventLoopRunner, GenerationJob, JobStatus, ThreadRunner
 from zimpasta.model.schedules import ExportedSchedules, ScheduleSet
 from zimpasta.model.workspace import ConfigWorkspace, ExportedConfig
@@ -50,6 +55,7 @@ class AppController:
         self.job = GenerationJob(
             generator=generator,
             on_success=self._store_results,
+            on_schedule=self._show_schedule,
             clock=clock,
             solver_timeout_ms=solver_timeout_ms,
             runner=runner,
@@ -190,8 +196,25 @@ class AppController:
     def cancel_generation(self) -> dict:
         return self.job.cancel().to_dict(self._clock())
 
+    def _show_schedule(self, schedule: Schedule, number: int, status: JobStatus) -> None:
+        """Called by the job as each schedule is found, so the viewer shows it right away.
+
+        The run's first schedule replaces the viewer's schedules; the rest are added after
+        it while the run continues.
+        """
+        with self._lock:
+            if number == 1:
+                self.schedules.start_generated(
+                    schedule,
+                    limit=status.settings.limit,
+                    optimizer_flags=status.settings.optimizer_flags,
+                    config_name=status.config_name,
+                )
+            else:
+                self.schedules.add_generated(schedule)
+
     def _store_results(self, result: GenerationResult, status: JobStatus) -> None:
-        """Called by the job on success: the new schedules become the viewer's schedules."""
+        """Called by the job on success: the complete set becomes the viewer's schedules."""
         with self._lock:
             self.schedules.replace_generated(result, config_name=status.config_name)
 

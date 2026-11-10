@@ -84,7 +84,8 @@ solving. Each pull request into `develop` gets its own preview there.
 
 ![The Schedule Viewer showing schedule 1 of 3 by room and lab, as a weekly timetable](docs/screenshots/schedule-viewer.png)
 
-Schedules appear here as soon as the Generator finishes, or after **Load JSON…**. The
+Schedules appear here one by one as the Generator finds them, so you can look at
+schedule 1 while the rest are still being solved, or after **Load JSON…**. The
 header shows how many there are (*3 schedules*).
 
 - **Move between schedules** with **‹** and **›** (they wrap around), or pick one from the
