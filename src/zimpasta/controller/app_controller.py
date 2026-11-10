@@ -206,8 +206,8 @@ class AppController:
             if number == 1:
                 self.schedules.start_generated(
                     schedule,
-                    limit=status.settings.limit,
-                    optimizer_flags=status.settings.optimizer_flags,
+                    limit=getattr(status.settings, "limit", None),
+                    optimizer_flags=getattr(status.settings, "optimizer_flags", None),
                     config_name=status.config_name,
                 )
             else:
