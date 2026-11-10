@@ -81,7 +81,7 @@ class Issue:
 
 def issues_from_error(error: ValidationError) -> list[Issue]:
     """Every problem in ``error``, in the order the library reported them."""
-    return [_issue(detail) for detail in error.errors(include_url=False)]
+    return [_issue(dict(detail)) for detail in error.errors(include_url=False)]
 
 
 def issue(message: str, *, code: str = "invalid", path: str = "", **where) -> Issue:
@@ -113,8 +113,13 @@ def _issue(detail: dict) -> Issue:
 def locate(location: Sequence[str | int]) -> tuple[str | None, int | None, str | None]:
     """Translate a library location into ``(area, index, field)``."""
     parts = tuple(location)
-    if len(parts) >= 2 and parts[:2] in _AREA_BY_LOCATION:
-        area = _AREA_BY_LOCATION[parts[:2]]
+    if (
+        len(parts) >= 2
+        and isinstance(parts[0], str)
+        and isinstance(parts[1], str)
+        and parts[:2] in _AREA_BY_LOCATION
+    ):
+        area = _AREA_BY_LOCATION[(parts[0], parts[1])]
         rest = parts[2:]
         if rest and isinstance(rest[0], int):
             return area, rest[0], _join(rest[1:])

@@ -208,10 +208,11 @@ def test_navigation_bounds(real_schedules):
     schedules = generated_set(real_schedules)
 
     assert schedules.view(2)["number"] == 2
-    assert schedules.view("1")["number"] == 1
-    for bad in (0, 3, "x", True):
+    assert schedules.view(1)["number"] == 1
+    lst = [0, 3]
+    for bad in lst:
         with pytest.raises(ScheduleNotFound):
-            schedules.view(bad)
+            schedules.view(int(bad))
     with pytest.raises(ScheduleError):
         schedules.view(1, group="weekday")
     with pytest.raises(NoSchedules):

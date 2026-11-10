@@ -26,6 +26,7 @@ from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import PurePath
+from typing import cast
 
 from pydantic import TypeAdapter, ValidationError
 from scheduler.json_types import CourseInstanceJSON
@@ -412,9 +413,9 @@ def _parse_schedules(data: object, filename: str) -> list[list[Assignment]]:
         try:
             validated = _SCHEDULE.validate_python(candidate)
         except ValidationError as error:
-            issues.extend(_schedule_issue(prefix, detail) for detail in error.errors())
+            issues.extend(_schedule_issue(prefix, dict(detail)) for detail in error.errors())
             continue
-        issues.extend(_format_issues(prefix, validated))
+        issues.extend(_format_issues(prefix, cast(list[dict], validated)))
         schedules.append(json.loads(json.dumps(validated)))
     if issues:
         count = len(issues)
@@ -491,7 +492,12 @@ def _clock_text(minutes: int) -> str:
 def _number(value: object) -> int:
     if isinstance(value, bool):
         raise ScheduleNotFound(f"{value!r} is not a schedule number.")
+
     try:
-        return int(value)
+        if isinstance(value, (int, float, str)):
+            return int(value)
+
+        raise TypeError(f"Expected int, got {type(value).__name__}")
+
     except (TypeError, ValueError):
         raise ScheduleNotFound(f"{value!r} is not a schedule number.") from None
