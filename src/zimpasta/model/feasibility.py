@@ -13,6 +13,7 @@ seconds). Those analyses need only the normalized problem, not the solver's arti
 tests/model/test_feasibility.py fails if a library upgrade changes them.
 """
 
+import logging
 from types import SimpleNamespace
 from typing import cast
 
@@ -22,6 +23,8 @@ from scheduler.problem import SchedulingProblem
 from scheduler.solver import SolverArtifacts
 
 from zimpasta.model.issues import COLLECTIONS, Issue
+
+logger = logging.getLogger(__name__)
 
 NOTES = frozenset({"derived_faculty_candidates"})
 """Findings that are notes, not problems ("derives faculty candidates from preferences")."""
@@ -51,6 +54,9 @@ def schedule_problems(config: CombinedConfig) -> tuple[Issue, ...]:
         domains = engine._candidate_domains()
         findings = engine._preflight_findings(domains, engine._capacity_analysis())
     except Exception:
+        # Advisory only, so an edit still goes through, but log it: a failure here usually
+        # means a library upgrade changed these private analyses.
+        logger.exception("The preflight schedule checks failed; showing no warnings")
         return ()
 
     candidates = {domain.course: set(domain.faculty_candidates) for domain in domains}

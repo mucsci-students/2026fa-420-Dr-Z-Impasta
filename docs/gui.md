@@ -154,6 +154,31 @@ Schedule export is the same without `markSaved`:
 short confirmation, or update the page visibly. Show failures inline, next to what failed, in
 the user's words. Don't ask anyone to look in the terminal.
 
+## Handling errors
+
+Errors take one path from the server to the screen. Follow it so every mode behaves the same:
+
+1. **The server** turns every failure into one JSON shape, `{ error: { code, message, issues } }`
+   (`controller/errors.py`, documented in [web-api.md](web-api.md)). Unexpected errors are
+   logged with a traceback and come back as `unexpected` with a short reference.
+2. **`api/client.js`** turns that into an `ApiError` and rejects with it. An unreachable server
+   is an `ApiError` too, with code `network_error` and a message that says what to do. Only
+   `api.*` and `saveFile()` reject.
+3. **Each user action catches its own error and shows it with `<ErrorMessage>`**, in the
+   dialog or card the user is looking at, or else at the top of the page. Show every error,
+   including `network_error`; never drop one with `.catch(() => {})`, and never let one
+   escape an event handler. `useAction` does this for you. The editor's handlers in
+   `state/eventHandlers.js` take the setter for where to show the error and resolve to `true`
+   or `false`, never rejecting.
+4. **Background fetches are the only exception.** `refresh()` never rejects (it resolves to
+   `null` on failure), and the polling it does shows an unreachable server in
+   `ConnectionBanner`, so don't catch it. A page's own data fetch (like `api.config.get()`)
+   is not background: show its failure instead of spinning forever.
+
+Toasts are only for success. Use `error.code` for logic (like `unsaved_changes`) and
+`error.message` for the user; don't write your own message for a server error unless the
+`code` tells you something the message doesn't.
+
 ## Rules that keep MVC honest
 
 - No scheduler rules in components. Don't re-check capacities, credit ranges, time formats,

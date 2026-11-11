@@ -57,7 +57,10 @@ export default function EditDialog({
           </>
         }
       >
-        <ErrorMessage error={error && { message: "The change was not applied.", issues: unplaced }} title="Not saved." />
+        <ErrorMessage
+          error={error && { message: error.issues?.length ? "The change was not applied." : error.message, issues: unplaced }}
+          title="Not saved."
+        />
         {children}
       </Dialog>
       <UnsavedChangesPrompt when={isDirty} />

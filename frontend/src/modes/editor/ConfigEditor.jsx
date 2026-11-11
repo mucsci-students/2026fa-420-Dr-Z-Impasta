@@ -36,7 +36,7 @@ import TimeSlotsDialog from "./dialogs/TimeSlotsDialog.jsx";
 import ConfirmDialog from "../../components/ConfirmDialog.jsx";
 
 import ErrorMessage from "../../components/ErrorMessage.jsx";
-import { Load, ConfirmLoad, Empty_Click, Validate, Save, ValidateAndSaveItem, DeleteItem, UpdateTimeSlot, UpdateSettings, TogglePattern, getHistoryLength, getCurrHistoryLength, redoAction, undoAction, pushToHist } from "../../state/eventHandlers";
+import { Load, ConfirmLoad, Empty_Click, ValidateConfig, SaveConfig, ValidateAndSaveItem, DeleteItem, UpdateTimeSlot, UpdateSettings, TogglePattern, getHistoryLength, getCurrHistoryLength, redoAction, undoAction, pushToHist } from "../../state/eventHandlers";
 
 export default function ConfigEditor() {
   const { state, loading, refresh } = useAppState();
@@ -50,7 +50,7 @@ export default function ConfigEditor() {
   const [options, setOptions] = useState(null);   // library choices for the dialogs; they have fallbacks
   const [deleting, setDeleting] = useState(null);  // the item being deleted, e.g. { area: "rooms", index: 0 }
   const [impact, setImpact] = useState(null);      // its delete preview, from api.config.deleteImpact
-  const [error, setError] = useState(null);       // a page-level error (failed New / Load), shown above the banner
+  const [error, setError] = useState(null);       // a page-level error (failed New, Load, Save, …), shown above the banner
   const [localError, setLocalError] = useState(null);   // the error from a failed edit, e.g. { message, issues: [{ area, index, field, message }] }
   const [pendingLoad, setPendingLoad] = useState(null);   // a load waiting for "discard changes?"
   const [settingsError, setSettingsError] = useState(null);   // shown inside SettingsCard, which has no dialog
@@ -60,9 +60,10 @@ export default function ConfigEditor() {
   // Fetch the full document when a configuration first exists and after every change.
   useEffect(() => {
     if (!hasConfig) return;
-    api.config.get().then((reply) => {
-      setDoc({ document: reply.document, sections: reply.sections });
-    });
+    api.config
+      .get()
+      .then((reply) => setDoc({ document: reply.document, sections: reply.sections }))
+      .catch((error) => setError({ error, title: "Couldn't load the configuration", onDismiss: () => setError(null) }));
   }, [hasConfig, revision]);
 
   // Fetch the dialogs' choices (weekdays, optimizer flags, …) once.
@@ -161,16 +162,15 @@ export default function ConfigEditor() {
             />
 
 
-            {/* Save and Validate don't show their failures here */}
             <Button
               disabled={!canSave}
               className={canSave ? "" : "disabled-btn"}
               aria-describedby={canSave ? undefined : "save-hint"}
-              onClick={async () => { await Save().catch(() => {}); await refresh(); }}
+              onClick={async () => { await SaveConfig(setError); await refresh(); }}
             >
               Save JSON...
             </Button>
-            <Button variant="primary" onClick={async () => { await Validate().catch(() => {}); await refresh(); }}>Validate</Button>
+            <Button variant="primary" onClick={async () => { await ValidateConfig(setError); await refresh(); }}>Validate</Button>
 
 		<div className="undo-redo-row">
 			<Button 
@@ -211,7 +211,7 @@ export default function ConfigEditor() {
         )}
       </Banner>
       {!doc ? (
-        <Spinner label="Loading the configuration" />
+        !error && <Spinner label="Loading the configuration" />   // a failed fetch is shown above instead
       ) : (
         <>
           <CardRow
