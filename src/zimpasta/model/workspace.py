@@ -82,6 +82,7 @@ from zimpasta.model import references as refs
 from zimpasta.model.defaults import empty_configuration
 from zimpasta.model.feasibility import schedule_problems
 from zimpasta.model.issues import COLLECTIONS, Issue, issue, issues_from_error
+from zimpasta.model.observable import Subject
 
 AREAS: tuple[str, ...] = tuple(COLLECTIONS)
 """Editable item lists, in the order the editor shows them."""
@@ -238,12 +239,24 @@ class _Evaluation:
     """The document in the library's canonical JSON form, when acceptable."""
 
 
-class ConfigWorkspace:
-    """The configuration being edited, with transactional, library-validated changes."""
+class ConfigWorkspace(Subject):
+    """The configuration being edited, with transactional, library-validated changes.
+
+    Observers (see :class:`~zimpasta.model.observable.Subject`) are told after every
+    committed edit, new or loaded configuration, and save. Edits inside a
+    :meth:`transaction` are announced once, when the transaction succeeds.
+    """
 
     def __init__(self, *, clock: Callable[[], datetime] = datetime.now) -> None:
+        super().__init__()
         self._lock = threading.RLock()
         self._clock = clock
+        self._transactions = 0
+        self._changed_in_transaction = False
+        self._clear()
+
+    def _clear(self) -> None:
+        """Forget the configuration: nothing open, nothing to save."""
         self._status: ConfigStatus = ConfigStatus.NONE
         self._document: dict | None = None
         self._config: CombinedConfig | None = None
@@ -263,6 +276,13 @@ class ConfigWorkspace:
         self._forced = False
         """Whether a forced change left the configuration not valid (cleared once valid).
         True whenever the status is ``invalid``."""
+
+    @property
+    def lock(self):
+        """The workspace's re-entrant lock. Hold it to make several operations on the
+        workspace (and whatever its observers do) happen as one, as the account service
+        does when it switches states."""
+        return self._lock
 
     # ------------------------------------------------------------------ reading
 
@@ -474,6 +494,78 @@ class ConfigWorkspace:
                 self._changes, self._states = [], []
             if filename:
                 self._name = filename
+        self._changed()
+
+    def close(self) -> None:
+        """Close the configuration without asking: afterwards nothing is open. Used when
+        the user logs out or switches to an empty state; the caller saves first. Like
+        :meth:`restore`, it doesn't notify observers: it switches what is open rather than
+        changing it."""
+        with self._lock:
+            revision = self._revision
+            self._clear()
+            self._revision = self._saved_revision = revision + 1
+
+    def record(self) -> dict:
+        """Everything needed to reopen the configuration exactly as it is: the document,
+        the file it came from, and the unsaved changes since that file was saved."""
+        with self._lock:
+            return copy.deepcopy(
+                {
+                    "document": self._document,
+                    "name": self._name,
+                    "revision": self._revision,
+                    "saved_revision": self._saved_revision,
+                    "saved_document": self._saved_document,
+                    "changes": [change.to_dict() for change in self._changes],
+                    "states": self._states,
+                    "forced": self._forced,
+                }
+            )
+
+    def restore(self, record: Mapping) -> None:
+        """Reopen a configuration from :meth:`record`. The library validates the document
+        again; observers are not told, since nothing changed that needs saving.
+
+        Raises:
+            InvalidFile: the library no longer accepts the recorded document. The current
+                configuration is kept.
+        """
+        document = record.get("document")
+        if document is None:
+            self.close()
+            return
+        evaluation = self._evaluate(copy.deepcopy(document))
+        if evaluation.status is None:
+            raise InvalidFile(
+                "invalid_configuration",
+                "The saved configuration is no longer accepted by the scheduler library.",
+                issues=evaluation.issues,
+            )
+        with self._lock:
+            # Revisions only ever grow, so nothing prepared for an earlier revision (such as
+            # a pending confirmation) can match the reopened configuration by accident.
+            shift = self._revision + 1
+            self._clear()
+            self._forced = bool(record.get("forced"))
+            self._apply(evaluation)
+            self._name = record.get("name")
+            self._revision = int(record.get("revision") or 0) + shift
+            self._saved_revision = int(record.get("saved_revision") or 0) + shift
+            saved = record.get("saved_document")
+            self._saved_document = copy.deepcopy(saved) if saved is not None else None
+            changes = [
+                Change(
+                    revision=int(change["revision"]) + shift,
+                    action=str(change["action"]),
+                    area=str(change["area"]),
+                    summary=str(change["summary"]),
+                )
+                for change in record.get("changes") or []
+            ]
+            states = copy.deepcopy(list(record.get("states") or []))
+            if len(changes) == len(states):
+                self._changes, self._states = changes, states
 
     # ------------------------------------------------------------------ editing
 
@@ -579,6 +671,7 @@ class ConfigWorkspace:
         through the AI assistant.
         """
         with self._lock:
+            self._transactions += 1
             saved = (
                 self._status,
                 self._document,
@@ -596,6 +689,9 @@ class ConfigWorkspace:
             try:
                 yield
             except BaseException:
+                self._transactions -= 1
+                if not self._transactions:
+                    self._changed_in_transaction = False
                 (
                     self._status,
                     self._document,
@@ -611,6 +707,10 @@ class ConfigWorkspace:
                     self._forced,
                 ) = saved
                 raise
+            self._transactions -= 1
+            if not self._transactions and self._changed_in_transaction:
+                self._changed_in_transaction = False
+                self._notify()
 
     # ---------------------------------------------------------------- internals
 
@@ -648,7 +748,15 @@ class ConfigWorkspace:
         self._apply(evaluation)
         change = Change(self._revision, action, area, summary)
         self._record(change)
+        self._changed()
         return change
+
+    def _changed(self) -> None:
+        """Tell observers, or, inside a transaction, once it succeeds."""
+        if self._transactions:
+            self._changed_in_transaction = True
+        else:
+            self._notify()
 
     def _record(self, change: Change) -> None:
         """Add ``change`` to the journal, or, if it brings the configuration back to an
@@ -732,6 +840,7 @@ class ConfigWorkspace:
         self._forced = False
         self._apply(evaluation)
         self._saved_document = copy.deepcopy(self._document)
+        self._changed()
 
     def _apply(self, evaluation: _Evaluation) -> None:
         if evaluation.status is None:
