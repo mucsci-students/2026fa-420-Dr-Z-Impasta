@@ -712,12 +712,14 @@ class ConfigWorkspace:
             config = CombinedConfig.model_validate(document)
         except ValidationError as error:
             issues = tuple(issues_from_error(error))
-            if issues and all(problem.is_missing_required_item for problem in issues):
-                return _Evaluation(ConfigStatus.INCOMPLETE, None, issues, _canonical(document))
             try:
                 canonical = _canonical(document)
-            except ValidationError:
-                return _Evaluation(None, None, issues, None)  # an item is invalid on its own
+            except (ValidationError, TypeError, KeyError, AttributeError):
+                # An item is invalid on its own, or the document isn't shaped like a
+                # configuration at all (for example "config" is not an object).
+                return _Evaluation(None, None, issues, None)
+            if issues and all(problem.is_missing_required_item for problem in issues):
+                return _Evaluation(ConfigStatus.INCOMPLETE, None, issues, canonical)
             return _Evaluation(ConfigStatus.INVALID, None, issues, canonical)
         return _Evaluation(ConfigStatus.VALID, config, (), json.loads(config.model_dump_json()))
 
