@@ -6,6 +6,7 @@ import ThemeToggle from "../components/ThemeToggle.jsx";
 import { configStatus } from "../format.js";
 import { MODES } from "../modes.js";
 import { useAppState } from "../state/appStateContext.js";
+import LoginMenu from "../components/LoginMenu.jsx";
 
 /** The top bar on every page: the app name, the three modes, the configuration's status,
  * and the light/dark theme switch. */
@@ -49,6 +50,7 @@ export default function Header() {
           {status.label}
         </StatusPill>
         <ThemeToggle />
+        <LoginMenu />
       </div>
     </header>
   );

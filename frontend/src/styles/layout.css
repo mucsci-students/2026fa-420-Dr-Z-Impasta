@@ -128,6 +128,33 @@
   padding: var(--space-4) var(--space-6) 0;
 }
 
+.login-menu {
+  position: relative;
+}
+
+.login-menu__popup {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 20;
+}
+
+.login-menu__avatar {
+  width: 24px;
+  height: 24px;
+  color: var(--accent);
+}
+
+.login-menu__button {
+  display: grid;
+  place-items: center;
+  padding: 6px;
+  color: var(--ink-2);
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+}
+
 /* ------------------------------------------------------------------- page */
 
 .page {
@@ -179,16 +206,19 @@
   .columns {
     grid-template-columns: 1fr;
   }
+
   .topbar {
     gap: var(--space-4);
     padding: 0 var(--space-4);
   }
+
   .topbar__tagline {
     display: none;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
+
   *,
   *::before,
   *::after {
