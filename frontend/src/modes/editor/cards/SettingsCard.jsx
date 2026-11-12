@@ -9,7 +9,7 @@ import ErrorMessage from "../../../components/ErrorMessage.jsx";
 import Field from "../../../components/Field.jsx";
 import HelpTip from "../../../components/HelpTip.jsx";
 import { formIssues } from "../../../components/issues.js";
-import { FLAG_NAMES } from "../labels.js";
+import { OPTIMIZER_FLAG_NAMES } from "../labels.js";
 import CardRow from "./CardRow.jsx";
 
 const toNumber = (text) => (text === "" ? null : Number(text));
@@ -18,11 +18,11 @@ const toText = (number) => (number == null ? "" : String(number));
 /**
  * Global settings, applied as they change: a flag on each click, the generation limit when
  * its box loses focus or Enter is pressed. `settings` is { limit, optimizer_flags } from the
- * document; an incomplete document may leave either out. `flags` is
+ * document; an incomplete document may leave either out. `optimizerFlagChoices` is
  * api.config.options().optimizer_flags ([{ value, description }]), with a fallback until it
  * arrives. `onApply` gets only the field that changed, ready for api.config.updateSettings(values).
  */
-export default function SettingsCard({ settings, flags, busy, error, onApply }) {
+export default function SettingsCard({ settings, optimizerFlagChoices, busy, error, onApply }) {
   const savedFlags = settings.optimizer_flags ?? [];
   const [limitText, setLimitText] = useState(toText(settings.limit));
   // The saved limit the box was last filled from; when it changes, refill the box
@@ -39,12 +39,12 @@ export default function SettingsCard({ settings, flags, busy, error, onApply }) 
     setCheckedFlags(savedFlags);
   }
 
-  const allFlags = flags?.length
-    ? flags
-    : Object.keys(FLAG_NAMES).map((value) => ({ value, description: undefined }));
+  const allFlags = optimizerFlagChoices?.length
+    ? optimizerFlagChoices
+    : Object.keys(OPTIMIZER_FLAG_NAMES).map((value) => ({ value, description: undefined }));
 
   /** Turn a flag on or off, keeping the flags in the library's order. */
-  function toggleFlag(value) {
+  function toggleOptimizerFlag(value) {
     const on = new Set(checkedFlags);
     if (on.has(value)) on.delete(value);
     else on.add(value);
@@ -93,8 +93,8 @@ export default function SettingsCard({ settings, flags, busy, error, onApply }) 
             <span key={value} className="flag-chip">
               <label>
                 <input type="checkbox" checked={checkedFlags.includes(value)} disabled={busy}
-                  onChange={() => toggleFlag(value)} />
-                {FLAG_NAMES[value] ?? value}
+                  onChange={() => toggleOptimizerFlag(value)} />
+                {OPTIMIZER_FLAG_NAMES[value] ?? value}
               </label>
               {description && <HelpTip text={description} />}
             </span>

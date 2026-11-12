@@ -219,11 +219,12 @@ export const ValidateAndSaveItem = async(editing, draft, setEditing, setLocalErr
 };
 
 /**
- * A class pattern's On/Off switch. Always applied (force), so patterns can be turned off in
- * any order; if that leaves the configuration with problems, the banner lists them. A
- * failure is shown at the top of the page (`setError`), since no dialog is open.
+ * A class pattern's On/Off switch, which flips its `disabled` field. Always applied (force),
+ * so patterns can be turned off in any order; if that leaves the configuration with
+ * problems, the banner lists them. A failure is shown at the top of the page (`setError`),
+ * since no dialog is open.
  */
-export const TogglePattern = async(index, pattern, setError) => {
+export const TogglePatternDisabled = async(index, pattern, setError) => {
 	try {
 		await api.config.replace("patterns", index, { ...pattern, disabled: !pattern.disabled }, true);
 	} catch(err) {
@@ -248,7 +249,7 @@ export const DeleteItem = async(deleting, setDeleting, setEditing, setLocalError
 	return true;
 };
 
-export const UpdateTimeSlot = async(vals, setEditing, setLocalError) =>
+export const UpdateTimeSlots = async(vals, setEditing, setLocalError) =>
 	applyEdit(() => api.config.updateTimeSlots(vals), setEditing, setLocalError);
 
 export const UpdateSettings = async(vals, setSettingsError) => {

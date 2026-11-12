@@ -36,7 +36,7 @@ import TimeSlotsDialog from "./dialogs/TimeSlotsDialog.jsx";
 import ConfirmDialog from "../../components/ConfirmDialog.jsx";
 
 import ErrorMessage from "../../components/ErrorMessage.jsx";
-import { Load, ConfirmLoad, Empty_Click, ValidateConfig, SaveConfig, ValidateAndSaveItem, DeleteItem, UpdateTimeSlot, UpdateSettings, TogglePattern, getHistoryLength, getCurrHistoryLength, redoAction, undoAction, pushToHist } from "../../state/eventHandlers";
+import { Load, ConfirmLoad, Empty_Click, ValidateConfig, SaveConfig, ValidateAndSaveItem, DeleteItem, UpdateTimeSlots, UpdateSettings, TogglePatternDisabled, getHistoryLength, getCurrHistoryLength, redoAction, undoAction, pushToHist } from "../../state/eventHandlers";
 
 export default function ConfigEditor() {
   const { state, loading, refresh } = useAppState();
@@ -287,7 +287,7 @@ export default function ConfigEditor() {
                 key={i}
                 pattern={p}
                 onEdit={() => setEditing({ area: "patterns", index: i })}
-                onToggle={async () => { if (await TogglePattern(i, p, setError)) await refresh(); }}
+                onToggleDisabled={async () => { if (await TogglePatternDisabled(i, p, setError)) await refresh(); }}
               />
             ))}
           </CardRow>
@@ -300,7 +300,7 @@ export default function ConfigEditor() {
             />
             <SettingsCard
               settings={settings}
-              flags={options?.optimizer_flags}
+              optimizerFlagChoices={options?.optimizer_flags}
               error={settingsError}
               onApply={async (values) => { if (await UpdateSettings(values, setSettingsError)) await refresh(); }}
             />
@@ -396,7 +396,7 @@ export default function ConfigEditor() {
               onSave={async (times) => 
 		      { 
 			      pushToHist(doc.document); 
-			      await UpdateTimeSlot({ times }, setEditing, setLocalError); 
+			      await UpdateTimeSlots({ times }, setEditing, setLocalError); 
 			      
 			      await refresh(); 
 		      }}
@@ -411,7 +411,7 @@ export default function ConfigEditor() {
               onSave={async (values) => 
 		      { 
 			      pushToHist(doc.document); 
-			      await UpdateTimeSlot(values, setEditing, setLocalError); 
+			      await UpdateTimeSlots(values, setEditing, setLocalError); 
 
 			      await refresh(); 
 		      }}
