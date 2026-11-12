@@ -87,6 +87,102 @@ export default function ConfigEditor() {
   const shownImpact =
     impact && deleting && impact.area === deleting.area && impact.index === deleting.index ? impact : null;
 
+  // --- Actions ---
+  // Every button and dialog calls one of these, so they can be compared side by side. They
+  // keep each action's existing undo and refresh timing, which differs between actions:
+  // - Item and time-slot saves record an undo step before saving and always refresh.
+  //   Delete records one only after it succeeds. The pattern switch and Global Settings
+  //   aren't recorded, so an Undo after them also reverts them along with the previous edit.
+  // - Load, the pattern switch, Global Settings, Delete, and Confirm Load refresh only if
+  //   the change went through; the others always refresh. New on the empty page doesn't
+  //   refresh at all: the next poll shows the editor.
+
+  /** New: start from the empty starter configuration. */
+  const handleNew = async ({ refreshAfter }) => {
+    await Empty_Click(setLoadingFile, setError, setPendingLoad);
+    if (refreshAfter) await refresh();
+  };
+
+  /** Load JSON…: the hidden file input's onChange. */
+  const handleLoadJson = async (event) => {
+    if (await Load(event, setLoadingFile, setError, setPendingLoad)) await refresh();
+  };
+
+  /** "Discard and load" in the unsaved-changes prompt. */
+  const handleConfirmLoad = async () => {
+    if (await ConfirmLoad(pendingLoad, setPendingLoad, setLoadingFile, setError)) await refresh();
+  };
+
+  const handleSave = async () => {
+    await SaveConfig(setError);
+    await refresh();
+  };
+
+  const handleValidate = async () => {
+    await ValidateConfig(setError);
+    await refresh();
+  };
+
+  /** Undo or Redo (`action`), with that button's "reloading" flag set while it runs. */
+  const runHistory = async (action, setReloading) => {
+    setReloading(true);
+    await action(doc.document, config.name, setError, setPendingLoad);
+    await refresh();
+    setReloading(false);
+  };
+  const handleUndo = () => runHistory(undoAction, setUndoReloading);
+  const handleRedo = () => runHistory(redoAction, setRedoReloading);
+
+  /** A pattern card's On/Off switch. */
+  const handleTogglePattern = async (index, pattern) => {
+    if (await TogglePatternDisabled(index, pattern, setError)) await refresh();
+  };
+
+  /** A change in the Global Settings card. */
+  const handleApplySettings = async (values) => {
+    if (await UpdateSettings(values, setSettingsError)) await refresh();
+  };
+
+  /** Save in an item dialog (faculty, course, room, lab, pattern): add or replace the item. */
+  const handleSaveItem = async (draft) => {
+    pushToHist(doc.document);
+    await ValidateAndSaveItem(editing, draft, setEditing, setLocalError);
+    await refresh();
+  };
+
+  /** Save in a time-slot dialog: one day's blocks (`{ times }`) or the timing options. */
+  const handleSaveTimeSlots = async (values) => {
+    pushToHist(doc.document);
+    await UpdateTimeSlots(values, setEditing, setLocalError);
+    await refresh();
+  };
+
+  /** Cancel in any edit dialog. */
+  const handleCloseDialog = () => {
+    setLocalError(null);
+    setEditing(null);
+  };
+
+  /** Delete in an item dialog: open the delete preview for the item being edited. */
+  const handleStartDelete = () => {
+    setLocalError(null);
+    setDeleting(editing);
+  };
+
+  /** Cancel in the delete dialog: back to the edit dialog. */
+  const handleCancelDelete = () => {
+    setLocalError(null);
+    setDeleting(null);
+  };
+
+  const handleConfirmDelete = async () => {
+    const force = shownImpact?.reply?.can_delete === false;   // the user saw the warning
+    if (await DeleteItem(deleting, setDeleting, setEditing, setLocalError, force)) {
+      pushToHist(doc.document);
+      await refresh();
+    }
+  };
+
   if (loading || loadingFile) {
     return (
       <>
@@ -106,13 +202,13 @@ export default function ConfigEditor() {
           mark={<Penne size={40} />}
           actions={
             <>
-              <Button variant="primary" onClick={() => Empty_Click(setLoadingFile, setError, setPendingLoad)}>New</Button>
+              <Button variant="primary" onClick={() => handleNew({ refreshAfter: false })}>New</Button>
               <Button onClick={() => { fileInputRef.current.click(); }}>Load JSON...</Button>
               <input
                 ref={fileInputRef}
                 type="file"
                 style={{ display: "none" }}
-                onChange={async (event) => { if (await Load(event, setLoadingFile, setError, setPendingLoad)) await refresh(); }} />
+                onChange={handleLoadJson} />
             </>
           }
         >
@@ -151,14 +247,14 @@ export default function ConfigEditor() {
         }
         actions={
           <>
-            <Button onClick={async () => { await Empty_Click(setLoadingFile, setError, setPendingLoad); await refresh(); }}>New</Button>
+            <Button onClick={() => handleNew({ refreshAfter: true })}>New</Button>
 
             <Button onClick={() => fileInputRef.current.click()}>Load JSON...</Button>
             <input
               ref={fileInputRef}
               type="file"
               style={{ display: "none" }}
-              onChange={async (event) => { if (await Load(event, setLoadingFile, setError, setPendingLoad)) await refresh(); }}
+              onChange={handleLoadJson}
             />
 
 
@@ -166,17 +262,17 @@ export default function ConfigEditor() {
               disabled={!canSave}
               className={canSave ? "" : "disabled-btn"}
               aria-describedby={canSave ? undefined : "save-hint"}
-              onClick={async () => { await SaveConfig(setError); await refresh(); }}
+              onClick={handleSave}
             >
               Save JSON...
             </Button>
-            <Button variant="primary" onClick={async () => { await ValidateConfig(setError); await refresh(); }}>Validate</Button>
+            <Button variant="primary" onClick={handleValidate}>Validate</Button>
 
 		<div className="undo-redo-row">
 			<Button 
 		className={undoReloading ? "reloading" : (getHistoryLength() > 1 ? "" : "disabled-btn")}
 		disabled={getHistoryLength() <= 1}
-		onClick={async() => {setUndoReloading(true); await undoAction(doc.document, config.name, setError, setPendingLoad); await refresh(); setUndoReloading(false); }}
+		onClick={handleUndo}
 		>
 		Undo
 		</Button>
@@ -184,7 +280,7 @@ export default function ConfigEditor() {
 			<Button 
 		className={redoReloading ? "reloading" : (getCurrHistoryLength() > 1 ? "" : "disabled-btn")} 
 		disabled={getCurrHistoryLength() <= 1}
-		onClick={async() => {setRedoReloading(true); await redoAction(doc.document, config.name, setError, setPendingLoad); await refresh(); setRedoReloading(false); }}
+		onClick={handleRedo}
 		>
 		Redo
 		</Button>
@@ -287,7 +383,7 @@ export default function ConfigEditor() {
                 key={i}
                 pattern={p}
                 onEdit={() => setEditing({ area: "patterns", index: i })}
-                onToggleDisabled={async () => { if (await TogglePatternDisabled(i, p, setError)) await refresh(); }}
+                onToggleDisabled={() => handleTogglePattern(i, p)}
               />
             ))}
           </CardRow>
@@ -302,7 +398,7 @@ export default function ConfigEditor() {
               settings={settings}
               optimizerFlagChoices={options?.optimizer_flags}
               error={settingsError}
-              onApply={async (values) => { if (await UpdateSettings(values, setSettingsError)) await refresh(); }}
+              onApply={handleApplySettings}
             />
           </div>
           {/* Edit dialogs: at most one is open, picked by editing.area. They hide while a delete is open. */}
@@ -315,15 +411,9 @@ export default function ConfigEditor() {
               rooms={items.rooms.map((r) => r.name)}
               labs={items.labs.map((l) => l.name)}
               options={options}
-              onCancel={() => { setLocalError(null); setEditing(null); }}
-              onDelete={() => { setLocalError(null); setDeleting(editing); }}
-              onSave={async (draft) => 
-		      {
-			      pushToHist(doc.document); 
-			      await ValidateAndSaveItem(editing, draft, setEditing, setLocalError);
-			      await refresh(); 
-			    
-	      }}
+              onCancel={handleCloseDialog}
+              onDelete={handleStartDelete}
+              onSave={handleSaveItem}
               error={localError}
             />
           )}
@@ -340,14 +430,9 @@ export default function ConfigEditor() {
               roomFeatures={[...new Set(items.rooms.flatMap((r) => r.features ?? []))]}
               labFeatures={[...new Set(items.labs.flatMap((l) => l.features ?? []))]}
               options={options}
-              onCancel={() => { setLocalError(null); setEditing(null); }}
-              onDelete={() => { setLocalError(null); setDeleting(editing); }}
-              onSave={async (draft) => 
-		      { 
-			      pushToHist(doc.document); 
-			      await ValidateAndSaveItem(editing, draft, setEditing, setLocalError); 
-			      await refresh(); 
-		      }}
+              onCancel={handleCloseDialog}
+              onDelete={handleStartDelete}
+              onSave={handleSaveItem}
               error={localError}
             />
           )}
@@ -359,14 +444,9 @@ export default function ConfigEditor() {
               resource={editing.index === null ? null : items[editing.area][editing.index]}
               suggestions={[...new Set(items[editing.area].flatMap((r) => r.features ?? []))]}
               options={options}
-              onCancel={() => { setLocalError(null); setEditing(null); }}
-              onDelete={() => { setLocalError(null); setDeleting(editing); }}
-              onSave={async (draft) => 
-		      { 
-			      pushToHist(doc.document); 
-			      await ValidateAndSaveItem(editing, draft, setEditing, setLocalError); 
-			      await refresh(); 
-		      }}
+              onCancel={handleCloseDialog}
+              onDelete={handleStartDelete}
+              onSave={handleSaveItem}
               error={localError}
             />
           )}
@@ -376,14 +456,9 @@ export default function ConfigEditor() {
               index={editing.index}
               pattern={editing.index === null ? null : patterns[editing.index]}
               options={options}
-              onCancel={() => { setLocalError(null); setEditing(null); }}
-              onDelete={() => { setLocalError(null); setDeleting(editing); }}
-              onSave={async (draft) => 
-		      { 
-			      pushToHist(doc.document); 
-			      await ValidateAndSaveItem(editing, draft, setEditing, setLocalError); 
-			      await refresh(); 
-		      }}
+              onCancel={handleCloseDialog}
+              onDelete={handleStartDelete}
+              onSave={handleSaveItem}
               error={localError}
             />
           )}
@@ -392,29 +467,16 @@ export default function ConfigEditor() {
               key={`time_slots-${editing.day}`}
               day={editing.day}
               times={timeSlots.times}
-              onCancel={() => { setLocalError(null); setEditing(null); }}
-              onSave={async (times) => 
-		      { 
-			      pushToHist(doc.document); 
-			      await UpdateTimeSlots({ times }, setEditing, setLocalError); 
-			      
-			      await refresh(); 
-		      }}
+              onCancel={handleCloseDialog}
+              onSave={(times) => handleSaveTimeSlots({ times })}
               error={localError}
-
             />
           )}
           {editing?.area === "timing" && (
             <TimeSlotsDialog
               timeSlots={timeSlots}
-              onCancel={() => { setLocalError(null); setEditing(null); }}
-              onSave={async (values) => 
-		      { 
-			      pushToHist(doc.document); 
-			      await UpdateTimeSlots(values, setEditing, setLocalError); 
-
-			      await refresh(); 
-		      }}
+              onCancel={handleCloseDialog}
+              onSave={handleSaveTimeSlots}
               error={localError}
             />
           )}
@@ -424,14 +486,8 @@ export default function ConfigEditor() {
               impact={shownImpact?.reply ?? null}
               loadError={shownImpact?.error}
               error={localError}
-              onCancel={() => { setLocalError(null); setDeleting(null); }}   /* back to the edit dialog */
-              onConfirm={async () => {
-                const force = shownImpact?.reply?.can_delete === false;   // the user saw the warning
-                if (await DeleteItem(deleting, setDeleting, setEditing, setLocalError, force)) {
-                  pushToHist(doc.document);
-                  await refresh();
-                }
-              }}
+              onCancel={handleCancelDelete}
+              onConfirm={handleConfirmDelete}
             />
           )}
           {/* Shown when Load JSON… would overwrite unsaved changes. */}
@@ -441,7 +497,7 @@ export default function ConfigEditor() {
             destructive
             confirmLabel="Discard and load"
             cancelLabel="Keep my changes"
-            onConfirm={async () => { if (await ConfirmLoad(pendingLoad, setPendingLoad, setLoadingFile, setError)) await refresh(); }}
+            onConfirm={handleConfirmLoad}
             onCancel={() => setPendingLoad(null)}
           >
             <p>These changes haven't been saved and will be lost:</p>
