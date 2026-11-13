@@ -10,10 +10,9 @@ from collections.abc import Iterable, Sequence
 from scheduler import CombinedConfig, TimeSlotConfig
 
 from zimpasta.command import CommandSpec, Invocation
+from zimpasta.commands.common import NO_CONFIG_LOADED as NO_CONFIG
 from zimpasta.console import Console
 from zimpasta.session import Session
-
-NO_CONFIG = "No configuration is loaded."
 
 
 def print_config(console: Console, session: Session, invocation: Invocation) -> None:

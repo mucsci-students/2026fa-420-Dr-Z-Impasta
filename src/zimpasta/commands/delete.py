@@ -23,11 +23,12 @@ from dataclasses import dataclass
 from pydantic import ValidationError
 
 from zimpasta.command import CommandSpec, Invocation, Option, Positional
+from zimpasta.commands.common import KINDS
+from zimpasta.commands.common import NO_CONFIG_TO_EDIT as NO_CONFIG
 from zimpasta.console import Console
 from zimpasta.prompts import ask_menu, ask_yes_no
 from zimpasta.session import Session
 
-NO_CONFIG = "No configuration loaded. Load one first."
 NOTHING_TO_DELETE = "There is nothing of that type to delete."
 NOT_FOUND = "There is no {kind} named {name}."
 CANCELLED = "Cancelled. Nothing was deleted."
@@ -40,9 +41,6 @@ SECTION_LABEL = "{name} (section {number} of {count})"
 """How an entry is shown when it shares its name with another."""
 
 CANCEL = "Cancel"
-
-KINDS: tuple[str, ...] = ("course", "room", "lab", "faculty")
-"""Categories, in the order the placeholder grammar and ``help`` list them."""
 
 
 @dataclass(frozen=True)

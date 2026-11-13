@@ -1,5 +1,6 @@
 """The interactive export step shared by the run and results commands."""
 
+from zimpasta.command import Option
 from zimpasta.console import Console
 from zimpasta.model.export import ExportFormat, ExportResult, export_schedules
 from zimpasta.model.generate import Schedule
@@ -11,6 +12,16 @@ from zimpasta.prompts import (
     ask_yes_no,
     overwrite_prompt,
 )
+
+FORMATS = tuple(fmt.value for fmt in ExportFormat)
+FORMAT_PROMPT = "Output format (csv/Json): "
+
+EXPORT_OPTIONS = (
+    Option("format", required=True, choices=FORMATS),
+    Option("output", required=True, help="output file; the extension is added"),
+    Option("overwrite", flag=True, help="replace an existing output file"),
+)
+"""The ``--format``, ``--output``, and ``--overwrite`` options of every command that exports."""
 
 
 def export_with_prompts(

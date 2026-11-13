@@ -15,11 +15,11 @@ from pydantic import ValidationError
 from scheduler import CombinedConfig
 
 from zimpasta.command import CommandError, CommandSpec, Invocation, Positional
+from zimpasta.commands.common import PATH_PROMPT
 from zimpasta.console import Console
 from zimpasta.model.config_loader import load_config as read_config
 from zimpasta.session import Session
 
-PATH_PROMPT = "Enter configuration file path: "
 FILE_NOT_FOUND = "File not found."
 UNREADABLE = "Unable to read file."
 INVALID = "Invalid configuration file."

@@ -16,7 +16,7 @@ from pydantic import ValidationError
 from scheduler import CombinedConfig
 
 from zimpasta.command import CommandError, CommandSpec, Invocation, Option
-from zimpasta.commands.export_flow import export_with_prompts
+from zimpasta.commands.export_flow import EXPORT_OPTIONS, FORMAT_PROMPT, export_with_prompts
 from zimpasta.commands.load_config import read_into_session
 from zimpasta.console import Console
 from zimpasta.model.config_loader import load_config
@@ -41,14 +41,12 @@ from zimpasta.session import Session
 CONFIG_PROMPT = "Config file to use [{default}]: "
 LIMIT_PROMPT = "Maximum number of schedules [{default}]: "
 OPTIMIZE_PROMPT = "Optimize? (yes/no): "
-FORMAT_PROMPT = "Output format (csv/Json): "
 
 CANCELLED = "Run cancelled."
 NO_CONFIG = "No configuration is loaded. Pass --config PATH, or load one first."
 NO_CONFIG_PROMPT = "No configuration is loaded. Enter the path to a config file."
 BAD_LIMIT = "--limit must be a whole number of 1 or more."
 
-FORMATS = tuple(fmt.value for fmt in ExportFormat)
 YES_NO = ("yes", "no")
 
 _NO_FEASIBLE_TEXT = {
@@ -82,9 +80,7 @@ def make_specs(
                 Option("config", help="configuration file; defaults to the loaded one"),
                 Option("limit", required=True, help="maximum number of schedules"),
                 Option("optimize", required=True, choices=YES_NO),
-                Option("format", required=True, choices=FORMATS),
-                Option("output", required=True, help="output file; the extension is added"),
-                Option("overwrite", flag=True, help="replace an existing output file"),
+                *EXPORT_OPTIONS,
             ),
             description="Generate schedules and export them",
             handler=handler,

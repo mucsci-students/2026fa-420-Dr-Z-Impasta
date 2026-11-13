@@ -28,15 +28,11 @@ from pydantic import ValidationError
 from scheduler import CourseConfig, FacultyConfig, LabConfig, RoomConfig
 
 from zimpasta.command import CommandSpec, Invocation, Option, Positional
+from zimpasta.commands.common import KINDS
+from zimpasta.commands.common import NO_CONFIG_TO_EDIT as NO_CONFIG
 from zimpasta.console import Console
 from zimpasta.prompts import ask_choice, ask_int
 from zimpasta.session import Session
-
-KINDS: tuple[str, ...] = ("course", "room", "lab", "faculty")
-"""Categories, in the same order delete.py's KINDS lists them."""
-
-NO_CONFIG = "No configuration loaded. Load one first."
-"""Matches delete.py's NO_CONFIG wording exactly, for consistency across commands."""
 
 ADDED = "Added {name}."
 CANCELLED = "Cancelled. Nothing was added."

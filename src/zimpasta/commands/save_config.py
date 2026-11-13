@@ -10,11 +10,11 @@ Author: Foster VanFleet. Converted to the command model.
 from pathlib import Path
 
 from zimpasta.command import CommandSpec, Invocation, Positional
+from zimpasta.commands.common import NO_CONFIG_LOADED as NO_CONFIG
+from zimpasta.commands.common import PATH_PROMPT
 from zimpasta.console import Console
 from zimpasta.session import Session
 
-NO_CONFIG = "No configuration is loaded."
-PATH_PROMPT = "Enter configuration file path: "
 PATH_PROMPT_WITH_DEFAULT = "Enter configuration file path [{default}]: "
 BLANK_PATH = "Enter a file name."
 UNWRITABLE = "Unable to save configuration."

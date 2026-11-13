@@ -50,10 +50,10 @@ from pydantic import TypeAdapter
 from scheduler import CombinedConfig, TimeRange, TimeRangeString
 
 from zimpasta.command import CommandError, CommandSpec, Invocation, Positional
+from zimpasta.commands.common import NO_CONFIG_TO_EDIT as NO_CONFIG
 from zimpasta.console import Console
 from zimpasta.session import Session
 
-NO_CONFIG = "No configuration loaded. Load one first."
 UPDATE_SUCCESS = "{kind} update has succeeded."
 UPDATE_FAILED = "{kind} update has not succeeded."
 UI_TO_CONFIG = {

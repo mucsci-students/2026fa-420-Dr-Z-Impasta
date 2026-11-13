@@ -5,8 +5,8 @@ They work on the schedules kept in ``session.results`` by the most recent succes
 them bare asks for the schedule number, format, and output file.
 """
 
-from zimpasta.command import CommandError, CommandSpec, Invocation, Option, Positional
-from zimpasta.commands.export_flow import export_with_prompts
+from zimpasta.command import CommandError, CommandSpec, Invocation, Positional
+from zimpasta.commands.export_flow import EXPORT_OPTIONS, FORMAT_PROMPT, export_with_prompts
 from zimpasta.console import Console
 from zimpasta.model.export import ExportFormat, resolve_output_path
 from zimpasta.model.results import ScheduleStore
@@ -16,11 +16,8 @@ from zimpasta.view import format_schedule, summarize
 
 NO_RESULTS = "No generated schedules in this session. Run the scheduler first."
 CLEARED = "Cleared generated schedules."
-FORMAT_PROMPT = "Output format (csv/Json): "
 WHICH_PROMPT = "Export which (all, or 1-{count}): "
 BAD_WHICH = "Please enter all or a number between 1 and {count}."
-
-FORMATS = tuple(fmt.value for fmt in ExportFormat)
 
 
 def summary(console: Console, session: Session, invocation: Invocation) -> None:
@@ -111,11 +108,7 @@ SPECS = (
         "schedules",
         "export",
         positionals=(Positional("which", help="a schedule number, or all"),),
-        options=(
-            Option("format", required=True, choices=FORMATS),
-            Option("output", required=True, help="output file; the extension is added"),
-            Option("overwrite", flag=True, help="replace an existing output file"),
-        ),
+        options=EXPORT_OPTIONS,
         description="Export one schedule or all of them",
         handler=export,
         builder=build_export,
