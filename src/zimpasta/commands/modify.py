@@ -5,7 +5,8 @@ or optimizer flag from the loaded configuration.
 a bare `modify`, or a modify command that is missing fields, will tell the user to insert
 the missing fields into the command.
 
-Either way the handler confirms before touching the configuration.
+The change is made to the loaded configuration and written straight back to its file;
+there is no confirmation.
 
 Any modify command is made up of 6 fields:
     1. the "modify" keyword
@@ -67,7 +68,7 @@ UI_TO_CONFIG = {
 
 
 def modify_handler(console: Console, session: Session, inv: Invocation) -> None:
-    """Processes a fully types modify-command and assesses if certain inputs are valid"""
+    """Handler: check the ID and field names, apply the update, and say whether it worked."""
 
     kind = inv.positionals["kind"]
     field_id = inv.positionals["id"]
@@ -75,46 +76,18 @@ def modify_handler(console: Console, session: Session, inv: Invocation) -> None:
     key = inv.positionals["key"]
     value = inv.positionals["value"]
 
-    id_keys_choices = id_key_choices(kind)
+    id_choices, key_choices = id_key_choices(kind)
 
-    if field_id not in id_keys_choices[0]:
-        raise CommandError(f"Unknown {kind} ID: {field_id}. Options are {id_keys_choices[0]}")
-        return
+    # When `id_choices` is one string, this is a substring check (see tests/test_modify.py).
+    if field_id not in id_choices:
+        raise CommandError(f"Unknown {kind} ID: {field_id}. Options are {id_choices}")
 
-    if key not in id_keys_choices[1]:
-        raise CommandError(f"Unknown field: {key}. Options are {id_keys_choices[1]}")
-        return
+    if key not in key_choices:
+        raise CommandError(f"Unknown field: {key}. Options are {key_choices}")
 
-    """ use different methods for json objects nested inside config vs those that aren't """
-    if kind in ("time_slot", "optimizer_flag"):
-        if (
-            update_config(kind, field_id, field, key, value, session.config, session.config_path)
-            != {}
-        ):
-            console.say(UPDATE_SUCCESS.format(kind=kind))
-        else:
-            console.say(UPDATE_FAILED.format(kind=kind))
-
-    elif kind in ("class"):
-        if (
-            update_config_time_slot_config(
-                kind, field_id, field, key, value, session.config, session.config_path
-            )
-            != {}
-        ):
-            console.say(UPDATE_SUCCESS.format(kind=kind))
-        else:
-            console.say(UPDATE_FAILED.format(kind=kind))
-    else:
-        if (
-            update_config_config(
-                kind, field_id, field, key, value, session.config, session.config_path
-            )
-            != {}
-        ):
-            console.say(UPDATE_SUCCESS.format(kind=kind))
-        else:
-            console.say(UPDATE_FAILED.format(kind=kind))
+    update = UPDATERS.get(kind, update_config_config)
+    updated = update(kind, field_id, field, key, value, session.config, session.config_path)
+    console.say((UPDATE_SUCCESS if updated else UPDATE_FAILED).format(kind=kind))
 
 
 def modify_builder(console: Console, session: Session, inv: Invocation) -> Invocation | None:
@@ -166,10 +139,8 @@ MODIFY_SPECS = (
 )
 
 
-def id_key_choices(
-    kind: str,
-) -> tuple[tuple[str, ...], tuple[str, ...]] | tuple[str, tuple[str, ...]]:
-    """Shows the valid input options for different kinds & fields"""
+def id_key_choices(kind: str) -> tuple[str | tuple[str, ...], tuple[str, ...]]:
+    """The valid ID names and field names for ``kind``, or ``("", ())`` for an unknown kind."""
 
     match kind:
         case "course":
@@ -216,6 +187,12 @@ def id_key_choices(
     return ("", ())
 
 
+def _write(config: CombinedConfig, config_path: Path | None) -> None:
+    """Write the whole configuration back to the file it was loaded from."""
+    with open(str(config_path), "w") as file:
+        json.dump(config.model_dump(mode="json"), file, indent=4)
+
+
 def update_config(
     json_obj: str,
     record_name: str,
@@ -224,8 +201,8 @@ def update_config(
     value: str,
     config: CombinedConfig | None,
     config_path: Path | None,
-) -> dict:
-    """Updates the config file for non-nested json objects"""
+) -> bool:
+    """Update an optimizer flag or a time block; True if the configuration had any."""
 
     if config is not None:
         records = getattr(config, UI_TO_CONFIG[json_obj])
@@ -243,13 +220,11 @@ def update_config(
                         data_type = type(getattr(r, key))
                         setattr(r, key, data_type(value))
 
-            """ write back to the config file """
-            with open(str(config_path), "w") as file:
-                json.dump(config.model_dump(mode="json"), file, indent=4)
+            # Only the first record is ever looked at: write the file and stop.
+            _write(config, config_path)
+            return True
 
-            return record
-
-    return {}
+    return False
 
 
 def update_config_time_slot_config(
@@ -260,8 +235,8 @@ def update_config_time_slot_config(
     value: str,
     config: CombinedConfig | None,
     config_path: Path | None,
-) -> dict:
-    """Updates the config file for json objects nested in time_slot_config"""
+) -> bool:
+    """Update a class pattern; True unless there are no patterns."""
 
     if config is not None:
         records = getattr(config.time_slot_config, UI_TO_CONFIG[json_obj])
@@ -285,15 +260,14 @@ def update_config_time_slot_config(
                         else:
                             record = change_class_attr(record, key, value)
 
-                with open(str(config_path), "w") as file:
-                    json.dump(config.model_dump(mode="json"), file, indent=4)
+                # Only the first pattern is ever looked at: write the file and stop.
+                _write(config, config_path)
+                return record != {}
+    return False
 
-                return record
-    return {}
 
-
-def change_class_attr(record, key: str, value: str) -> dict:
-    """Changes an record inside a dict and returns the new record"""
+def change_class_attr(record, key: str, value: str) -> object:
+    """Change one field of the meeting on day ``key``; return that meeting, or {} if none."""
 
     for rec in record:
         if rec.day == key:
@@ -315,8 +289,8 @@ def update_config_config(
     value: str,
     config: CombinedConfig | None,
     config_path: Path | None,
-) -> dict:
-    """Updates the config file for json objects nested in config"""
+) -> bool:
+    """Update a room, lab, course, or faculty member; True if one matched."""
 
     if config is not None:
         records = getattr(config.config, UI_TO_CONFIG[json_obj])
@@ -325,12 +299,12 @@ def update_config_config(
             if f"{record_name}={record_val}" in str(
                 record
             ) or f"{record_name}='{record_val}'" in str(record):
-                """ this if block handles nested jsons & TimeRange type values """
-                if json_obj == "faculty" and (
-                    key == "times"
-                    or key == "course_preferences"
-                    or key == "room_preferences"
-                    or key == "lab_preferences"
+                # A faculty member's times and preferences are dicts, set one entry at a time.
+                if json_obj == "faculty" and key in (
+                    "times",
+                    "course_preferences",
+                    "room_preferences",
+                    "lab_preferences",
                 ):
                     inner_key = value.split(":", 1)[0]
                     value = value.split(":", 1)[1]
@@ -353,9 +327,14 @@ def update_config_config(
                     data_type = type(getattr(record, key))
                     setattr(record, key, data_type(value))
 
-                """ write back to the config file """
-                with open(str(config_path), "w") as file:
-                    json.dump(config.model_dump(mode="json"), file, indent=4)
+                _write(config, config_path)
+                return True
+    return False
 
-                return record
-    return {}
+
+UPDATERS = {
+    "time_slot": update_config,
+    "optimizer_flag": update_config,
+    "class": update_config_time_slot_config,
+}
+"""Kinds stored outside ``config.config``; every other kind uses ``update_config_config``."""
