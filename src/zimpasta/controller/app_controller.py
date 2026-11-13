@@ -12,6 +12,7 @@ turns them into error responses.
 
 import threading
 from collections.abc import Callable, Mapping
+from contextlib import AbstractContextManager
 from datetime import datetime
 from pathlib import PurePath
 
@@ -93,6 +94,16 @@ class AppController:
             "document": self.workspace.document(),
             "sections": self.workspace.section_labels(),
         }
+
+    def configuration_state(self) -> dict:
+        """The configuration's state (status, name, revisions, unsaved changes, problems,
+        counts) without its contents: the ``config`` part of :meth:`state`."""
+        return self.workspace.snapshot()
+
+    def transaction(self) -> AbstractContextManager[None]:
+        """Make several edits as one: if any of them raises, all of them are undone. The AI
+        assistant applies a request's changes this way."""
+        return self.workspace.transaction()
 
     def schema(self) -> dict:
         return catalog.configuration_schema()
@@ -217,6 +228,10 @@ class AppController:
     def schedule_summary(self) -> dict:
         with self._lock:
             return self.schedules.summary()
+
+    def schedule_count(self) -> int:
+        with self._lock:
+            return self.schedules.count
 
     def schedule_view(self, number: int, group: str = "room") -> dict:
         with self._lock:

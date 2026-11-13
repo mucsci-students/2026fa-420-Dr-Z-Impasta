@@ -9,8 +9,9 @@ exception, so the model and the chat transcript both see exactly what happened.
 
 The GUI's safeguards apply:
 
-* Every edit goes through :class:`~zimpasta.model.workspace.ConfigWorkspace`, so the
-  scheduler library validates the whole configuration and a rejected edit changes nothing.
+* Every edit goes through the same :class:`AppController` methods as the GUI's (``add_item``,
+  ``replace_item``, ``delete_item``, ...), so the scheduler library validates the whole
+  configuration and a rejected edit changes nothing.
 * ``edit_configuration`` applies all of a request's changes in one transaction: if any is
   rejected, none is applied.
 * Deleting asks the user first, as the GUI's delete dialog does, and a delete that other
@@ -380,9 +381,8 @@ def _failure(error: Exception) -> ToolResult:
 
 
 def inspect_configuration(app: "AppController", args: InspectArguments) -> ToolResult:
-    workspace = app.workspace
     if args.area == "overview":
-        snapshot = workspace.snapshot()
+        snapshot = app.configuration_state()
         return ToolResult.done(
             "Read the configuration overview.",
             status_of_configuration=snapshot["status"],
@@ -392,10 +392,10 @@ def inspect_configuration(app: "AppController", args: InspectArguments) -> ToolR
             counts=snapshot["counts"],
             problems=[problem["message"] for problem in snapshot["issues"]][:20],
             generation=_brief_generation(app.generation_status()),
-            schedules=app.schedules.count,
+            schedules=app.schedule_count(),
         )
     if args.area in SECTIONS:
-        document = workspace.document()
+        document = app.configuration()["document"]
         if document is None:
             raise NoConfiguration()
         if args.area == "time_slots":
@@ -403,8 +403,8 @@ def inspect_configuration(app: "AppController", args: InspectArguments) -> ToolR
         else:
             section = {"limit": document["limit"], "optimizer_flags": document["optimizer_flags"]}
         return ToolResult.done(f"Read {args.area}.", **{args.area: section})
-    listed = workspace.items(args.area)
-    labels = workspace.section_labels() if args.area == "courses" else None
+    listed = app.list_items(args.area)["items"]
+    labels = app.configuration()["sections"] if args.area == "courses" else None
     entries = []
     for index, item in enumerate(listed[:MAX_LISTED]):
         entry: dict[str, Any] = {"index": index}
@@ -441,8 +441,8 @@ def describe_fields(app: "AppController", args: DescribeArguments) -> ToolResult
     else:
         schema = ITEM_TYPES[args.area].model_json_schema()
     data: dict[str, Any] = {"area": args.area, "schema": schema, "choices": choices}
-    if args.area not in SECTIONS and app.workspace.document() is not None:
-        existing = app.workspace.items(args.area)
+    if args.area not in SECTIONS and app.configuration()["document"] is not None:
+        existing = app.list_items(args.area)["items"]
         if existing:
             data["example"] = existing[0]
     return ToolResult.done(f"Described the fields for {args.area}.", **data)
@@ -469,7 +469,6 @@ def _apply_changes(app: "AppController", changes: list[Change], *, confirmed: bo
     indexes of existing items don't move. Deletes run last, highest index first, so every
     index means what it meant before the call.
     """
-    workspace = app.workspace
     numbered = list(enumerate(changes, start=1))
     deletes = [(n, c) for n, c in numbered if c.action == "delete"]
     targets = [(c.area, c.index) for _, c in deletes]
@@ -483,7 +482,7 @@ def _apply_changes(app: "AppController", changes: list[Change], *, confirmed: bo
     done: list[str] = []
     removals: list[str] = []
     try:
-        with workspace.transaction():
+        with app.transaction():
             for number, change in ordered:
                 try:
                     done.append(_apply_one(app, change, removals))
@@ -502,7 +501,7 @@ def _apply_changes(app: "AppController", changes: list[Change], *, confirmed: bo
             prompt=prompt,
             details=tuple(done + removals),
             run=lambda: _apply_changes(app, changes, confirmed=True),
-            revision=workspace.revision,
+            revision=app.configuration_state()["revision"],
         )
         return ToolResult.waiting(f"Waiting for confirmation: {prompt}", pending, applied=False)
     except _Rejected as rejected:
@@ -525,35 +524,38 @@ def _apply_changes(app: "AppController", changes: list[Change], *, confirmed: bo
 
 
 def _apply_one(app: "AppController", change: Change, removals: list[str]) -> str:
-    workspace = app.workspace
+    """Apply one change through the GUI's own AppController methods; return its summary."""
     if change.area == "time_slots":
-        return workspace.update_time_slots(change.fields or {}).summary
+        return app.update_time_slots(change.fields or {})["change"]["summary"]
     if change.area == "settings":
-        return workspace.update_settings(change.fields or {}).summary
+        return app.update_settings(change.fields or {})["change"]["summary"]
     if change.action == "add":
-        return workspace.add(change.area, change.item).summary
+        return app.add_item(change.area, change.item)["change"]["summary"]
     index = change.index if change.index is not None else -1
     if change.action == "update":
-        current = workspace.item(change.area, index)
-        return workspace.replace(change.area, index, {**current, **(change.fields or {})}).summary
-    recorded, impact = workspace.remove(change.area, index)
-    for reference in impact.cascades:
-        noun = refs.AREA_NOUNS.get(reference.area, reference.area)
+        current = app.get_item(change.area, index)["item"]
+        updated = {**current, **(change.fields or {})}
+        return app.replace_item(change.area, index, updated)["change"]["summary"]
+    deleted = app.delete_item(change.area, index)
+    impact = deleted["impact"]
+    for reference in impact["cascades"]:
+        noun = refs.AREA_NOUNS.get(reference["area"], reference["area"])
         removals.append(
-            f"Also removes {impact.label} from {noun} {reference.label} ({reference.field})"
+            f"Also removes {impact['label']} from {noun} {reference['label']} "
+            f"({reference['field']})"
         )
-    return recorded.summary
+    return deleted["change"]["summary"]
 
 
 def new_configuration(app: "AppController", args: NoArguments) -> ToolResult:
-    workspace = app.workspace
-    if workspace.dirty and workspace.changes:
+    state = app.configuration_state()
+    if state["dirty"] and state["changes"]:
         pending = PendingAction(
             kind="confirm",
             prompt="Discard the unsaved changes and start a new configuration?",
-            details=tuple(change.summary for change in workspace.changes),
+            details=tuple(change["summary"] for change in state["changes"]),
             run=lambda: _start_new(app),
-            revision=workspace.revision,
+            revision=state["revision"],
         )
         return ToolResult.waiting(
             "Waiting for confirmation: the unsaved changes would be lost.", pending
@@ -617,7 +619,7 @@ def generation_status(app: "AppController", args: NoArguments) -> ToolResult:
     return ToolResult.done(
         status["message"] or f"Generation is {status['state']}.",
         generation=brief,
-        schedules=app.schedules.count,
+        schedules=app.schedule_count(),
     )
 
 
@@ -633,7 +635,7 @@ def _brief_generation(status: Mapping[str, Any]) -> dict[str, Any]:
 
 
 def _brief_configuration(app: "AppController") -> dict[str, Any]:
-    snapshot = app.workspace.snapshot()
+    snapshot = app.configuration_state()
     return {
         "status": snapshot["status"],
         "counts": snapshot["counts"],
