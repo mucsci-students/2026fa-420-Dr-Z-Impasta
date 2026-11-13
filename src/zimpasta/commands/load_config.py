@@ -8,9 +8,11 @@ Author: Foster VanFleet. Converted to the command model.
 """
 
 import json
+from collections.abc import Callable
 from pathlib import Path
 
 from pydantic import ValidationError
+from scheduler import CombinedConfig
 
 from zimpasta.command import CommandError, CommandSpec, Invocation, Positional
 from zimpasta.console import Console
@@ -24,19 +26,38 @@ INVALID = "Invalid configuration file."
 LOADED = "Configuration loaded successfully."
 
 
-def load_into_session(session: Session, path: Path) -> str | None:
-    """Load ``path`` into the session. Returns a message when it cannot be loaded, else None."""
+LoadError = OSError | json.JSONDecodeError | ValidationError
+"""Why a configuration file couldn't be loaded. Each command words it its own way."""
+
+
+def read_into_session(
+    session: Session, path: Path, loader: Callable[[Path], CombinedConfig] = read_config
+) -> LoadError | None:
+    """Load ``path`` into the session, or return why it couldn't be loaded.
+
+    Shared by ``load`` and ``run schedule --config``. The session is only updated after a
+    successful load, so a bad path or an invalid file leaves the previous configuration.
+    """
     try:
-        config = read_config(path)
-    except FileNotFoundError:
-        return FILE_NOT_FOUND
-    except OSError:
-        return UNREADABLE
-    except (json.JSONDecodeError, ValidationError):
-        return INVALID
+        config = loader(path)
+    except (OSError, json.JSONDecodeError, ValidationError) as error:
+        return error
     session.config = config
     session.config_path = path.resolve()
     return None
+
+
+def load_into_session(session: Session, path: Path) -> str | None:
+    """Load ``path`` into the session. Returns a message when it cannot be loaded, else None."""
+    match read_into_session(session, path):
+        case None:
+            return None
+        case FileNotFoundError():
+            return FILE_NOT_FOUND
+        case OSError():
+            return UNREADABLE
+        case _:
+            return INVALID
 
 
 def load(console: Console, session: Session, invocation: Invocation) -> None:

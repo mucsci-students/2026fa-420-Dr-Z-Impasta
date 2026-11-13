@@ -365,3 +365,30 @@ def test_end_of_input_cancels_without_raising(config, fake_generator):
     run(console, Session(config=config), "run", fake_generator)
 
     assert console.output[-1] == CANCELLED
+
+
+def test_the_messages_for_a_config_that_will_not_load(tmp_path, config_data):
+    from zimpasta.commands.run import load_into_session
+    from zimpasta.model.config_loader import load_config
+
+    session = Session()
+    missing = tmp_path / "missing.json"
+    not_json = tmp_path / "not.json"
+    not_json.write_text("{", encoding="utf-8")
+    invalid = tmp_path / "invalid.json"
+    config_data["config"]["rooms"][0]["capacity"] = -1
+    invalid.write_text(json.dumps(config_data), encoding="utf-8")
+
+    assert load_into_session(session, missing, load_config) == (
+        f"Cannot read config file '{missing}': No such file or directory"
+    )
+    assert load_into_session(session, not_json, load_config) == (
+        f"Config file '{not_json}' is not valid JSON: "
+        "Expecting property name enclosed in double quotes: line 1 column 2 (char 1)"
+    )
+    message = load_into_session(session, invalid, load_config)
+    assert message is not None
+    first, *details = message.splitlines()
+    assert first == f"Config file '{invalid}' is not a valid configuration:"
+    assert details and all(line.startswith("  - ") for line in details)
+    assert session.config is None

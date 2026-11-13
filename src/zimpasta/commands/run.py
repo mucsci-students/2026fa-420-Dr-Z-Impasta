@@ -17,6 +17,7 @@ from scheduler import CombinedConfig
 
 from zimpasta.command import CommandError, CommandSpec, Invocation, Option
 from zimpasta.commands.export_flow import export_with_prompts
+from zimpasta.commands.load_config import read_into_session
 from zimpasta.console import Console
 from zimpasta.model.config_loader import load_config
 from zimpasta.model.export import ExportFormat, resolve_output_path
@@ -205,19 +206,17 @@ def load_into_session(session: Session, path: Path, loader: ConfigLoader) -> str
     The session is only updated after a successful load, so a bad path or an invalid file
     leaves the previously valid configuration intact.
     """
-    try:
-        config = loader(path)
-    except OSError as exc:
-        return f"Cannot read config file '{path}': {exc.strerror or exc}"
-    except json.JSONDecodeError as exc:
-        return f"Config file '{path}' is not valid JSON: {exc}"
-    except ValidationError as exc:
-        lines = [f"Config file '{path}' is not a valid configuration:"]
-        lines.extend(f"  - {line}" for line in format_validation_errors(exc))
-        return "\n".join(lines)
-    session.config = config
-    session.config_path = path.resolve()
-    return None
+    match read_into_session(session, path, loader):
+        case None:
+            return None
+        case OSError() as exc:
+            return f"Cannot read config file '{path}': {exc.strerror or exc}"
+        case json.JSONDecodeError() as exc:
+            return f"Config file '{path}' is not valid JSON: {exc}"
+        case ValidationError() as exc:
+            lines = [f"Config file '{path}' is not a valid configuration:"]
+            lines.extend(f"  - {line}" for line in format_validation_errors(exc))
+            return "\n".join(lines)
 
 
 def _config_for(session: Session, invocation: Invocation, loader: ConfigLoader) -> CombinedConfig:

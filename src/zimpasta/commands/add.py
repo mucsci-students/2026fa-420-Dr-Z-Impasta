@@ -37,7 +37,10 @@ UNCONFIRMED / TODO, pending full confirmation from scheduler.py:
     is unconfirmed -- we don't pre-check it ourselves, only report if it raises.
 """
 
+from collections.abc import Callable
+
 from pydantic import ValidationError
+from scheduler import CourseConfig, FacultyConfig, LabConfig, RoomConfig
 
 from zimpasta.command import CommandSpec, Invocation, Option, Positional
 from zimpasta.console import Console
@@ -75,6 +78,49 @@ REQUIRED_LIST_FIELDS: dict[str, tuple[str, ...]] = {
 }
 
 EMPTY_TIMES = {"MON": [], "TUE": [], "WED": [], "THU": [], "FRI": []}
+
+NewEntry = Callable[[str, dict[str, int], dict[str, list[str]]], object]
+"""Builds a new entry from its id, its whole-number fields, and its list fields."""
+
+NEW_ENTRIES: dict[str, tuple[str, NewEntry]] = {
+    "room": (
+        "rooms",
+        lambda item_id, fields, lists: RoomConfig(name=item_id, capacity=fields["capacity"]),
+    ),
+    "lab": (
+        "labs",
+        lambda item_id, fields, lists: LabConfig(name=item_id, capacity=fields["capacity"]),
+    ),
+    # No duplicate check: a repeated course_id is another section of the same course.
+    # Faculty and room can't be empty, or the library rejects the course.
+    "course": (
+        "courses",
+        lambda item_id, fields, lists: CourseConfig(
+            course_id=item_id,
+            credits=fields["credits"],
+            capacity=fields["capacity"],
+            room=lists["room"],
+            lab=[],
+            conflicts=[],
+            faculty=lists["faculty"],
+        ),
+    ),
+    # Times and preferences start empty; fill them in afterwards with modify.
+    "faculty": (
+        "faculty",
+        lambda item_id, fields, lists: FacultyConfig(
+            name=item_id,
+            maximum_credits=fields["maximum-credits"],
+            minimum_credits=fields["minimum-credits"],
+            unique_course_limit=fields["unique-course-limit"],
+            times=dict(EMPTY_TIMES),
+            course_preferences={},
+            room_preferences={},
+            lab_preferences={},
+        ),
+    ),
+}
+"""For each kind: the list on ``config.config`` it goes in, and how to build one."""
 
 
 def _label(kind: str, field: str) -> str:
@@ -199,68 +245,14 @@ def add(console: Console, session: Session, invocation: Invocation) -> None:
         console.say(str(exc))
         return
 
-    # CONFIRMED from your traceback: the real class is RoomConfig, not Room --
-    # `Room`/`Lab`/`Course`/`Faculty` in scheduler are type aliases (not
-    # callable), which is exactly the TypeError you hit. LabConfig/CourseConfig/
-    # FacultyConfig follow the same *Config naming pattern seen on RoomConfig,
-    # but are NOT yet confirmed the same way -- verify with the two commands
-    # from my last message and tell me if any of these three are wrong.
-    from scheduler import CourseConfig, FacultyConfig, LabConfig, RoomConfig
-
+    items, new_entry = NEW_ENTRIES[kind]
     try:
-        # edit_mode() is the library's way of doing an atomic, validated edit --
-        # we build the new list (old items plus the one we're adding) and
-        # reassign it as a whole, rather than appending in place. That matters
-        # because the library only re-validates on assignment, not on mutation,
-        # so scheduler.rooms.append(...) would silently skip validation.
+        # edit_mode() makes the edit atomic and validated. The library re-validates only on
+        # assignment, not on mutation, so the list is reassigned whole rather than appended to.
         with session.config.edit_mode() as working:
             scheduler = working.config
-            if kind == "room":
-                scheduler.rooms = [
-                    *scheduler.rooms,
-                    RoomConfig(name=item_id, capacity=fields["capacity"]),
-                ]
-            elif kind == "lab":
-                scheduler.labs = [
-                    *scheduler.labs,
-                    LabConfig(name=item_id, capacity=fields["capacity"]),
-                ]
-            elif kind == "course":
-                # No duplicate check here on purpose -- a repeated course_id is
-                # a new section (same course, different offering), not a
-                # mistake. See the module docstring for the CMSC 161 example
-                # that proves this. Also: faculty and room can't be left empty
-                # for a course, or the library's own validation rejects it, so
-                # both come from list_fields rather than defaulting to None/[].
-                scheduler.courses = [
-                    *scheduler.courses,
-                    CourseConfig(
-                        course_id=item_id,
-                        credits=fields["credits"],
-                        capacity=fields["capacity"],
-                        room=list_fields["room"],
-                        lab=[],
-                        conflicts=[],
-                        faculty=list_fields["faculty"],
-                    ),
-                ]
-            elif kind == "faculty":
-                # Faculty don't have the same "can't be empty" problem courses
-                # do, so we're fine defaulting their preferences/times to
-                # nothing for now -- someone can fill those in later via modify.
-                scheduler.faculty = [
-                    *scheduler.faculty,
-                    FacultyConfig(
-                        name=item_id,
-                        maximum_credits=fields["maximum-credits"],
-                        minimum_credits=fields["minimum-credits"],
-                        unique_course_limit=fields["unique-course-limit"],
-                        times=dict(EMPTY_TIMES),
-                        course_preferences={},
-                        room_preferences={},
-                        lab_preferences={},
-                    ),
-                ]
+            entries = getattr(scheduler, items)
+            setattr(scheduler, items, [*entries, new_entry(item_id, fields, list_fields)])
     except ValidationError as exc:
         # Whatever the library didn't like about this addition -- a duplicate
         # name, some cross-reference that doesn't hold up, etc. -- gets
