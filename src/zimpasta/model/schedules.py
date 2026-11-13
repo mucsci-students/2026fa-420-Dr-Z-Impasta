@@ -30,16 +30,16 @@ from typing import cast
 
 from pydantic import TypeAdapter, ValidationError
 from scheduler.json_types import CourseInstanceJSON
-from scheduler.models import CourseInstance, Day
+from scheduler.models import CourseInstance
 
 from zimpasta.model.generate import GenerationResult, Schedule
 from zimpasta.model.issues import Issue
+from zimpasta.model.schedule_format import DAY_NAMES, clock_text
 
 Assignment = dict
 """One ``CourseInstanceJSON`` record."""
 
 _SCHEDULE = TypeAdapter(list[CourseInstanceJSON])
-_DAY_NAMES = {day.value: day.name for day in Day}
 _MINUTES_PER_DAY = 24 * 60
 
 GROUPINGS = ("room", "faculty")
@@ -299,12 +299,12 @@ def meetings(assignment: Assignment) -> list[dict]:
                 "faculty": assignment["faculty"],
                 "room": assignment.get("room"),
                 "lab": lab,
-                "day": _DAY_NAMES[time["day"]],
+                "day": DAY_NAMES[time["day"]],
                 "day_number": time["day"],
                 "start": start,
                 "end": start + duration,
-                "start_time": _clock_text(start),
-                "end_time": _clock_text(start + duration),
+                "start_time": clock_text(start),
+                "end_time": clock_text(start + duration),
                 "duration": duration,
                 "kind": "lab" if position == lab_index else "lecture",
                 "delivery": time.get("delivery", "in_person"),
@@ -435,7 +435,7 @@ def _format_issues(prefix: tuple, schedule: list[dict]) -> list[Issue]:
         times = assignment["times"]
         for column, time in enumerate(times):
             where = (*prefix, row, "times", column)
-            if time["day"] not in _DAY_NAMES:
+            if time["day"] not in DAY_NAMES:
                 problems.append(_problem((*where, "day"), "Day must be 1 (Monday) to 5 (Friday)."))
             if not 0 <= time["start"] < _MINUTES_PER_DAY:
                 problems.append(
@@ -466,8 +466,8 @@ def _csv_row(assignment: Assignment) -> str:
     lab = assignment.get("lab")
     lab_index = assignment.get("lab_index") if lab is not None else None
     times = ",".join(
-        f"{_DAY_NAMES[time['day']]} {_clock_text(time['start'])}-"
-        f"{_clock_text(time['start'] + time['duration'])}"
+        f"{DAY_NAMES[time['day']]} {clock_text(time['start'])}-"
+        f"{clock_text(time['start'] + time['duration'])}"
         f"{'@online' if time.get('delivery') == 'online' else ''}"
         f"{'^' if position == lab_index else ''}"
         for position, time in enumerate(assignment["times"])
@@ -483,10 +483,6 @@ def _csv_row(assignment: Assignment) -> str:
         ]
     )
     return output.getvalue()
-
-
-def _clock_text(minutes: int) -> str:
-    return f"{minutes // 60:02d}:{minutes % 60:02d}"
 
 
 def _number(value: object) -> int:
