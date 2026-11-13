@@ -6,6 +6,8 @@ import SignInDialog from "./SignInDialog.jsx";
  * opens in its own dialog.
  */
 export default function UserMenu() {
+    // AI_CONTEXT: USER_MENU_STATE — `open` controls the account popup; `signInOpen` controls
+    // the sign-in dialog; `menuRef` lets the outside-click handler identify popup clicks.
     const [open, setOpen] = useState(false);
     const [signInOpen, setSignInOpen] = useState(false);
     const menuRef = useRef(null);
@@ -45,8 +47,9 @@ export default function UserMenu() {
             {open && (
                 <div className="user-menu__popup">
                     <p>Guest User</p>
-                    {/* These are placeholders. Render backend projects here and pass each
-                        project's stable ID to its click handler so the right project loads. */}
+                    {/* AI_CONTEXT: ACCOUNT_PROJECT_SELECTION — These are placeholders with no
+                        selection handler yet. Render backend projects here and pass each
+                        project's stable ID (not its display name) to the click handler. */}
                     <button type="button">Project 1</button>
                     <button type="button">Project 2</button>
                     <button type="button">Project 3</button>
@@ -58,6 +61,7 @@ export default function UserMenu() {
                             setSignInOpen(true);
                         }}
                     >
+                        {/* AI_CONTEXT: SIGN_IN_DIALOG_TRIGGER — This opens SignInDialog below. */}
                         Sign in
                     </button>
                 </div>

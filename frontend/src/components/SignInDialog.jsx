@@ -32,8 +32,9 @@ export default function SignInDialog({ open, onClose }) {
         className="sign-in-form"
         onSubmit={(event) => {
           event.preventDefault();
-          // Replace this placeholder with the auth request. Read "username" and "password"
-          // from FormData and send them in the request body, not in a URL or logs.
+          // AI_CONTEXT: SIGN_IN_AUTH_HANDLER — Replace this placeholder with the auth request.
+          // Read "username" and "password" from FormData and send them in the request body,
+          // not in a URL or logs; handle success and authentication errors here.
           setMessage("Authentication is not connected yet.");
         }}
       >
