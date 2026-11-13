@@ -1,5 +1,5 @@
-import { useEffect } from "react";
 import { useBlocker } from "react-router";
+import { useWarnBeforeUnload } from "../state/useWarnBeforeUnload.js";
 import ConfirmDialog from "./ConfirmDialog.jsx";
 
 /**
@@ -13,15 +13,7 @@ export default function UnsavedChangesPrompt({
 }) {
   const blocker = useBlocker(when);
 
-  useEffect(() => {
-    if (!when) return undefined;
-    const warn = (event) => {
-      event.preventDefault();
-      event.returnValue = "";
-    };
-    window.addEventListener("beforeunload", warn);
-    return () => window.removeEventListener("beforeunload", warn);
-  }, [when]);
+  useWarnBeforeUnload(when);
 
   return (
     <ConfirmDialog
