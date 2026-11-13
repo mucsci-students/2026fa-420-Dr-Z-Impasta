@@ -6,6 +6,7 @@ import { useId, useRef } from "react";
 import Button from "../../components/Button.jsx";
 import { DAY_NAMES } from "./labels.js";
 import { hourAfter } from "./times.js";
+import FieldError from "../../components/FieldError.jsx";
 
 const WEEKDAYS = ["MON", "TUE", "WED", "THU", "FRI"];
 
@@ -120,12 +121,7 @@ export default function AvailabilityEditor({ value, onChange, days = WEEKDAYS, l
           </div>
         );
       })}
-      {weekError && (
-        <p className="field__error">
-          <span aria-hidden="true">⚠ </span>
-          {weekError}
-        </p>
-      )}
+      <FieldError error={weekError} />
     </fieldset>
   );
 }

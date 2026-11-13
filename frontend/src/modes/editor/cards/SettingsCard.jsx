@@ -11,6 +11,7 @@ import HelpTip from "../../../components/HelpTip.jsx";
 import { formIssues } from "../../../components/issues.js";
 import { OPTIMIZER_FLAG_NAMES } from "../labels.js";
 import CardRow from "./CardRow.jsx";
+import FieldError from "../../../components/FieldError.jsx";
 
 const toNumber = (text) => (text === "" ? null : Number(text));
 const toText = (number) => (number == null ? "" : String(number));
@@ -99,12 +100,7 @@ export default function SettingsCard({ settings, optimizerFlagChoices, busy, err
               {description && <HelpTip text={description} />}
             </span>
           ))}
-          {flagsError && (
-            <p className="field__error">
-              <span aria-hidden="true">⚠ </span>
-              {flagsError}
-            </p>
-          )}
+          <FieldError error={flagsError} />
         </fieldset>
       </Card>
     </CardRow>
