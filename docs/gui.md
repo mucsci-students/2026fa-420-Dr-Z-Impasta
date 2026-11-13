@@ -17,8 +17,8 @@ This starts two processes: the Python API on port 8765 (`npm run dev:api`, which
 at http://localhost:5173 (open it yourself), which reloads the page as you save. Vite forwards `/api` to
 the Python server. Python changes need `npm run dev` restarted; React changes don't.
 
-Before pushing: `npm run lint` and `npm run build` in `frontend/`, and `uv run pytest` at the
-root.
+Before pushing: `npm run lint`, `npm test`, and `npm run build` in `frontend/`, and
+`uv run pytest` at the root.
 
 ## Two backends, one GUI
 

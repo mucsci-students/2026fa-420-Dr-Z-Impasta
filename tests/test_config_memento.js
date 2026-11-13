@@ -7,8 +7,9 @@ import {
 	ConfigFileHistory 
 } from "../frontend/src/state/configEditorMemento.js";
 
+// Relative to this file, not the folder the test is run from.
 const CONFIG_FILE = JSON.parse(
-	fs.readFileSync("../examples/sample_config.json", 'utf-8')
+	fs.readFileSync(new URL("../examples/sample_config.json", import.meta.url), 'utf-8')
 );
 
 test("test config file memento", () => {
@@ -19,8 +20,9 @@ test("test config file memento", () => {
 test("test config file originator", () => {
 	const org = new ConfigFileOriginator();
 
+	// A new originator holds "" (no file yet); ConfigFileHistory checks for exactly that.
 	org.storeFile();
-	assert.deepEqual(org.doc, null);
+	assert.deepEqual(org.doc, "");
 
 	org.set(CONFIG_FILE);
 	assert.deepEqual(org.doc, CONFIG_FILE);

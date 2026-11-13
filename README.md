@@ -201,6 +201,7 @@ CI runs these on Linux, macOS, and Windows:
 ```bash
 uv run ruff format --check .
 uv run ruff check .
+uv run ty check
 uv run pytest
 ```
 
@@ -209,14 +210,19 @@ and these for the GUI:
 ```bash
 cd frontend
 npm run lint
+npm test
 npm run build
 npm run build:browser
 npm run test:browser
 ```
 
 `uv run ruff format .` fixes Python formatting in place. `uv run pytest` is the whole test
-suite: the Model, the Controller (including every API route), and the shell. It doesn't need
-the GUI to be built, and it never calls OpenAI: the AI assistant's tests use a scripted fake.
+suite: the Model, the Controller (including every API route), and the shell. It never calls
+OpenAI: the AI assistant's tests use a scripted fake. The browser tests in
+`tests/test_config_editor.py` need the GUI built (`npm run build`) and are skipped until it
+is; each starts its own server on a free port. For the Model's coverage on its own, run
+`uv run pytest --cov` and then `uv run coverage report --include="*/zimpasta/model/*"`.
+`npm test` runs the frontend's unit tests (the editor's undo history).
 `npm run test:browser` runs the browser version's Python in Node; its first run downloads
 about 15 MB. The one live OpenAI test runs only on request, with `uv run pytest -m live`
 and `OPENAI_API_KEY` set.
