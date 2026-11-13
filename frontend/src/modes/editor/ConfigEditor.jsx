@@ -15,7 +15,7 @@ import { Penne } from "../../components/PastaMarks.jsx";
 import Spinner from "../../components/Spinner.jsx";
 import { clockTime, configStatus, describeCounts, plural } from "../../format.js";
 import { useAppState } from "../../state/appStateContext.js";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import { api } from "../../api/client.js";
 import Button from "../../components/Button.jsx";
 import Banner from "../../components/Banner.jsx";
@@ -34,6 +34,7 @@ import DeleteDialog from "./dialogs/DeleteDialog.jsx";
 import DayBlocksDialog from "./dialogs/DayBlocksDialog.jsx";
 import TimeSlotsDialog from "./dialogs/TimeSlotsDialog.jsx";
 import ConfirmDialog from "../../components/ConfirmDialog.jsx";
+import LoadJsonButton from "./LoadJsonButton.jsx";
 
 import ErrorMessage from "../../components/ErrorMessage.jsx";
 import { loadFile, confirmLoad, startNewConfig, validateShowingErrors, saveShowingErrors, saveItem, deleteItem, updateTimeSlots, updateSettings, togglePatternDisabled, undoStepCount, redoStepCount, redo, undo, recordUndoStep } from "../../state/eventHandlers";
@@ -44,7 +45,6 @@ export default function ConfigEditor() {
   const [doc, setDoc] = useState(null);           // { document, sections }: the full configuration and each course's section label
   const revision = config?.revision;              // goes up on every server-side change
   const hasConfig = Boolean(config) && config.status !== "none";
-  const fileInputRef = useRef(null);              // the hidden <input type="file"> that the Load JSON… buttons click
   const [loadingFile, setLoadingFile] = useState(false);   // true while New or Load JSON… is in progress
   const [editing, setEditing] = useState(null);   // the item being edited, e.g. { area: "courses", index: 2 }; index null means "add new"
   const [options, setOptions] = useState(null);   // library choices for the dialogs; they have fallbacks
@@ -204,12 +204,7 @@ export default function ConfigEditor() {
           actions={
             <>
               <Button variant="primary" onClick={() => handleNew({ refreshAfter: false })}>New</Button>
-              <Button onClick={() => { fileInputRef.current.click(); }}>Load JSON...</Button>
-              <input
-                ref={fileInputRef}
-                type="file"
-                style={{ display: "none" }}
-                onChange={handleLoadJson} />
+              <LoadJsonButton onLoad={handleLoadJson} />
             </>
           }
         >
@@ -250,13 +245,7 @@ export default function ConfigEditor() {
           <>
             <Button onClick={() => handleNew({ refreshAfter: true })}>New</Button>
 
-            <Button onClick={() => fileInputRef.current.click()}>Load JSON...</Button>
-            <input
-              ref={fileInputRef}
-              type="file"
-              style={{ display: "none" }}
-              onChange={handleLoadJson}
-            />
+            <LoadJsonButton onLoad={handleLoadJson} />
 
 
             <Button
