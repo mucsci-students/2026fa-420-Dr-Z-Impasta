@@ -10,7 +10,7 @@ import IssueList from "../components/IssueList.jsx";
 import LoadingBar from "../components/LoadingBar.jsx";
 import { plural } from "../format.js";
 import { useAppState } from "../state/appStateContext.js";
-import { Save } from "../state/eventHandlers.js";
+import { saveConfig } from "../state/eventHandlers.js";
 
 /**
  * `latestEdit` / `latestRun`: this is the newest change to the configuration / the newest
@@ -115,7 +115,7 @@ function PendingAction({ pending, busy, onAnswer }) {
     setSave({ status: "saving" });
     let saved;
     try {
-      saved = await Save();
+      saved = await saveConfig();
     } catch (error) {
       setSave({ status: "failed", error });
       return;

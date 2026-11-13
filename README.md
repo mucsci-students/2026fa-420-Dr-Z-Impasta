@@ -437,7 +437,7 @@ depending on what is inside.
 
 **How they interact** (`frontend/src/state/eventHandlers.js`, used by the buttons in
 `modes/editor/ConfigEditor.jsx`).
-1. When an editor dialog saves an edit, `pushToHist()` first gives the current document to
+1. When an editor dialog saves an edit, `recordUndoStep()` first gives the current document to
    the originator and pushes its `storeFile()` memento onto the undo stack.
 2. **Undo** pops a memento from the undo stack and saves the current document onto the redo
    stack the same way. The originator then restores the memento, and the restored document

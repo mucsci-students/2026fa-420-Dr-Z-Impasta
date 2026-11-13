@@ -163,8 +163,8 @@ Errors take one path from the server to the screen. Follow it so every mode beha
    logged with a traceback and come back as `unexpected` with a short reference.
 2. **`api/client.js`** turns that into an `ApiError` and rejects with it. An unreachable server
    is an `ApiError` too, with code `network_error` and a message that says what to do. Only
-   `api.*`, `pickFile()`, `saveFile()`, and the editor's `Save` and `Validate` (which the
-   chat shares) reject; everything a button calls catches.
+   `api.*`, `pickFile()`, `saveFile()`, and the editor's `saveConfig` and `validateConfig`
+   (which the chat shares) reject; everything a button calls catches.
 3. **Each user action catches its own error and shows it with `<ErrorMessage>`**, in the
    dialog or card the user is looking at, or else at the top of the page. Show every error,
    including `network_error`; never drop one with `.catch(() => {})`, and never let one

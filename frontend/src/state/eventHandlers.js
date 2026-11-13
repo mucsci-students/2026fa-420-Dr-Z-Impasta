@@ -7,10 +7,10 @@
  * unreachable server. Page-level errors go through `setError` (shown above the banner);
  * a dialog's or card's errors go through its own setter.
  *
- * Validate and Save are the exception: the chat also uses them and shows results its own
- * way, so they work like `api` (resolve with the result, reject with an ApiError, or for
- * Save an Error if the file couldn't be written). The editor's buttons call them through
- * ValidateConfig and SaveConfig, which follow the rule.
+ * validateConfig and saveConfig are the exception: the chat also uses them and shows results
+ * its own way, so they work like `api` (resolve with the result, reject with an ApiError, or
+ * for saveConfig an Error if the file couldn't be written). The editor's buttons call them
+ * through validateShowingErrors and saveShowingErrors, which follow the rule.
  */
 import { api } from "../api/client.js";
 import { saveFile } from "../files.js";
@@ -23,14 +23,14 @@ let HISTORY = null;
 const showPageError = (setError, error, title) =>
 	setError({ error, title, onDismiss: () => setError(null) });
 
-// getters to see the length of the history arrays
-export const getHistoryLength = () => {
+// How many snapshots the undo and redo histories hold (0 before the first load).
+export const undoStepCount = () => {
 	if(HISTORY != null)
 		return (HISTORY.getSnapshots()).length;
 	else
 		return 0;
 };
-export const getCurrHistoryLength = () => {
+export const redoStepCount = () => {
 	if(HISTORY != null)
 		return (HISTORY.getCurrSnapshots()).length;
 	else
@@ -41,34 +41,34 @@ export const getCurrHistoryLength = () => {
 // the configuration into a memento with storeFile() and back with restore(), and HISTORY
 // (the caretaker) keeps the mementos without looking inside them.
 
-// pushes snapshot of history to appropriate array
-export const pushToHist = (content) => {
+// Record a snapshot of `content` on the undo history, or on the redo history.
+export const recordUndoStep = (content) => {
 	ORIGINATOR.set(content);
 	HISTORY.push(ORIGINATOR.storeFile());
 };
-const pushToCurr = (content) => {
+const recordRedoStep = (content) => {
 	ORIGINATOR.set(content);
 	HISTORY.pushToCurr(ORIGINATOR.storeFile());
 };
 
 
-export const redoAction = async(currDoc, filename, setError, setPendingLoad) => {
+export const redo = async(currDoc, filename, setError, setPendingLoad) => {
 	const memento = HISTORY.popCurr();
 	if(memento == undefined) return false;
 
 	// push snapshot of current state, before re-doing, to undo-action's history array
-	pushToHist(currDoc);
+	recordUndoStep(currDoc);
 
 	ORIGINATOR.restore(memento);
 	return sendLoad(filename, JSON.stringify(ORIGINATOR.doc), true, setError, setPendingLoad);
 };
 
-export const undoAction = async(currDoc, filename, setError, setPendingLoad) => {
+export const undo = async(currDoc, filename, setError, setPendingLoad) => {
 	const memento = HISTORY.pop();
 	if(memento == undefined) return false;
 
 	// push snapshot of current state, before undoing, to redo-action's history array
-	pushToCurr(currDoc);
+	recordRedoStep(currDoc);
 
 	ORIGINATOR.restore(memento);
 	return sendLoad(filename, JSON.stringify(ORIGINATOR.doc), true, setError, setPendingLoad);
@@ -80,7 +80,7 @@ const sendLoad = async(filename, content, discardChanges, setError, setPendingLo
 		await api.config.load({ filename, content, discardChanges });
 	} catch(error) {
 		if(error.code === "unsaved_changes") {
-			// Ask first; ConfirmLoad sends it again if the user agrees
+			// Ask first; confirmLoad sends it again if the user agrees
 			setPendingLoad({ filename, content, changes: error.extra?.changes ?? [] });
 			return false;
 		}
@@ -99,7 +99,7 @@ const sendLoad = async(filename, content, discardChanges, setError, setPendingLo
 	return true;
 };
 
-export const Load = async(event, setLoadingFile, setError, setPendingLoad) => {
+export const loadFile = async(event, setLoadingFile, setError, setPendingLoad) => {
 	const file = event.target.files[0];
 	event.target.value = "";   // so choosing the same file again still triggers onChange
 	if(!file) return false;
@@ -120,7 +120,7 @@ export const Load = async(event, setLoadingFile, setError, setPendingLoad) => {
 };
 
 /** The user agreed to discard their unsaved changes: load the same file again. */
-export const ConfirmLoad = async(pending, setPendingLoad, setLoadingFile, setError) => {
+export const confirmLoad = async(pending, setPendingLoad, setLoadingFile, setError) => {
 	setPendingLoad(null);
 	setLoadingFile(true);
 	try {
@@ -130,7 +130,7 @@ export const ConfirmLoad = async(pending, setPendingLoad, setLoadingFile, setErr
 	}
 };
 
-export const Empty_Click = async(setLoadingFile, setError, setPendingLoad) => {
+export const startNewConfig = async(setLoadingFile, setError, setPendingLoad) => {
 	setLoadingFile(true);
 	try {
 		// The starter file is served next to the GUI, not by the API, so this is a plain
@@ -153,7 +153,7 @@ export const Empty_Click = async(setLoadingFile, setError, setPendingLoad) => {
 };
 
 /** Check the whole configuration now. Resolves to the report: `{ status, valid, issues, checked_at }`. */
-export const Validate = async() => {
+export const validateConfig = async() => {
 	const { report } = await api.config.validate();
 	return report;
 };
@@ -163,7 +163,7 @@ export const Validate = async() => {
  * Resolves to true if saved, or false if the user closed the save dialog. An invalid
  * configuration rejects with an ApiError whose `issues` say what to fix.
  */
-export const Save = async() => {
+export const saveConfig = async() => {
 	const { content, filename, revision } = await api.config.exportFile();
 	const saved = await saveFile({ suggestedName: filename, content });
 	if(!saved) return false;
@@ -171,10 +171,10 @@ export const Save = async() => {
 	return true;
 };
 
-/** The editor's Validate button: Validate, showing a failure on the page. The banner shows the result. */
-export const ValidateConfig = async(setError) => {
+/** The editor's Validate button: validateConfig, showing a failure on the page. The banner shows the result. */
+export const validateShowingErrors = async(setError) => {
 	try {
-		await Validate();
+		await validateConfig();
 	} catch(error) {
 		showPageError(setError, error, "Couldn't validate the configuration");
 		return false;
@@ -183,11 +183,11 @@ export const ValidateConfig = async(setError) => {
 	return true;
 };
 
-/** The editor's Save button: Save, showing a failure on the page. Resolves to false if not saved. */
-export const SaveConfig = async(setError) => {
+/** The editor's Save button: saveConfig, showing a failure on the page. Resolves to false if not saved. */
+export const saveShowingErrors = async(setError) => {
 	let saved;
 	try {
-		saved = await Save();
+		saved = await saveConfig();
 	} catch(error) {
 		showPageError(setError, error, "Couldn't save the configuration");
 		return false;
@@ -209,7 +209,7 @@ const applyEdit = async(request, setEditing, setLocalError) => {
 	return true;
 };
 
-export const ValidateAndSaveItem = async(editing, draft, setEditing, setLocalError) => {
+export const saveItem = async(editing, draft, setEditing, setLocalError) => {
 	const { area, index } = editing;
 	return applyEdit(
 		() => (index == null ? api.config.add(area, draft) : api.config.replace(area, index, draft)),
@@ -224,7 +224,7 @@ export const ValidateAndSaveItem = async(editing, draft, setEditing, setLocalErr
  * problems, the banner lists them. A failure is shown at the top of the page (`setError`),
  * since no dialog is open.
  */
-export const TogglePatternDisabled = async(index, pattern, setError) => {
+export const togglePatternDisabled = async(index, pattern, setError) => {
 	try {
 		await api.config.replace("patterns", index, { ...pattern, disabled: !pattern.disabled }, true);
 	} catch(err) {
@@ -236,7 +236,7 @@ export const TogglePatternDisabled = async(index, pattern, setError) => {
 };
 
 /** `force`: the user confirmed the delete after the dialog warned what it breaks. */
-export const DeleteItem = async(deleting, setDeleting, setEditing, setLocalError, force = false) => {
+export const deleteItem = async(deleting, setDeleting, setEditing, setLocalError, force = false) => {
 	try {
 		await api.config.remove(deleting.area, deleting.index, force);
 	} catch(err) {
@@ -249,10 +249,10 @@ export const DeleteItem = async(deleting, setDeleting, setEditing, setLocalError
 	return true;
 };
 
-export const UpdateTimeSlots = async(vals, setEditing, setLocalError) =>
+export const updateTimeSlots = async(vals, setEditing, setLocalError) =>
 	applyEdit(() => api.config.updateTimeSlots(vals), setEditing, setLocalError);
 
-export const UpdateSettings = async(vals, setSettingsError) => {
+export const updateSettings = async(vals, setSettingsError) => {
 	try {
 		await api.config.updateSettings(vals);
 	} catch(err) {

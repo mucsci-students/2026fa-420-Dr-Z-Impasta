@@ -36,7 +36,7 @@ import TimeSlotsDialog from "./dialogs/TimeSlotsDialog.jsx";
 import ConfirmDialog from "../../components/ConfirmDialog.jsx";
 
 import ErrorMessage from "../../components/ErrorMessage.jsx";
-import { Load, ConfirmLoad, Empty_Click, ValidateConfig, SaveConfig, ValidateAndSaveItem, DeleteItem, UpdateTimeSlots, UpdateSettings, TogglePatternDisabled, getHistoryLength, getCurrHistoryLength, redoAction, undoAction, pushToHist } from "../../state/eventHandlers";
+import { loadFile, confirmLoad, startNewConfig, validateShowingErrors, saveShowingErrors, saveItem, deleteItem, updateTimeSlots, updateSettings, togglePatternDisabled, undoStepCount, redoStepCount, redo, undo, recordUndoStep } from "../../state/eventHandlers";
 
 export default function ConfigEditor() {
   const { state, loading, refresh } = useAppState();
@@ -99,27 +99,27 @@ export default function ConfigEditor() {
 
   /** New: start from the empty starter configuration. */
   const handleNew = async ({ refreshAfter }) => {
-    await Empty_Click(setLoadingFile, setError, setPendingLoad);
+    await startNewConfig(setLoadingFile, setError, setPendingLoad);
     if (refreshAfter) await refresh();
   };
 
   /** Load JSON…: the hidden file input's onChange. */
   const handleLoadJson = async (event) => {
-    if (await Load(event, setLoadingFile, setError, setPendingLoad)) await refresh();
+    if (await loadFile(event, setLoadingFile, setError, setPendingLoad)) await refresh();
   };
 
   /** "Discard and load" in the unsaved-changes prompt. */
   const handleConfirmLoad = async () => {
-    if (await ConfirmLoad(pendingLoad, setPendingLoad, setLoadingFile, setError)) await refresh();
+    if (await confirmLoad(pendingLoad, setPendingLoad, setLoadingFile, setError)) await refresh();
   };
 
   const handleSave = async () => {
-    await SaveConfig(setError);
+    await saveShowingErrors(setError);
     await refresh();
   };
 
   const handleValidate = async () => {
-    await ValidateConfig(setError);
+    await validateShowingErrors(setError);
     await refresh();
   };
 
@@ -130,33 +130,33 @@ export default function ConfigEditor() {
     await refresh();
     setReloading(false);
   };
-  const handleUndo = () => runHistory(undoAction, setUndoReloading);
-  const handleRedo = () => runHistory(redoAction, setRedoReloading);
+  const handleUndo = () => runHistory(undo, setUndoReloading);
+  const handleRedo = () => runHistory(redo, setRedoReloading);
 
   /** A pattern card's On/Off switch. */
   const handleTogglePattern = async (index, pattern) => {
-    if (await TogglePatternDisabled(index, pattern, setError)) await refresh();
+    if (await togglePatternDisabled(index, pattern, setError)) await refresh();
   };
 
   /** A change in the Global Settings card. */
   const handleApplySettings = async (values) => {
-    if (await UpdateSettings(values, setSettingsError)) await refresh();
+    if (await updateSettings(values, setSettingsError)) await refresh();
   };
 
   /** A dialog's Save: record an undo step, send the edit (`save`), then refresh. */
   const saveWithUndo = async (save) => {
-    pushToHist(doc.document);
+    recordUndoStep(doc.document);
     await save();
     await refresh();
   };
 
   /** Save in an item dialog (faculty, course, room, lab, pattern): add or replace the item. */
   const handleSaveItem = (draft) =>
-    saveWithUndo(() => ValidateAndSaveItem(editing, draft, setEditing, setLocalError));
+    saveWithUndo(() => saveItem(editing, draft, setEditing, setLocalError));
 
   /** Save in a time-slot dialog: one day's blocks (`{ times }`) or the timing options. */
   const handleSaveTimeSlots = (values) =>
-    saveWithUndo(() => UpdateTimeSlots(values, setEditing, setLocalError));
+    saveWithUndo(() => updateTimeSlots(values, setEditing, setLocalError));
 
   /** Cancel in any edit dialog. */
   const handleCloseDialog = () => {
@@ -178,8 +178,8 @@ export default function ConfigEditor() {
 
   const handleConfirmDelete = async () => {
     const force = shownImpact?.reply?.can_delete === false;   // the user saw the warning
-    if (await DeleteItem(deleting, setDeleting, setEditing, setLocalError, force)) {
-      pushToHist(doc.document);
+    if (await deleteItem(deleting, setDeleting, setEditing, setLocalError, force)) {
+      recordUndoStep(doc.document);
       await refresh();
     }
   };
@@ -271,16 +271,16 @@ export default function ConfigEditor() {
 
 		<div className="undo-redo-row">
 			<Button 
-		className={undoReloading ? "reloading" : (getHistoryLength() > 1 ? "" : "disabled-btn")}
-		disabled={getHistoryLength() <= 1}
+		className={undoReloading ? "reloading" : (undoStepCount() > 1 ? "" : "disabled-btn")}
+		disabled={undoStepCount() <= 1}
 		onClick={handleUndo}
 		>
 		Undo
 		</Button>
 
 			<Button 
-		className={redoReloading ? "reloading" : (getCurrHistoryLength() > 1 ? "" : "disabled-btn")} 
-		disabled={getCurrHistoryLength() <= 1}
+		className={redoReloading ? "reloading" : (redoStepCount() > 1 ? "" : "disabled-btn")} 
+		disabled={redoStepCount() <= 1}
 		onClick={handleRedo}
 		>
 		Redo
