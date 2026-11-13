@@ -269,27 +269,25 @@ export default function ConfigEditor() {
             </Button>
             <Button variant="primary" onClick={handleValidate}>Validate</Button>
 
-		<div className="undo-redo-row">
-			<Button 
-		className={undoReloading ? "reloading" : (undoStepCount() > 1 ? "" : "disabled-btn")}
-		disabled={undoStepCount() <= 1}
-		onClick={handleUndo}
-		>
-		Undo
-		</Button>
+            <div className="undo-redo-row">
+              <Button
+                className={undoReloading ? "reloading" : (undoStepCount() > 1 ? "" : "disabled-btn")}
+                disabled={undoStepCount() <= 1}
+                onClick={handleUndo}
+              >
+                Undo
+              </Button>
 
-			<Button 
-		className={redoReloading ? "reloading" : (redoStepCount() > 1 ? "" : "disabled-btn")} 
-		disabled={redoStepCount() <= 1}
-		onClick={handleRedo}
-		>
-		Redo
-		</Button>
-		</div>
+              <Button
+                className={redoReloading ? "reloading" : (redoStepCount() > 1 ? "" : "disabled-btn")}
+                disabled={redoStepCount() <= 1}
+                onClick={handleRedo}
+              >
+                Redo
+              </Button>
+            </div>
           </>
-
         }
-
       />
       <ErrorMessage error={error?.error} title={error?.title} onDismiss={error?.onDismiss} />
       <Banner tone={bannerTone} title={status.label}>
