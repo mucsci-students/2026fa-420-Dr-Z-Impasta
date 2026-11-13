@@ -4,37 +4,22 @@
 missing a required field, prompts for what's missing and then runs the same
 command through the evaluator -- mirroring delete.py's build()/handler split.
 
-A course id is NOT required to be unique: the real configuration may legitimately
-list the same course_id more than once, once per section (see delete.py's own
-docstring and delete_test.py's CMSC 161 x3 example). So adding a course never
-checks for a duplicate course_id itself -- that would incorrectly block adding a
-second section of an existing course. Room/lab/faculty uniqueness, if the library
-enforces it at all, is left entirely to CombinedConfig's own validation; we only
-catch and report whatever pydantic.ValidationError it raises, the same way
-delete.py catches ValidationError from removals that would leave things invalid.
+A course id is not required to be unique: a configuration lists the same course_id
+once per section (see delete.py's docstring and the CMSC 161 sections in
+tests/test_delete.py). So adding a course never checks for a duplicate course_id;
+that would block adding a second section. Every other rule, such as duplicate
+room, lab, or faculty names, is left to CombinedConfig's own validation, and its
+pydantic.ValidationError is reported, the same way delete.py reports removals that
+would leave the configuration invalid.
 
-CONFIRMED by real validation failures while testing this file:
-  - A course with faculty=None is only valid if some existing faculty member's
-    course_preferences already names that course_id -- which a brand-new
-    course_id never has yet.
-  - A course with room=[] has "no enabled class pattern that can run without
-    a room" -- every course needs at least one room.
-So `add course` requires both --faculty and --room (each comma-separated for
-more than one), and always passes real lists instead of None/[].
+The library rejects a course with faculty=None unless some faculty member's
+course_preferences already names that course_id (a new course_id never is), and a
+course with room=[] (no class pattern can run without a room). So `add course`
+requires both --faculty and --room (comma-separated for more than one) and always
+passes real lists.
 
-UNCONFIRMED / TODO, pending full confirmation from scheduler.py:
-  - RoomConfig is CONFIRMED as the real class (seen directly in a pytest
-    traceback: RoomConfig(name='Room 101', capacity=40, features=set(),
-    times=None) -- note it also has `features` and `times` fields we don't
-    set, apparently optional with defaults).
-  - LabConfig/CourseConfig/FacultyConfig are assumed to follow the same
-    *Config naming pattern as RoomConfig, but are NOT yet confirmed the same
-    way. Run `python3 -c "import scheduler; print(dir(scheduler))"` to check.
-  - Faculty's `times`/`*_preferences` fields are given empty defaults here
-    since add only collects scalar fields (see the module-level note below on
-    that same limitation from the earlier version of this file).
-  - Whether CombinedConfig actually rejects a duplicate room/lab/faculty name
-    is unconfirmed -- we don't pre-check it ourselves, only report if it raises.
+Faculty times and preferences start empty, and rooms and labs get no features or
+times, since add only collects scalar fields; fill them in afterwards with modify.
 """
 
 from collections.abc import Callable
@@ -68,11 +53,8 @@ REQUIRED_INT_FIELDS: dict[str, tuple[str, ...]] = {
     "faculty": ("maximum-credits", "minimum-credits", "unique-course-limit"),
 }
 
-# CONFIRMED by real validation failures (not guesses): a course with
-# faculty=None needs an existing preference to derive from (which a brand-new
-# course never has), and a course with room=[] has "no enabled class pattern
-# that can run without a room". So both --faculty and --room are effectively
-# required when adding a course, even though neither is an "int" field.
+# Both are required for a course even though neither is a number (see the module
+# docstring for why the library needs them).
 REQUIRED_LIST_FIELDS: dict[str, tuple[str, ...]] = {
     "course": ("faculty", "room"),
 }

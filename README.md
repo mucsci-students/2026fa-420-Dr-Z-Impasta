@@ -471,7 +471,6 @@ src/zimpasta/
     schedules.py      ScheduleSet: import, export, room and faculty views
     generate.py       schedule generation through the library's Scheduler
     config_loader.py  load_config(path): read a configuration file (shell)
-    config_finder.py  ConfigFinder: look up items by id or name (shell)
     results.py        ScheduleStore: the shell's generated schedules
     export.py         the shell's JSON and CSV export with overwrite protection
   controller/       the Controller
@@ -544,8 +543,8 @@ new server-side workflow as an `AppController` method with pytest tests.
    validation error. Never read `examples/sample_config.json` from a command; work on
    `session.config`, and leave writing it to disk to `save`.
 6. A `course_id` is not unique: a configuration lists one entry per section, so the example
-   has `CMSC 140` twice. Look items up with `ConfigFinder`, which returns every match, and
-   decide how your command picks one (`delete` uses `--section`).
+   has `CMSC 140` twice. A lookup by id can match several entries, so decide how your
+   command picks one (`delete` uses `--section`).
 
 ## Known limitations
 

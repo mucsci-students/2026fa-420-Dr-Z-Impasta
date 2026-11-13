@@ -420,12 +420,6 @@ class ConfigWorkspace:
             raise InvalidFile("unreadable_file", f"Can't read {path.name}: {reason}.") from None
         self.load_text(text, filename=path.name, discard_changes=discard_changes)
 
-    def load_empty(self, content: str, filename: str, discard_changes: bool = False) -> None:
-        """Loads an "empty" config file,
-        "empty" is not completely empty but rather defined as
-        a minimumal number of entries per key that is allowed by CombinedConfig.model_validate"""
-        self.load_text(content, filename=filename, discard_changes=False)
-
     def validate(self) -> ValidationReport:
         """Validate the whole configuration with the library now."""
         with self._lock:
