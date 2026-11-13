@@ -143,19 +143,20 @@ export default function ConfigEditor() {
     if (await UpdateSettings(values, setSettingsError)) await refresh();
   };
 
-  /** Save in an item dialog (faculty, course, room, lab, pattern): add or replace the item. */
-  const handleSaveItem = async (draft) => {
+  /** A dialog's Save: record an undo step, send the edit (`save`), then refresh. */
+  const saveWithUndo = async (save) => {
     pushToHist(doc.document);
-    await ValidateAndSaveItem(editing, draft, setEditing, setLocalError);
+    await save();
     await refresh();
   };
 
+  /** Save in an item dialog (faculty, course, room, lab, pattern): add or replace the item. */
+  const handleSaveItem = (draft) =>
+    saveWithUndo(() => ValidateAndSaveItem(editing, draft, setEditing, setLocalError));
+
   /** Save in a time-slot dialog: one day's blocks (`{ times }`) or the timing options. */
-  const handleSaveTimeSlots = async (values) => {
-    pushToHist(doc.document);
-    await UpdateTimeSlots(values, setEditing, setLocalError);
-    await refresh();
-  };
+  const handleSaveTimeSlots = (values) =>
+    saveWithUndo(() => UpdateTimeSlots(values, setEditing, setLocalError));
 
   /** Cancel in any edit dialog. */
   const handleCloseDialog = () => {
