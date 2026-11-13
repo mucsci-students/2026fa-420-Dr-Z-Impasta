@@ -20,8 +20,7 @@ function isEmptyError(error) {
 
 /**
  * Load schedule `number` (counting from 1) grouped by `group` ("room" or "faculty").
- * `view` is the server's reply, or null when there are no schedules. `error` is the
- * ApiError when loading failed for any other reason.
+ * `view` is the server's reply, or null when there are no schedules.
  */
 export function useSchedules({ number, group, refreshKey }) {
   const [result, setResult] = useState({ loading: true, view: null, error: null });
@@ -37,7 +36,7 @@ export function useSchedules({ number, group, refreshKey }) {
       })
       .catch((error) => {
         if (cancelled) return;
-        setResult({ loading: false, view: null, error: isEmptyError(error) ? null : error });
+        setResult({ loading: false, view: null, error: isEmptyError(error) ? null : error.message });
       });
 
     return () => {

@@ -61,7 +61,7 @@ export function useChat() {
       ok = false;
     }
     await load();
-    refresh();
+    refresh().catch(() => {});
     setOutgoing(null);
     setWorking(false);
     return ok;

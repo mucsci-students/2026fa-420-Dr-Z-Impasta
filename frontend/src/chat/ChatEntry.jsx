@@ -125,7 +125,7 @@ function PendingAction({ pending, busy, onAnswer }) {
       onAnswer(pending.id, "cancel"); // the user closed the save dialog
       return;
     }
-    await refresh();
+    await refresh().catch(() => {});
     onAnswer(pending.id, "saved");
   }
 

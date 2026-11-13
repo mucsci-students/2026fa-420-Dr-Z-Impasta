@@ -15,9 +15,6 @@ export default function AppStateProvider({ children }) {
   const [state, setState] = useState(null);
   const [connectionError, setConnectionError] = useState(null);
 
-  // Never rejects, so callers don't need a catch: it resolves to the new state, or to null
-  // if the fetch failed. An unreachable server is shown by ConnectionBanner, and the next
-  // poll tries again.
   const refresh = useCallback(async () => {
     try {
       const next = await api.state();
@@ -26,7 +23,7 @@ export default function AppStateProvider({ children }) {
       return next;
     } catch (error) {
       if (error.code === "network_error") setConnectionError(error);
-      return null;
+      throw error;
     }
   }, []);
 
@@ -34,8 +31,13 @@ export default function AppStateProvider({ children }) {
     let cancelled = false;
     let timer;
     async function poll() {
-      const next = await refresh();
-      const delay = !next ? RETRY_MS : next.generation?.running ? RUNNING_POLL_MS : IDLE_POLL_MS;
+      let delay = IDLE_POLL_MS;
+      try {
+        const next = await refresh();
+        if (next.generation?.running) delay = RUNNING_POLL_MS;
+      } catch {
+        delay = RETRY_MS;
+      }
       if (!cancelled) timer = setTimeout(poll, delay);
     }
     poll();

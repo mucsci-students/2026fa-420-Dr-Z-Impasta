@@ -157,7 +157,7 @@ export default function ScheduleViewer() {
           field: issue.area ? issue.field : describeSchedulePath(issue.path),
         })),
       }
-    : loadError;
+    : loadError && { message: loadError };
   const errorMessage = (
     <ErrorMessage
       error={shownError}

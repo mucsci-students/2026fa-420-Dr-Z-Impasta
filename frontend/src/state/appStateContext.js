@@ -5,8 +5,7 @@ export const AppStateContext = createContext(null);
 /**
  * `{ state, loading, connectionError, refresh }` where `state` is the latest
  * GET /api/state reply (null until the first one arrives). Call `refresh()` after any
- * action so every mode and the header update straight away. It never rejects: it resolves
- * to the new state, or null if the server couldn't be reached (ConnectionBanner says so).
+ * action so every mode and the header update straight away.
  */
 export function useAppState() {
   const value = useContext(AppStateContext);
