@@ -128,24 +128,36 @@
   padding: var(--space-4) var(--space-6) 0;
 }
 
-.login-menu {
+/* ------------------------------------------------------------- user menu */
+
+.user-menu {
   position: relative;
 }
 
-.login-menu__popup {
+.user-menu__popup {
   position: absolute;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
   top: calc(100% + 8px);
   right: 0;
   z-index: 20;
+  width: 20rem;
+  padding: 1rem;
+  box-sizing: border-box;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-float);
 }
 
-.login-menu__avatar {
+.user-menu__avatar {
   width: 24px;
   height: 24px;
   color: var(--accent);
 }
 
-.login-menu__button {
+.user-menu__button {
   display: grid;
   place-items: center;
   padding: 6px;
