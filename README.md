@@ -469,6 +469,7 @@ src/zimpasta/
     catalog.py        choices and help text for form controls, read from the library
     generation_job.py background generation with per-run overrides, progress, cancel
     schedules.py      ScheduleSet: import, export, room and faculty views
+    schedule_format.py clock_text() and DAY_NAMES: how every schedule view writes times
     generate.py       schedule generation through the library's Scheduler
     config_loader.py  load_config(path): read a configuration file (shell)
     results.py        ScheduleStore: the shell's generated schedules
