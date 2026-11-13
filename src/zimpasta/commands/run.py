@@ -16,7 +16,11 @@ from pydantic import ValidationError
 from scheduler import CombinedConfig
 
 from zimpasta.command import CommandError, CommandSpec, Invocation, Option
-from zimpasta.commands.export_flow import EXPORT_OPTIONS, FORMAT_PROMPT, export_with_prompts
+from zimpasta.commands.export_flow import (
+    EXPORT_OPTIONS,
+    ask_missing_export_options,
+    export_with_prompts,
+)
 from zimpasta.commands.load_config import read_into_session
 from zimpasta.console import Console
 from zimpasta.model.config_loader import load_config
@@ -35,7 +39,7 @@ from zimpasta.model.generate import (
     format_validation_errors,
     generate_schedules,
 )
-from zimpasta.prompts import OutputTarget, ask_format, ask_int, ask_output_path, ask_yes_no
+from zimpasta.prompts import OutputTarget, ask_int, ask_yes_no
 from zimpasta.session import Session
 
 CONFIG_PROMPT = "Config file to use [{default}]: "
@@ -178,17 +182,7 @@ def build_run_schedule(
             options["limit"] = str(ask_int(console, prompt, default=config.limit))
         if invocation.get("optimize") is None:
             options["optimize"] = "yes" if ask_yes_no(console, OPTIMIZE_PROMPT) else "no"
-        given_format = invocation.get("format")
-        if given_format is None:
-            fmt = ask_format(console, FORMAT_PROMPT)
-            options["format"] = fmt.value
-        else:
-            fmt = ExportFormat(str(given_format))
-        if invocation.get("output") is None:
-            target = ask_output_path(console, fmt)
-            options["output"] = str(target.path)
-            if target.overwrite:
-                options["overwrite"] = True
+        options.update(ask_missing_export_options(console, invocation))
         return invocation.with_values(options=options)
     except (EOFError, KeyboardInterrupt):
         console.say("")

@@ -6,11 +6,15 @@ them bare asks for the schedule number, format, and output file.
 """
 
 from zimpasta.command import CommandError, CommandSpec, Invocation, Positional
-from zimpasta.commands.export_flow import EXPORT_OPTIONS, FORMAT_PROMPT, export_with_prompts
+from zimpasta.commands.export_flow import (
+    EXPORT_OPTIONS,
+    ask_missing_export_options,
+    export_with_prompts,
+)
 from zimpasta.console import Console
 from zimpasta.model.export import ExportFormat, resolve_output_path
 from zimpasta.model.results import ScheduleStore
-from zimpasta.prompts import OutputTarget, ask_format, ask_int, ask_output_path
+from zimpasta.prompts import OutputTarget, ask_int
 from zimpasta.session import Session
 from zimpasta.view import format_schedule, summarize
 
@@ -67,17 +71,7 @@ def build_export(console: Console, session: Session, invocation: Invocation) -> 
     options: dict[str, str | bool] = {}
     if invocation.get("which") is None:
         positionals["which"] = _ask_which(console, store)
-    given_format = invocation.get("format")
-    if given_format is None:
-        fmt = ask_format(console, FORMAT_PROMPT)
-        options["format"] = fmt.value
-    else:
-        fmt = ExportFormat(str(given_format))
-    if invocation.get("output") is None:
-        target = ask_output_path(console, fmt)
-        options["output"] = str(target.path)
-        if target.overwrite:
-            options["overwrite"] = True
+    options.update(ask_missing_export_options(console, invocation))
     return invocation.with_values(positionals, options)
 
 

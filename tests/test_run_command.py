@@ -6,11 +6,11 @@ from scheduler import OptimizerFlags
 
 from tests.helpers import FakeSchedulerFactory, ScriptedConsole
 from zimpasta.command import CommandError, Registry, evaluate, tokenize
+from zimpasta.commands.export_flow import FORMAT_PROMPT
 from zimpasta.commands.run import (
     BAD_LIMIT,
     CANCELLED,
     CONFIG_PROMPT,
-    FORMAT_PROMPT,
     LIMIT_PROMPT,
     NO_CONFIG,
     NO_CONFIG_PROMPT,
