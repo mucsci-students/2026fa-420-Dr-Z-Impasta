@@ -12,8 +12,8 @@ import { formIssues } from "../../../components/issues.js";
 import { OPTIMIZER_FLAG_NAMES } from "../labels.js";
 import CardRow from "./CardRow.jsx";
 import FieldError from "../../../components/FieldError.jsx";
+import { toNumber } from "../forms.js";
 
-const toNumber = (text) => (text === "" ? null : Number(text));
 const toText = (number) => (number == null ? "" : String(number));
 
 /**

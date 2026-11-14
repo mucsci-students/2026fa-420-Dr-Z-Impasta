@@ -38,6 +38,7 @@ import LoadJsonButton from "./LoadJsonButton.jsx";
 
 import ErrorMessage from "../../components/ErrorMessage.jsx";
 import { loadFile, confirmLoad, startNewConfig, validateConfig, saveConfig, saveItem, deleteItem, updateTimeSlots, updateSettings, togglePatternDisabled, undoStepCount, redoStepCount, redo, undo, recordUndoStep } from "../../state/eventHandlers";
+import { weekdaysFrom } from "./labels.js";
 
 export default function ConfigEditor() {
   const { state, loading, refresh } = useAppState();
@@ -226,7 +227,7 @@ export default function ConfigEditor() {
   const items = doc?.document.config;                     // rooms, labs, courses, faculty
   const timeSlots = doc?.document.time_slot_config;        // time blocks, timing options
   const patterns = timeSlots?.classes;                     // class patterns
-  const weekdays = options?.weekdays?.length ? options.weekdays : ["MON", "TUE", "WED", "THU", "FRI"];
+  const weekdays = weekdaysFrom(options);
   const enabled = patterns?.filter((p) => !p.disabled).length;
   const settings = doc && { limit: doc.document.limit, optimizer_flags: doc.document.optimizer_flags };
 
@@ -246,7 +247,6 @@ export default function ConfigEditor() {
             <Button onClick={() => handleNew({ refreshAfter: true })}>New</Button>
 
             <LoadJsonButton onLoad={handleLoadJson} />
-
 
             <Button
               disabled={!canSave}

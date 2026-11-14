@@ -4,11 +4,9 @@
 
 import { useId, useRef } from "react";
 import Button from "../../components/Button.jsx";
-import { DAY_NAMES } from "./labels.js";
+import { DAY_NAMES, WEEKDAYS } from "./labels.js";
 import { hourAfter } from "./times.js";
 import FieldError from "../../components/FieldError.jsx";
-
-const WEEKDAYS = ["MON", "TUE", "WED", "THU", "FRI"];
 
 /** A day's first range: the same working day ResourceDialog starts rooms with. */
 const FIRST_RANGE = { start: "08:00", end: "17:00" };

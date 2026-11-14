@@ -12,11 +12,10 @@ import { hourAfter } from "../times.js";
 import EditDialog from "./EditDialog.jsx";
 import { useDraft } from "./useDraft.js";
 import FieldError from "../../../components/FieldError.jsx";
+import { toNumber } from "../forms.js";
 
 /** A day's first block, when it has none. */
 const FIRST_BLOCK = { start: "08:00", end: "17:00", spacing: 60 };
-
-const toNumber = (text) => (text === "" ? null : Number(text));
 
 /** A new block: the working day if there are none, else an hour after the last block, same spacing. */
 function nextBlock(blocks) {
