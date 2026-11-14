@@ -35,6 +35,7 @@ from scheduler.models import CourseInstance
 from zimpasta.model.generate import GenerationResult, Schedule
 from zimpasta.model.issues import Issue
 from zimpasta.model.schedule_format import DAY_NAMES, clock_text
+from zimpasta.model.wording import plural
 
 Assignment = dict
 """One ``CourseInstanceJSON`` record."""
@@ -421,8 +422,7 @@ def _parse_schedules(data: object, filename: str) -> list[list[Assignment]]:
         count = len(issues)
         raise InvalidScheduleFile(
             "invalid_schedule_file",
-            f"{filename} is not in the schedule format: {count} "
-            f"{'problem' if count == 1 else 'problems'} found.",
+            f"{filename} is not in the schedule format: {plural(count, 'problem')} found.",
             issues=tuple(issues[:50]),
         )
     return schedules

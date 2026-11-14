@@ -82,6 +82,7 @@ from zimpasta.model import references as refs
 from zimpasta.model.defaults import empty_configuration
 from zimpasta.model.feasibility import schedule_problems
 from zimpasta.model.issues import COLLECTIONS, Issue, issue, issues_from_error
+from zimpasta.model.wording import plural
 
 AREAS: tuple[str, ...] = tuple(COLLECTIONS)
 """Editable item lists, in the order the editor shows them."""
@@ -140,8 +141,9 @@ class UnsavedChanges(WorkspaceError):
 
     def __init__(self, changes: tuple["Change", ...]) -> None:
         count = len(changes)
-        noun = "change has" if count == 1 else "changes have"
-        super().__init__(f"{count} {noun} not been saved and would be lost.")
+        super().__init__(
+            f"{plural(count, 'change has', 'changes have')} not been saved and would be lost."
+        )
         self.changes = changes
 
 
@@ -163,8 +165,8 @@ class DeleteBlocked(WorkspaceError):
     def __init__(self, impact: refs.DeleteImpact) -> None:
         if impact.blocking:
             count = len(impact.blocking)
-            noun = "section depends" if count == 1 else "sections depend"
-            message = f"Can't delete {impact.label}: {count} {noun} on it."
+            depend = plural(count, "section depends", "sections depend")
+            message = f"Can't delete {impact.label}: {depend} on it."
         else:
             message = f"Can't delete {impact.label}: the configuration would no longer be valid."
         super().__init__(message, issues=impact.problems)
@@ -402,8 +404,7 @@ class ConfigWorkspace:
             count = len(evaluation.issues)
             raise InvalidFile(
                 "invalid_configuration",
-                f"{filename} is not a valid configuration: {count} "
-                f"{'problem' if count == 1 else 'problems'} found.",
+                f"{filename} is not a valid configuration: {plural(count, 'problem')} found.",
                 issues=evaluation.issues,
             )
         with self._lock:
@@ -504,7 +505,7 @@ class ConfigWorkspace:
                 summary = f"{noun[:1].upper()}{noun[1:]}: {_diff(old, current)}"
                 if renamed[1]:
                     count = renamed[1]
-                    summary += f" ({count} {'reference' if count == 1 else 'references'} updated)"
+                    summary += f" ({plural(count, 'reference')} updated)"
                 return "edited", area, summary
 
             return self._commit(candidate, describe, force=force)
@@ -549,9 +550,7 @@ class ConfigWorkspace:
             summary = f"Removed {refs.AREA_NOUNS[area]} {impact.label}"
             references = len(impact.blocking) + len(impact.cascades)
             if references:
-                summary += (
-                    f" and {references} {'reference' if references == 1 else 'references'} to it"
-                )
+                summary += f" and {plural(references, 'reference')} to it"
             change = self._commit(candidate, lambda doc: ("removed", area, summary), force=force)
             return change, impact
 

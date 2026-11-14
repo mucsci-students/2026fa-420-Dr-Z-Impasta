@@ -38,6 +38,7 @@ from zimpasta.model import references as refs
 from zimpasta.model.generation_job import GenerationBusy, InvalidOverrides
 from zimpasta.model.issues import issue
 from zimpasta.model.schedules import ScheduleError
+from zimpasta.model.wording import plural
 from zimpasta.model.workspace import (
     ITEM_TYPES,
     DeleteBlocked,
@@ -412,7 +413,7 @@ def inspect_configuration(app: "AppController", args: InspectArguments) -> ToolR
         entries.append({**entry, **item})
     noun = refs.AREA_NOUNS[args.area]
     return ToolResult.done(
-        f"Listed {len(listed)} {noun}{'' if len(listed) == 1 else 's'}.",
+        f"Listed {plural(len(listed), noun)}.",
         area=args.area,
         items=entries,
         truncated=len(listed) > MAX_LISTED,
@@ -578,7 +579,7 @@ def validate_configuration(app: "AppController", args: NoArguments) -> ToolResul
         summary = "The scheduler library accepts the configuration: it is valid."
     else:
         count = len(problems)
-        summary = f"The configuration is not valid yet: {count} problem{'s' * (count != 1)}."
+        summary = f"The configuration is not valid yet: {plural(count, 'problem')}."
     return ToolResult.done(
         summary,
         valid=report["valid"],
