@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import SignInDialog from "./dialogs/SignInDialog.jsx";
-import AddProjectDialog from "./dialogs/AddProjectDialog";
+import AddStateDialog from "./dialogs/AddStateDialog";
+import { getFormInfo } from "./dialogs/AddStateDialog";
 
 /**
  * The account menu in the shared header. Outside clicks close the menu, while sign-in
@@ -11,7 +12,7 @@ export default function UserMenu() {
     // the sign-in dialog; `menuRef` lets the outside-click handler identify popup clicks.
     const [open, setOpen] = useState(false);
     const [signInOpen, setSignInOpen] = useState(false);
-	const[addProjectOpen, setAddProjectOpen] = useState(false);
+	const[addStateOpen, setAddStateOpen] = useState(false);
     const menuRef = useRef(null);
 
     useEffect(() => {
@@ -55,7 +56,18 @@ export default function UserMenu() {
                     <button type="button">Project 1</button>
                     <button type="button">Project 2</button>
                     <button type="button">Project 3</button>
-                    <button type="button" onClick={() => setAddProjectOpen(true)}>Add Project</button>
+                    <button 
+		    type="button" 
+		    onClick={() => 
+			    { 
+				    setAddStateOpen(true); 
+				    console.log(getFormInfo()); 
+			    }
+		    }
+		    >
+		    Add State
+		    </button>
+
                     <button
                         type="button"
                         onClick={() => {
@@ -69,7 +81,7 @@ export default function UserMenu() {
                 </div>
             )}
 	    <SignInDialog open={signInOpen} onClose={() => setSignInOpen(false)} />
-	    <AddProjectDialog open={addProjectOpen} onClose={() => setAddProjectOpen(false)} />
+	    <AddStateDialog open={addStateOpen} onClose={() => setAddStateOpen(false)} />
         </div>
     );
 }

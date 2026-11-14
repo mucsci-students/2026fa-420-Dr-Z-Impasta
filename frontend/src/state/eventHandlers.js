@@ -53,6 +53,7 @@ const pushToCurr = (content) => {
 	HISTORY.pushToCurr(ORIGINATOR.storeFile());
 };
 
+// TODO: fix error handling
 export const authenticateUser = async(username, password) => {
 	try {
 		await api.account.logIn({username, password});
@@ -63,6 +64,18 @@ export const authenticateUser = async(username, password) => {
 	}
 	return true;
 
+};
+
+// TODO: fix error handling
+export const createState = async(name, copy) => {
+	try {
+		await api.states.create(name, copy);
+	}
+	catch(error) {
+		console.log(error);
+		return false;
+	}
+	return true;
 };
 
 export const redoAction = async(currDoc, filename, setError, setPendingLoad) => {
