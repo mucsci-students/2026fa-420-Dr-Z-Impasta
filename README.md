@@ -451,6 +451,156 @@ depending on what is inside.
 them as opaque objects. The editor gets undo and redo without exposing how the
 configuration is stored, and a restored state is always one the library accepted before.
 
+## Technical debt reduction (Sprint 4)
+
+### 1. The shell's `modify` command was complex and effectively untested
+
+**Problem.** `src/zimpasta/commands/modify.py` handled each kind of item in three
+near-identical branches, had unreachable `return`s after `raise`, wrote the file in three
+copied blocks, and declared `-> dict` on functions that returned a room, a tuple, or a flag.
+`tests/test_modify.py` only asserted `!= []`, which every result passes, and covered 68%.
+
+**Why it mattered.** Nobody could change the command safely: the tests could not fail, so a
+broken refactor would have gone unnoticed, and the copied branches had to be kept in step by
+hand.
+
+**Change.** First, 29 tests that pin today's behavior exactly: console output, the
+configuration in memory, and the file written, including known bugs (each marked `Bug:`).
+Then `modify_handler` became one `UPDATERS` lookup, the update functions return `bool`, and
+one `_write` helper replaced the three copies.
+
+**Evidence.** The same 28 pinning tests passed on the old code and on the new code (the 29th
+checks the new `bool` returns). Coverage of `modify.py` rose from 68% to 91%.
+
+### 2. The GUI and the AI assistant did the same edits through different code
+
+**Problem.** The AI tools (`controller/assistant/tools.py`, `prompt.py`, `session.py`)
+reached into `app.workspace` and `app.schedules` directly, while the GUI's routes went
+through `AppController`. Adding a room from the chat and from the editor ran different code.
+
+**Why it mattered.** A fix or a new rule added to one path (logging, locking, undo) silently
+missed the other, which is the duplication §6.2 rules out.
+
+**Change.** The tools now edit with the same `AppController` methods the GUI's routes use
+(`add_item`, `replace_item`, `delete_item`, `update_time_slots`, `update_settings`), and
+read through `configuration_state()`, `transaction()`, and `schedule_count()`. The assistant
+package no longer touches the Model directly.
+
+**Evidence.** The assistant's 90 tests, including three added first to pin untested paths
+(listing a non-course area, describing an empty area, a delete mixed with other changes),
+passed before and after. The extra work per AI edit is about 0.4 ms against 66 ms of library
+validation.
+
+### 3. The data the backend sends the frontend had no tests
+
+**Problem.** The frontend reads the API's replies as plain JavaScript objects. Renaming a
+field in Python, or an error code such as `unsaved_changes`, would break the GUI silently.
+
+**Why it mattered.** Nothing connected the two sides, so the GUI could break without any
+test failing.
+
+**Change.** `tests/controller/test_api_shapes.py` (18 tests) pins the exact field names of
+every reply the GUI reads (state, configuration, options, delete impact, schedule views,
+chat entries), the error shape and the codes the GUI branches on, the download headers
+`client.js` parses, and the chat tool names the chat panel uses. Each shape names the
+frontend files that read it. See [docs/web-api.md](docs/web-api.md).
+
+**Evidence.** Renaming any one of three fields (`day_number`, an issue's `field`,
+`last_entry`) made the tests fail with a message naming the missing and unexpected field.
+
+### 4. Repeated application behavior in the shell and the Model
+
+**Problem.** The same logic was written several times:
+- `commands/delete.py` had four near-identical `_remove_room`/`_lab`/`_course`/`_faculty`
+  functions, and `commands/add.py` an `if/elif` chain per kind.
+- `load` and `run schedule --config` each had their own file loader.
+- `run schedule` and `schedules export` repeated their format and output-file prompts and
+  options.
+- `print_config` was the longest function in the repository (99 lines), repeating the same
+  heading and "list or None" code for every section.
+- The HH:MM formatter and weekday names existed in both `model/schedules.py` and
+  `commands/display_schedules.py`; nine messages built plurals by hand.
+- Shared wording (`KINDS`, "No configuration loaded", the config path prompt) was copied
+  across commands.
+
+**Why it mattered.** Each change had to be made in every copy, and a copy that was missed
+would quietly behave differently from the others.
+
+**Change.** A table-driven `_remove` and `NEW_ENTRIES` table; one `read_into_session` that
+returns the error while each command keeps its own wording; `ask_missing_export_options` and
+`EXPORT_OPTIONS` in `commands/export_flow.py`; `print_config` built from per-section helpers;
+`model/schedule_format.py` (`clock_text`, `DAY_NAMES`) and `model/wording.py` (`plural`);
+shared constants in `commands/common.py`.
+
+**Evidence.** The existing command tests (97–100% coverage) passed throughout. Where a case
+was untested, a pinning test was added first (deleting a course's only faculty member, the
+exact `run` load messages). `print_config`'s output was compared byte for byte against the
+old code on three configurations, and every rewritten plural was compared against the
+original expression (44 cases, no differences).
+
+### 5. The Configuration Editor's actions were repeated and inconsistent
+
+**Problem.** `frontend/src/modes/editor/ConfigEditor.jsx` wrote every action inline: the
+same save logic four times, Cancel six times, Undo/Redo twice, Load JSON twice. The handlers
+in `state/eventHandlers.js` used four naming styles (`Load`, `Empty_Click`,
+`ValidateAndSaveItem`, `pushToHist`), and front-end names did not match the backend's
+(`FLAG_NAMES` for `optimizer_flags`, `TogglePattern` for the `disabled` field). The ⚠ field
+error was copied into six components, the "warn before closing the tab" effect into two,
+and the weekday fallback and `toNumber` into six files each.
+
+**Why it mattered.** The actions could not be compared side by side, so their differences
+(when each one records an undo step or refreshes) were invisible; finding the backend code
+behind a control meant guessing its name.
+
+**Change.** One block of named `handle*` actions with a comment stating how they differ;
+`saveWithUndo`; camelCase verb names (`loadFile`, `startNewConfig`, `saveItem`,
+`recordUndoStep`); names that match the backend (`OPTIMIZER_FLAG_NAMES`,
+`togglePatternDisabled`); and shared `LoadJsonButton`, `FieldError`, `useWarnBeforeUnload`,
+`weekdaysFrom`, and `toNumber`.
+
+**Evidence.** The ten Playwright tests (including undo and redo) pass, and the rendered HTML
+of six screens (empty editor, loaded editor, an add dialog with a field error, an edit
+dialog, the Generator, the Viewer) matches `develop` exactly, except the Generator's
+"Number of schedules" and "Optimizer options", now "Generation limit" and "Optimizer flags"
+to match the editor and the backend.
+
+### 6. Tests depended on the developer's machine
+
+**Problem.** `tests/test_config_editor.py` started one shared server on port 8000 without
+`--no-browser`, so it opened a browser window, talked to whatever else was on port 8000,
+made each test depend on the one before, and waited up to 5 s per test for a dialog. It
+failed when the GUI wasn't built. `tests/test_config_memento.js` ran nowhere and only worked
+from inside `tests/`. Coverage counted the test files themselves.
+
+**Why it mattered.** `uv run pytest` was not reliable on a fresh checkout, and the frontend's
+only unit test could break without anyone noticing.
+
+**Change.** Each browser test starts its own server on a free port and is skipped with a
+clear reason until the GUI is built; fixed waits became `expect(...)`. `npm test` runs the
+memento test, and CI runs it. `[tool.coverage.run]` measures only the application, and CI
+prints the Model's coverage on its own.
+
+**Evidence.** The browser tests take 22 s instead of 33 s, pass in any order, and leave no
+servers running. Model coverage is 97%.
+
+### 7. Obsolete code and outdated documentation
+
+**Problem.** About 1,600 lines nothing used: four stale CSS files in `frontend/src/layout/`,
+`model/config_finder.py`, a committed run output, the unused `/api/config/load_empty` route,
+`SegmentedControl`, `pickFile()`, `AREAS`, unused fields (`Session.has_config`,
+`Session.schedule_path`, `_Pending.entry_id`), leftover AI-chat notes, and the shell's
+`PLACEHOLDERS` naming from Sprint 1. This README also described the shell as "a second view
+on the same Model", which it is not.
+
+**Why it mattered.** Dead code and wrong documentation send readers to the wrong place: the
+`layout/` CSS had already drifted from the `styles/` copies the app actually loads.
+
+**Change.** Removed the unused code and files, cleaned the notes, renamed `PLACEHOLDERS` to
+`COMMANDS`, and corrected the README's MVC description.
+
+**Evidence.** Each removal was confirmed unused by searching the code, tests, and docs; the
+full test suite, lint, `ty`, and both frontend builds pass after it.
+
 ## Layout
 
 ```
