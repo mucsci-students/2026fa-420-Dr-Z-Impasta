@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { useBlocker } from "react-router";
-import ConfirmDialog from "./ConfirmDialog.jsx";
+import ConfirmDialog from "./dialogs/ConfirmDialog.jsx";
 
 /**
  * Put this in a page that has a form draft. While `when` is true, switching modes or
