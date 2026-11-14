@@ -53,6 +53,16 @@ const pushToCurr = (content) => {
 	HISTORY.pushToCurr(ORIGINATOR.storeFile());
 };
 
+export const authenticateUser = async(username, password) => {
+	try {
+		const login = await api.account.logIn({username, password});
+	}
+	catch(error) {
+		return false;
+	}
+	return true;
+
+};
 
 export const redoAction = async(currDoc, filename, setError, setPendingLoad) => {
 	const memento = HISTORY.popCurr();

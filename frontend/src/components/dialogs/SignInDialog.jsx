@@ -1,7 +1,8 @@
 import { useState } from "react";
-import Button from "./Button.jsx";
+import Button from "../Button.jsx";
 import Dialog from "./Dialog.jsx";
-import Field from "./Field.jsx";
+import Field from "../Field.jsx";
+import { authenticateUser } from "../../state/eventHandlers.js";
 
 /**
  * Collects a username and password in a modal. The form submit handler is the integration
@@ -9,6 +10,7 @@ import Field from "./Field.jsx";
  */
 export default function SignInDialog({ open, onClose }) {
   const [message, setMessage] = useState("");
+	const [loginStatus, setLoginStatus] = useState(true);
   const close = () => {
     setMessage("");
     onClose?.();
@@ -30,19 +32,22 @@ export default function SignInDialog({ open, onClose }) {
       <form
         id="sign-in-form"
         className="sign-in-form"
-        onSubmit={(event) => {
+        onSubmit={async (event) => {
           event.preventDefault();
-          // AI_CONTEXT: SIGN_IN_AUTH_HANDLER — Replace this placeholder with the auth request.
-          // Read "username" and "password" from FormData and send them in the request body,
-          // not in a URL or logs; handle success and authentication errors here.
-          setMessage("Authentication is not connected yet.");
+		const data = new FormData(event.currentTarget);
+		const res = await authenticateUser(data.get("username"), data.get("password"))
+		setLoginStatus(res);
+
+		if(res == false) {
+			setMessage("Invalid login.");
+		}
         }}
       >
         <Field label="Username" required>
-          <input type="text" name="username" autoComplete="username" data-autofocus />
+          <input type="text" name="username" autoComplete="username" data-autofocus className={!loginStatus ? "login-error" : ""}/>
         </Field>
         <Field label="Password" required>
-          <input type="password" name="password" autoComplete="current-password" />
+          <input type="password" name="password" autoComplete="current-password" className={!loginStatus ? "login-error" : ""}/>
         </Field>
         {message && (
           <p className="sign-in-form__message" role="status">
