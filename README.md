@@ -171,9 +171,9 @@ characters, so Windows paths need no quoting or escaping.
 sections, 9 faculty). Its limit is 100, so give `run` a small limit the first time; each
 schedule takes a second or two.
 
-A typical session: `load` a configuration, `print` it, edit it with `delete` (and `add` and
-`modify` once they land), `save` it, `run schedule` to generate and export, then `display`
-the exported file. `display` looks for `.csv` and `.json` files in the directory the shell
+A typical session: `load` a configuration, `print` it, edit it with `add`, `modify`, and
+`delete`, `save` it, `run schedule` to generate and export, then `display` the exported
+file. `display` looks for `.csv` and `.json` files in the directory the shell
 was started from, so export there.
 
 ## Commands
@@ -229,9 +229,11 @@ and `OPENAI_API_KEY` set.
 
 ## Architecture (MVC)
 
-Sprint 2 uses Model-View-Controller. The Model and Controller are Python; the View is the
-React GUI, which talks to the Controller over a local JSON API. The Sprint 1 shell is a
-second view on the same Model.
+The GUI uses Model-View-Controller. The Model and Controller are Python; the View is the
+React GUI, which talks to the Controller over a local JSON API. The Sprint 1 shell is
+separate: its commands keep the configuration as a `CombinedConfig` on `Session`
+(`session.py`) rather than going through `ConfigWorkspace`, and share only schedule
+generation (`generate.py`) and schedule formatting (`schedule_format.py`) with the GUI.
 
 | Part | Where | Responsibility |
 | --- | --- | --- |
@@ -461,7 +463,8 @@ src/zimpasta/
                     ask_output_path) and the fixed acceptance-scenario messages
   welcome_page.py   the welcome banner
   view.py           text summary and table for the in-session schedules
-  model/            the Model, shared by the shell and the GUI
+  model/            the Model: the GUI's, except the shell's last three; both use generate.py
+                    and schedule_format.py
     workspace.py      ConfigWorkspace: the configuration, validated edits, unsaved changes
     references.py     who refers to what: delete impact, cascades, renames
     issues.py         library validation errors located by area, item, and field
