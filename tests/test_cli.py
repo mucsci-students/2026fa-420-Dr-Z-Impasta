@@ -1,5 +1,5 @@
 from tests.helpers import ScriptedConsole
-from zimpasta.cli import GOODBYE, PLACEHOLDERS, PROMPT, build_registry, run
+from zimpasta.cli import COMMANDS, GOODBYE, PROMPT, build_registry, run
 from zimpasta.command import CommandSpec, Positional
 from zimpasta.prompts import INVALID_CHOICE
 from zimpasta.session import Session
@@ -11,7 +11,7 @@ def test_startup_lists_every_command_then_quit():
     run(console, Session())
 
     listing = "\n".join(console.output)
-    for spec in PLACEHOLDERS:
+    for spec in COMMANDS:
         assert spec.usage in listing
     assert "help [<command>]" in listing
     assert "quit" in listing

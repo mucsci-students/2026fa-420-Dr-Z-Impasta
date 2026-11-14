@@ -534,7 +534,7 @@ new server-side workflow as an `AppController` method with pytest tests.
    Invocation | None` that asks for whatever required values are missing (use
    `invocation.missing()` and `invocation.with_values(...)`) and returns `None` if the
    user cancels. Read values with `invocation.get("name")`.
-3. In `src/zimpasta/cli.py`, add your `SPECS` to `PLACEHOLDERS`. Keep the grammar the team
+3. In `src/zimpasta/cli.py`, add your `SPECS` to `COMMANDS`. Keep the grammar the team
    agreed on. `commands/delete.py` is a good model to follow.
 4. Test with `ScriptedConsole` from `tests/helpers.py`: call `evaluate(console, session,
    "your command line", Registry(SPECS))` for the direct path and a bare verb for the
