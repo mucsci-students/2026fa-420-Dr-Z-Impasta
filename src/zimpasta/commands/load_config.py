@@ -7,44 +7,17 @@ valid configuration.
 Author: Foster VanFleet. Converted to the command model.
 """
 
-import json
-from collections.abc import Callable
 from pathlib import Path
 
-from pydantic import ValidationError
-from scheduler import CombinedConfig
-
 from zimpasta.command import CommandError, CommandSpec, Invocation, Positional
-from zimpasta.commands.common import PATH_PROMPT
+from zimpasta.commands.common import PATH_PROMPT, read_into_session
 from zimpasta.console import Console
-from zimpasta.model.config_loader import load_config as read_config
 from zimpasta.session import Session
 
 FILE_NOT_FOUND = "File not found."
 UNREADABLE = "Unable to read file."
 INVALID = "Invalid configuration file."
 LOADED = "Configuration loaded successfully."
-
-
-LoadError = OSError | json.JSONDecodeError | ValidationError
-"""Why a configuration file couldn't be loaded. Each command words it its own way."""
-
-
-def read_into_session(
-    session: Session, path: Path, loader: Callable[[Path], CombinedConfig] = read_config
-) -> LoadError | None:
-    """Load ``path`` into the session, or return why it couldn't be loaded.
-
-    Shared by ``load`` and ``run schedule --config``. The session is only updated after a
-    successful load, so a bad path or an invalid file leaves the previous configuration.
-    """
-    try:
-        config = loader(path)
-    except (OSError, json.JSONDecodeError, ValidationError) as error:
-        return error
-    session.config = config
-    session.config_path = path.resolve()
-    return None
 
 
 def load_into_session(session: Session, path: Path) -> str | None:

@@ -16,12 +16,12 @@ from pydantic import ValidationError
 from scheduler import CombinedConfig
 
 from zimpasta.command import CommandError, CommandSpec, Invocation, Option
+from zimpasta.commands.common import read_into_session
 from zimpasta.commands.export_flow import (
     EXPORT_OPTIONS,
     ask_missing_export_options,
     export_with_prompts,
 )
-from zimpasta.commands.load_config import read_into_session
 from zimpasta.console import Console
 from zimpasta.model.config_loader import load_config
 from zimpasta.model.export import ExportFormat, resolve_output_path
