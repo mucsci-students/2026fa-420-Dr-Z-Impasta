@@ -320,7 +320,7 @@ export default function ConfigEditor() {
               onSave={async (draft) => 
 		      {
 			      pushToHist(doc.document); 
-			      await ValidateAndSaveItem(editing, draft, setEditing, setLocalError); 
+			      await ValidateAndSaveItem(editing, draft, setEditing, setLocalError);
 			      await refresh(); 
 			    
 	      }}

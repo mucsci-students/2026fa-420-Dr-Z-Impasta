@@ -22,6 +22,18 @@ from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException
 
 from zimpasta.controller.assistant import AIError, ChatBusy, ChatError, PendingNotFound
+from zimpasta.model.accounts import (
+    AccountError,
+    InvalidAccountInput,
+    InvalidCredentials,
+    NotLoggedIn,
+    StateInUse,
+    StateNameTaken,
+    StateNotFound,
+    StorageFailed,
+    StorageUnavailable,
+    UsernameTaken,
+)
 from zimpasta.model.generation_job import GenerationBusy, InvalidOverrides
 from zimpasta.model.schedules import (
     InvalidScheduleFile,
@@ -67,8 +79,16 @@ def _respond(status: int, code: str, message: str, *, issues=(), **extra) -> JSO
 
 def _status_for(error: Exception) -> int:
     match error:
-        case ItemNotFound() | ScheduleNotFound() | PendingNotFound():
+        case ItemNotFound() | ScheduleNotFound() | PendingNotFound() | StateNotFound():
             return 404
+        case StorageUnavailable() | StorageFailed():
+            return 503
+        case InvalidCredentials() | NotLoggedIn():
+            return 401
+        case UsernameTaken() | StateNameTaken() | StateInUse():
+            return 409
+        case InvalidAccountInput():
+            return 400
         case AIError():
             return 503
         case ChatBusy():
@@ -97,29 +117,39 @@ async def _model_error(request: Request, error: Exception) -> JSONResponse:
         extra["impact"] = error.impact.to_dict()
     return _respond(
         _status_for(error),
-        error.code,
-        error.message,
+        getattr(error, "code", ""),
+        getattr(error, "message", ""),
         issues=getattr(error, "issues", ()),
         **extra,
     )
 
 
-async def _bad_request(request: Request, error: RequestValidationError) -> JSONResponse:
-    details = [
-        {
-            "location": ".".join(str(part) for part in detail.get("loc", ())),
-            "message": detail.get("msg", "Invalid value."),
-        }
-        for detail in error.errors()
-    ]
-    first = details[0]["message"] if details else "Invalid request."
-    return _respond(400, "bad_request", f"The request was not understood: {first}", details=details)
+async def _bad_request(request: Request, error: RequestValidationError | Exception) -> JSONResponse:
+    if isinstance(error, RequestValidationError):
+        details = [
+            {
+                "location": ".".join(str(part) for part in detail.get("loc", ())),
+                "message": detail.get("msg", "Invalid value."),
+            }
+            for detail in error.errors()
+        ]
+        first = details[0]["message"] if details else "Invalid request."
+        return _respond(
+            400, "bad_request", f"The request was not understood: {first}", details=details
+        )
+    else:
+        return _respond(400, "bad_request", "The request was not understood")
 
 
-async def _http_error(request: Request, error: HTTPException) -> JSONResponse:
-    code = "not_found" if error.status_code == 404 else "http_error"
-    message = "There is no such API endpoint." if error.status_code == 404 else str(error.detail)
-    return _respond(error.status_code, code, message)
+async def _http_error(request: Request, error: HTTPException | Exception) -> JSONResponse:
+    if isinstance(error, HTTPException):
+        code = "not_found" if error.status_code == 404 else "http_error"
+        message = (
+            "There is no such API endpoint." if error.status_code == 404 else str(error.detail)
+        )
+        return _respond(error.status_code, code, message)
+    else:
+        return _respond(400, "error", str(error))
 
 
 async def _unexpected(request: Request, error: Exception) -> JSONResponse:
@@ -137,6 +167,7 @@ def install(app: FastAPI) -> None:
         InvalidOverrides,
         AIError,
         ChatError,
+        AccountError,
     ):
         app.add_exception_handler(error_type, _model_error)
     app.add_exception_handler(RequestValidationError, _bad_request)

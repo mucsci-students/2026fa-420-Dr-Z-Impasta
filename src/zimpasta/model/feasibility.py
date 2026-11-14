@@ -14,10 +14,12 @@ tests/model/test_feasibility.py fails if a library upgrade changes them.
 """
 
 from types import SimpleNamespace
+from typing import cast
 
 from scheduler import CombinedConfig
 from scheduler.diagnostics import DiagnosticEngine
 from scheduler.problem import SchedulingProblem
+from scheduler.solver import SolverArtifacts
 
 from zimpasta.model.issues import COLLECTIONS, Issue
 
@@ -42,7 +44,10 @@ def schedule_problems(config: CombinedConfig) -> tuple[Issue, ...]:
     must not block an edit.
     """
     try:
-        engine = DiagnosticEngine(SchedulingProblem.from_config(config), _NO_SOLVER)
+        engine = DiagnosticEngine(
+            SchedulingProblem.from_config(config), cast(SolverArtifacts, _NO_SOLVER)
+        )
+
         domains = engine._candidate_domains()
         findings = engine._preflight_findings(domains, engine._capacity_analysis())
     except Exception:
