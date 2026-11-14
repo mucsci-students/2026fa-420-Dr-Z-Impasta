@@ -623,6 +623,7 @@ src/zimpasta/
     generation_job.py background generation with per-run overrides, progress, cancel
     schedules.py      ScheduleSet: import, export, room and faculty views
     schedule_format.py clock_text() and DAY_NAMES: how every schedule view writes times
+    wording.py        plural(): counted nouns in messages ("1 problem", "3 problems")
     generate.py       schedule generation through the library's Scheduler
     config_loader.py  load_config(path): read a configuration file (shell)
     results.py        ScheduleStore: the shell's generated schedules
@@ -644,6 +645,7 @@ src/zimpasta/
     run.py, results.py, export_flow.py                 run schedule, schedules ...
     display_schedules.py                               display
     help.py                                            help
+    common.py                                          shared wording and the config loader
 tests/
   conftest.py       fixtures: config_data, config, config_file (from tests/fixtures/)
   fixtures/         minimal_config.json: two courses, solved in milliseconds
@@ -658,7 +660,8 @@ frontend/           the View: React + Vite, JavaScript (see docs/gui.md)
     main.jsx, router.jsx, App.jsx, modes.js   entry, routes, frame, the three modes
     api/client.js     every API call
     api/backend.js    the server, or Python in a Web Worker (api/browser/) for build:browser
-    state/            app state polling, useAction, toasts, eventHandlers.js (editor actions)
+    state/            app state polling, useAction, useWarnBeforeUnload, toasts,
+                      eventHandlers.js (editor actions)
     components/       Button, Card, Dialog, ...
     layout/           header, connection banner, error pages
     modes/editor|generator|viewer/   one folder per mode
