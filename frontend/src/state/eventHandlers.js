@@ -55,9 +55,10 @@ const pushToCurr = (content) => {
 
 export const authenticateUser = async(username, password) => {
 	try {
-		const login = await api.account.logIn({username, password});
+		await api.account.logIn({username, password});
 	}
 	catch(error) {
+		console.log(error);
 		return false;
 	}
 	return true;

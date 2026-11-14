@@ -19,7 +19,7 @@ export default function AddProjectDialog({open, onClose}) {
 			<form
 			id="add-project-form"
 			className="add-project-form"
-			onSubmit={(event) => {
+			onSubmit={() => {
 			}}
 			>
 				<Field label="Title" required>
