@@ -5,10 +5,10 @@ import Field from "../Field.jsx";
 import Dialog from "./Dialog.jsx";
 import CheckboxList from "../../modes/editor/CheckboxList.jsx";
 
-export default function AddStateDialog({open, onClose}) {
-	const [copy, setCopy] = useState(false);
-	const [formInfo, setFormInfo] = useState({});
 
+export default function AddStateDialog({open, onClose, onFormSubmit}) {
+	const [copy, setCopy] = useState(false);
+	
 	return (
 		<Dialog
 		open={open}
@@ -30,7 +30,7 @@ export default function AddStateDialog({open, onClose}) {
 				const title = data.get("title");
 				const res = await createState(title, copy);
 				setCopy(false);
-				setFormInfo({title, res});
+				onFormSubmit({title, res});
 			
 			}}
 			>
@@ -43,7 +43,7 @@ export default function AddStateDialog({open, onClose}) {
 				legend=""
 				options={["Copy Current State?"]}
 				value={copy ? ["Copy Current State?"] : []}
-				onChange={(selected) => setCopy(true)}
+				onChange={() => setCopy(true)}
 				error=""
 				/>
 			</form>
@@ -51,7 +51,4 @@ export default function AddStateDialog({open, onClose}) {
 	);
 }
 
-export const getFormInfo = () => {
-	return formInfo;
-};
 

@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import SignInDialog from "./dialogs/SignInDialog.jsx";
 import AddStateDialog from "./dialogs/AddStateDialog";
-import { getFormInfo } from "./dialogs/AddStateDialog";
 
 /**
  * The account menu in the shared header. Outside clicks close the menu, while sign-in
@@ -13,6 +12,7 @@ export default function UserMenu() {
     const [open, setOpen] = useState(false);
     const [signInOpen, setSignInOpen] = useState(false);
 	const[addStateOpen, setAddStateOpen] = useState(false);
+	const[formInfo, setFormInfo] = useState({});
     const menuRef = useRef(null);
 
     useEffect(() => {
@@ -61,7 +61,6 @@ export default function UserMenu() {
 		    onClick={() => 
 			    { 
 				    setAddStateOpen(true); 
-				    console.log(getFormInfo()); 
 			    }
 		    }
 		    >
@@ -81,7 +80,14 @@ export default function UserMenu() {
                 </div>
             )}
 	    <SignInDialog open={signInOpen} onClose={() => setSignInOpen(false)} />
-	    <AddStateDialog open={addStateOpen} onClose={() => setAddStateOpen(false)} />
+	    <AddStateDialog 
+	    open={addStateOpen} 
+	    onClose={() => setAddStateOpen(false)} 
+	    onFormSubmit={(info) => {
+		    setFormInfo(info);
+		    console.log(formInfo);
+	    }}
+	    />
         </div>
     );
 }
