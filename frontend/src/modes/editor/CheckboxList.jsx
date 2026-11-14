@@ -1,6 +1,7 @@
 /**
  * Used by CourseDialog (rooms, labs, faculty, conflicts) and FacultyDialog (mandatory days).
  */
+import FieldError from "../../components/FieldError.jsx";
 
 /** Pick any number of names from `options`. `value` is the list of picked names. */
 export default function CheckboxList({ legend, options, value, onChange, empty = "None to choose from", error }) {
@@ -23,12 +24,7 @@ export default function CheckboxList({ legend, options, value, onChange, empty =
           {name}
         </label>
       ))}
-      {(error) && (
-        <p className="field__error">
-          <span aria-hidden="true">⚠ </span>
-          {error}
-        </p>
-      )}
+      <FieldError error={error} />
     </fieldset>
   );
 }

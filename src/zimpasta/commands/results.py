@@ -5,22 +5,23 @@ They work on the schedules kept in ``session.results`` by the most recent succes
 them bare asks for the schedule number, format, and output file.
 """
 
-from zimpasta.command import CommandError, CommandSpec, Invocation, Option, Positional
-from zimpasta.commands.export_flow import export_with_prompts
+from zimpasta.command import CommandError, CommandSpec, Invocation, Positional
+from zimpasta.commands.export_flow import (
+    EXPORT_OPTIONS,
+    ask_missing_export_options,
+    export_with_prompts,
+)
 from zimpasta.console import Console
 from zimpasta.model.export import ExportFormat, resolve_output_path
 from zimpasta.model.results import ScheduleStore
-from zimpasta.prompts import OutputTarget, ask_format, ask_int, ask_output_path
+from zimpasta.prompts import OutputTarget, ask_int
 from zimpasta.session import Session
 from zimpasta.view import format_schedule, summarize
 
 NO_RESULTS = "No generated schedules in this session. Run the scheduler first."
 CLEARED = "Cleared generated schedules."
-FORMAT_PROMPT = "Output format (csv/Json): "
 WHICH_PROMPT = "Export which (all, or 1-{count}): "
 BAD_WHICH = "Please enter all or a number between 1 and {count}."
-
-FORMATS = tuple(fmt.value for fmt in ExportFormat)
 
 
 def summary(console: Console, session: Session, invocation: Invocation) -> None:
@@ -58,8 +59,7 @@ def export(console: Console, session: Session, invocation: Invocation) -> None:
         resolve_output_path(str(invocation.get("output")), fmt),
         overwrite=bool(invocation.get("overwrite", False)),
     )
-    result = export_with_prompts(console, schedules, fmt, target)
-    session.schedule_path = result.path
+    export_with_prompts(console, schedules, fmt, target)
 
 
 def build_export(console: Console, session: Session, invocation: Invocation) -> Invocation | None:
@@ -70,17 +70,7 @@ def build_export(console: Console, session: Session, invocation: Invocation) -> 
     options: dict[str, str | bool] = {}
     if invocation.get("which") is None:
         positionals["which"] = _ask_which(console, store)
-    given_format = invocation.get("format")
-    if given_format is None:
-        fmt = ask_format(console, FORMAT_PROMPT)
-        options["format"] = fmt.value
-    else:
-        fmt = ExportFormat(str(given_format))
-    if invocation.get("output") is None:
-        target = ask_output_path(console, fmt)
-        options["output"] = str(target.path)
-        if target.overwrite:
-            options["overwrite"] = True
+    options.update(ask_missing_export_options(console, invocation))
     return invocation.with_values(positionals, options)
 
 
@@ -111,11 +101,7 @@ SPECS = (
         "schedules",
         "export",
         positionals=(Positional("which", help="a schedule number, or all"),),
-        options=(
-            Option("format", required=True, choices=FORMATS),
-            Option("output", required=True, help="output file; the extension is added"),
-            Option("overwrite", flag=True, help="replace an existing output file"),
-        ),
+        options=EXPORT_OPTIONS,
         description="Export one schedule or all of them",
         handler=export,
         builder=build_export,

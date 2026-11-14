@@ -16,7 +16,12 @@ from pydantic import ValidationError
 from scheduler import CombinedConfig
 
 from zimpasta.command import CommandError, CommandSpec, Invocation, Option
-from zimpasta.commands.export_flow import export_with_prompts
+from zimpasta.commands.common import read_into_session
+from zimpasta.commands.export_flow import (
+    EXPORT_OPTIONS,
+    ask_missing_export_options,
+    export_with_prompts,
+)
 from zimpasta.console import Console
 from zimpasta.model.config_loader import load_config
 from zimpasta.model.export import ExportFormat, resolve_output_path
@@ -34,20 +39,18 @@ from zimpasta.model.generate import (
     format_validation_errors,
     generate_schedules,
 )
-from zimpasta.prompts import OutputTarget, ask_format, ask_int, ask_output_path, ask_yes_no
+from zimpasta.prompts import OutputTarget, ask_int, ask_yes_no
 from zimpasta.session import Session
 
 CONFIG_PROMPT = "Config file to use [{default}]: "
 LIMIT_PROMPT = "Maximum number of schedules [{default}]: "
 OPTIMIZE_PROMPT = "Optimize? (yes/no): "
-FORMAT_PROMPT = "Output format (csv/Json): "
 
 CANCELLED = "Run cancelled."
 NO_CONFIG = "No configuration is loaded. Pass --config PATH, or load one first."
 NO_CONFIG_PROMPT = "No configuration is loaded. Enter the path to a config file."
 BAD_LIMIT = "--limit must be a whole number of 1 or more."
 
-FORMATS = tuple(fmt.value for fmt in ExportFormat)
 YES_NO = ("yes", "no")
 
 _NO_FEASIBLE_TEXT = {
@@ -81,9 +84,7 @@ def make_specs(
                 Option("config", help="configuration file; defaults to the loaded one"),
                 Option("limit", required=True, help="maximum number of schedules"),
                 Option("optimize", required=True, choices=YES_NO),
-                Option("format", required=True, choices=FORMATS),
-                Option("output", required=True, help="output file; the extension is added"),
-                Option("overwrite", flag=True, help="replace an existing output file"),
+                *EXPORT_OPTIONS,
             ),
             description="Generate schedules and export them",
             handler=handler,
@@ -143,8 +144,7 @@ def run_schedule(
         case GenerationSuccess(result=result):
             session.results.replace(result)
             console.say(_success_text(result))
-            exported = export_with_prompts(console, result.schedules, fmt, target)
-            session.schedule_path = exported.path
+            export_with_prompts(console, result.schedules, fmt, target)
 
 
 def build_run_schedule(
@@ -181,17 +181,7 @@ def build_run_schedule(
             options["limit"] = str(ask_int(console, prompt, default=config.limit))
         if invocation.get("optimize") is None:
             options["optimize"] = "yes" if ask_yes_no(console, OPTIMIZE_PROMPT) else "no"
-        given_format = invocation.get("format")
-        if given_format is None:
-            fmt = ask_format(console, FORMAT_PROMPT)
-            options["format"] = fmt.value
-        else:
-            fmt = ExportFormat(str(given_format))
-        if invocation.get("output") is None:
-            target = ask_output_path(console, fmt)
-            options["output"] = str(target.path)
-            if target.overwrite:
-                options["overwrite"] = True
+        options.update(ask_missing_export_options(console, invocation))
         return invocation.with_values(options=options)
     except (EOFError, KeyboardInterrupt):
         console.say("")
@@ -205,19 +195,17 @@ def load_into_session(session: Session, path: Path, loader: ConfigLoader) -> str
     The session is only updated after a successful load, so a bad path or an invalid file
     leaves the previously valid configuration intact.
     """
-    try:
-        config = loader(path)
-    except OSError as exc:
-        return f"Cannot read config file '{path}': {exc.strerror or exc}"
-    except json.JSONDecodeError as exc:
-        return f"Config file '{path}' is not valid JSON: {exc}"
-    except ValidationError as exc:
-        lines = [f"Config file '{path}' is not a valid configuration:"]
-        lines.extend(f"  - {line}" for line in format_validation_errors(exc))
-        return "\n".join(lines)
-    session.config = config
-    session.config_path = path.resolve()
-    return None
+    match read_into_session(session, path, loader):
+        case None:
+            return None
+        case OSError() as exc:
+            return f"Cannot read config file '{path}': {exc.strerror or exc}"
+        case json.JSONDecodeError() as exc:
+            return f"Config file '{path}' is not valid JSON: {exc}"
+        case ValidationError() as exc:
+            lines = [f"Config file '{path}' is not a valid configuration:"]
+            lines.extend(f"  - {line}" for line in format_validation_errors(exc))
+            return "\n".join(lines)
 
 
 def _config_for(session: Session, invocation: Invocation, loader: ConfigLoader) -> CombinedConfig:

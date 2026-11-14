@@ -1,18 +1,10 @@
-"""Tests for zimpasta/commands/add.py, in the same style as delete_test.py:
+"""Tests for zimpasta/commands/add.py, in the same style as tests/test_delete.py:
 full command lines, the bare-verb builder path, and the no-config case, checked
 against the real CombinedConfig (via the shared `config`/`config_data` fixtures)
 rather than a hand-rolled fake.
 
-ASSUMES your project's tests/conftest.py already provides `config` and
-`config_data` fixtures (the same ones delete_test.py uses) with a room named
-"Room 101", courses "CS 101"/"CS 102", and faculty "Dr. Smith"/"Dr. Jones" --
-inferred from delete_test.py's own assertions, not confirmed against your real
-fixtures. If your actual fixture data differs, the exact names/counts below may
-need adjusting, but the shape of each test should still hold.
-
-Also assumes ADDED/CANCELLED/INVALID/NO_CONFIG are exported from add.py as
-message-format constants, mirroring delete.py's DELETED/CANCELLED/
-WOULD_LEAVE_INVALID/NO_CONFIG.
+The fixtures (tests/fixtures/minimal_config.json) have one room, "Room 101", one
+lab, "Lab 101", courses "CS 101" and "CS 102", and faculty "Dr. Smith" and "Dr. Jones".
 """
 
 from scheduler import CombinedConfig
@@ -52,9 +44,8 @@ def test_full_command_line_adds_a_lab(config: CombinedConfig):
     assert [lab.name for lab in config.config.labs] == ["Lab 101", "Lab 102"]
 
 
-# Courses need more than just a capacity -- credits, plus the faculty/room
-# fields we only found out were required after the real library rejected an
-# empty faculty/room list. This confirms all four together actually work.
+# Courses need more than a capacity: credits, plus faculty and room, which the
+# library requires (see the two tests below). This checks all four together.
 def test_full_command_line_adds_a_course(config: CombinedConfig):
     console = ScriptedConsole([])
 
@@ -69,8 +60,8 @@ def test_full_command_line_adds_a_course(config: CombinedConfig):
 
 
 def test_course_faculty_option_is_required(config: CombinedConfig):
-    """CONFIRMED real validation rule: a course with faculty=None needs an
-    existing preference to derive from, which a brand-new course never has."""
+    """The library rejects a course with faculty=None unless a preference names it,
+    which a brand-new course never has."""
     # Leave --faculty off entirely and make sure we get a clear error instead
     # of either crashing or silently creating a broken course.
     console = ScriptedConsole([])
@@ -88,8 +79,8 @@ def test_course_faculty_option_is_required(config: CombinedConfig):
 
 
 def test_course_room_option_is_required(config: CombinedConfig):
-    """CONFIRMED real validation rule: a course with room=[] has no enabled
-    class pattern that can run without a room."""
+    """The library rejects a course with room=[]: no class pattern can run without
+    a room."""
     # Mirror of the faculty test above, but for --room this time.
     console = ScriptedConsole([])
 
@@ -317,7 +308,7 @@ def test_duplicate_faculty_name_is_reported_and_not_added(config: CombinedConfig
 
 
 def test_repeating_a_course_id_adds_a_new_section_instead_of_erroring(config: CombinedConfig):
-    """Mirrors delete_test.py's own CMSC 161 x3 example: a course_id may
+    """Like the CMSC 161 sections in tests/test_delete.py: a course_id may
     legitimately appear more than once, as separate sections."""
 
     console = ScriptedConsole([])

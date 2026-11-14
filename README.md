@@ -171,9 +171,9 @@ characters, so Windows paths need no quoting or escaping.
 sections, 9 faculty). Its limit is 100, so give `run` a small limit the first time; each
 schedule takes a second or two.
 
-A typical session: `load` a configuration, `print` it, edit it with `delete` (and `add` and
-`modify` once they land), `save` it, `run schedule` to generate and export, then `display`
-the exported file. `display` looks for `.csv` and `.json` files in the directory the shell
+A typical session: `load` a configuration, `print` it, edit it with `add`, `modify`, and
+`delete`, `save` it, `run schedule` to generate and export, then `display` the exported
+file. `display` looks for `.csv` and `.json` files in the directory the shell
 was started from, so export there.
 
 ## Commands
@@ -201,6 +201,7 @@ CI runs these on Linux, macOS, and Windows:
 ```bash
 uv run ruff format --check .
 uv run ruff check .
+uv run ty check
 uv run pytest
 ```
 
@@ -209,23 +210,30 @@ and these for the GUI:
 ```bash
 cd frontend
 npm run lint
+npm test
 npm run build
 npm run build:browser
 npm run test:browser
 ```
 
 `uv run ruff format .` fixes Python formatting in place. `uv run pytest` is the whole test
-suite: the Model, the Controller (including every API route), and the shell. It doesn't need
-the GUI to be built, and it never calls OpenAI: the AI assistant's tests use a scripted fake.
+suite: the Model, the Controller (including every API route), and the shell. It never calls
+OpenAI: the AI assistant's tests use a scripted fake. The browser tests in
+`tests/test_config_editor.py` need the GUI built (`npm run build`) and are skipped until it
+is; each starts its own server on a free port. For the Model's coverage on its own, run
+`uv run pytest --cov` and then `uv run coverage report --include="*/zimpasta/model/*"`.
+`npm test` runs the frontend's unit tests (the editor's undo history).
 `npm run test:browser` runs the browser version's Python in Node; its first run downloads
 about 15 MB. The one live OpenAI test runs only on request, with `uv run pytest -m live`
 and `OPENAI_API_KEY` set.
 
 ## Architecture (MVC)
 
-Sprint 2 uses Model-View-Controller. The Model and Controller are Python; the View is the
-React GUI, which talks to the Controller over a local JSON API. The Sprint 1 shell is a
-second view on the same Model.
+The GUI uses Model-View-Controller. The Model and Controller are Python; the View is the
+React GUI, which talks to the Controller over a local JSON API. The Sprint 1 shell is
+separate: its commands keep the configuration as a `CombinedConfig` on `Session`
+(`session.py`) rather than going through `ConfigWorkspace`, and share only schedule
+generation (`generate.py`) and schedule formatting (`schedule_format.py`) with the GUI.
 
 | Part | Where | Responsibility |
 | --- | --- | --- |
@@ -431,7 +439,7 @@ depending on what is inside.
 
 **How they interact** (`frontend/src/state/eventHandlers.js`, used by the buttons in
 `modes/editor/ConfigEditor.jsx`).
-1. When an editor dialog saves an edit, `pushToHist()` first gives the current document to
+1. When an editor dialog saves an edit, `recordUndoStep()` first gives the current document to
    the originator and pushes its `storeFile()` memento onto the undo stack.
 2. **Undo** pops a memento from the undo stack and saves the current document onto the redo
    stack the same way. The originator then restores the memento, and the restored document
@@ -442,6 +450,156 @@ depending on what is inside.
 **Why it fits.** Only the originator creates and reads snapshots, and the caretaker stores
 them as opaque objects. The editor gets undo and redo without exposing how the
 configuration is stored, and a restored state is always one the library accepted before.
+
+## Technical debt reduction (Sprint 4)
+
+### 1. The shell's `modify` command was complex and effectively untested
+
+**Problem.** `src/zimpasta/commands/modify.py` handled each kind of item in three
+near-identical branches, had unreachable `return`s after `raise`, wrote the file in three
+copied blocks, and declared `-> dict` on functions that returned a room, a tuple, or a flag.
+`tests/test_modify.py` only asserted `!= []`, which every result passes, and covered 68%.
+
+**Why it mattered.** Nobody could change the command safely: the tests could not fail, so a
+broken refactor would have gone unnoticed, and the copied branches had to be kept in step by
+hand.
+
+**Change.** First, 29 tests that pin today's behavior exactly: console output, the
+configuration in memory, and the file written, including known bugs (each marked `Bug:`).
+Then `modify_handler` became one `UPDATERS` lookup, the update functions return `bool`, and
+one `_write` helper replaced the three copies.
+
+**Evidence.** The same 28 pinning tests passed on the old code and on the new code (the 29th
+checks the new `bool` returns). Coverage of `modify.py` rose from 68% to 91%.
+
+### 2. The GUI and the AI assistant did the same edits through different code
+
+**Problem.** The AI tools (`controller/assistant/tools.py`, `prompt.py`, `session.py`)
+reached into `app.workspace` and `app.schedules` directly, while the GUI's routes went
+through `AppController`. Adding a room from the chat and from the editor ran different code.
+
+**Why it mattered.** A fix or a new rule added to one path (logging, locking, undo) silently
+missed the other, which is the duplication §6.2 rules out.
+
+**Change.** The tools now edit with the same `AppController` methods the GUI's routes use
+(`add_item`, `replace_item`, `delete_item`, `update_time_slots`, `update_settings`), and
+read through `configuration_state()`, `transaction()`, and `schedule_count()`. The assistant
+package no longer touches the Model directly.
+
+**Evidence.** The assistant's 90 tests, including three added first to pin untested paths
+(listing a non-course area, describing an empty area, a delete mixed with other changes),
+passed before and after. The extra work per AI edit is about 0.4 ms against 66 ms of library
+validation.
+
+### 3. The data the backend sends the frontend had no tests
+
+**Problem.** The frontend reads the API's replies as plain JavaScript objects. Renaming a
+field in Python, or an error code such as `unsaved_changes`, would break the GUI silently.
+
+**Why it mattered.** Nothing connected the two sides, so the GUI could break without any
+test failing.
+
+**Change.** `tests/controller/test_api_shapes.py` (18 tests) pins the exact field names of
+every reply the GUI reads (state, configuration, options, delete impact, schedule views,
+chat entries), the error shape and the codes the GUI branches on, the download headers
+`client.js` parses, and the chat tool names the chat panel uses. Each shape names the
+frontend files that read it. See [docs/web-api.md](docs/web-api.md).
+
+**Evidence.** Renaming any one of three fields (`day_number`, an issue's `field`,
+`last_entry`) made the tests fail with a message naming the missing and unexpected field.
+
+### 4. Repeated application behavior in the shell and the Model
+
+**Problem.** The same logic was written several times:
+- `commands/delete.py` had four near-identical `_remove_room`/`_lab`/`_course`/`_faculty`
+  functions, and `commands/add.py` an `if/elif` chain per kind.
+- `load` and `run schedule --config` each had their own file loader.
+- `run schedule` and `schedules export` repeated their format and output-file prompts and
+  options.
+- `print_config` was the longest function in the repository (99 lines), repeating the same
+  heading and "list or None" code for every section.
+- The HH:MM formatter and weekday names existed in both `model/schedules.py` and
+  `commands/display_schedules.py`; nine messages built plurals by hand.
+- Shared wording (`KINDS`, "No configuration loaded", the config path prompt) was copied
+  across commands.
+
+**Why it mattered.** Each change had to be made in every copy, and a copy that was missed
+would quietly behave differently from the others.
+
+**Change.** A table-driven `_remove` and `NEW_ENTRIES` table; one `read_into_session` that
+returns the error while each command keeps its own wording; `ask_missing_export_options` and
+`EXPORT_OPTIONS` in `commands/export_flow.py`; `print_config` built from per-section helpers;
+`model/schedule_format.py` (`clock_text`, `DAY_NAMES`) and `model/wording.py` (`plural`);
+shared constants in `commands/common.py`.
+
+**Evidence.** The existing command tests (97–100% coverage) passed throughout. Where a case
+was untested, a pinning test was added first (deleting a course's only faculty member, the
+exact `run` load messages). `print_config`'s output was compared byte for byte against the
+old code on three configurations, and every rewritten plural was compared against the
+original expression (44 cases, no differences).
+
+### 5. The Configuration Editor's actions were repeated and inconsistent
+
+**Problem.** `frontend/src/modes/editor/ConfigEditor.jsx` wrote every action inline: the
+same save logic four times, Cancel six times, Undo/Redo twice, Load JSON twice. The handlers
+in `state/eventHandlers.js` used four naming styles (`Load`, `Empty_Click`,
+`ValidateAndSaveItem`, `pushToHist`), and front-end names did not match the backend's
+(`FLAG_NAMES` for `optimizer_flags`, `TogglePattern` for the `disabled` field). The ⚠ field
+error was copied into six components, the "warn before closing the tab" effect into two,
+and the weekday fallback and `toNumber` into six files each.
+
+**Why it mattered.** The actions could not be compared side by side, so their differences
+(when each one records an undo step or refreshes) were invisible; finding the backend code
+behind a control meant guessing its name.
+
+**Change.** One block of named `handle*` actions with a comment stating how they differ;
+`saveWithUndo`; camelCase verb names (`loadFile`, `startNewConfig`, `saveItem`,
+`recordUndoStep`); names that match the backend (`OPTIMIZER_FLAG_NAMES`,
+`togglePatternDisabled`); and shared `LoadJsonButton`, `FieldError`, `useWarnBeforeUnload`,
+`weekdaysFrom`, and `toNumber`.
+
+**Evidence.** The ten Playwright tests (including undo and redo) pass, and the rendered HTML
+of six screens (empty editor, loaded editor, an add dialog with a field error, an edit
+dialog, the Generator, the Viewer) matches `develop` exactly, except the Generator's
+"Number of schedules" and "Optimizer options", now "Generation limit" and "Optimizer flags"
+to match the editor and the backend.
+
+### 6. Tests depended on the developer's machine
+
+**Problem.** `tests/test_config_editor.py` started one shared server on port 8000 without
+`--no-browser`, so it opened a browser window, talked to whatever else was on port 8000,
+made each test depend on the one before, and waited up to 5 s per test for a dialog. It
+failed when the GUI wasn't built. `tests/test_config_memento.js` ran nowhere and only worked
+from inside `tests/`. Coverage counted the test files themselves.
+
+**Why it mattered.** `uv run pytest` was not reliable on a fresh checkout, and the frontend's
+only unit test could break without anyone noticing.
+
+**Change.** Each browser test starts its own server on a free port and is skipped with a
+clear reason until the GUI is built; fixed waits became `expect(...)`. `npm test` runs the
+memento test, and CI runs it. `[tool.coverage.run]` measures only the application, and CI
+prints the Model's coverage on its own.
+
+**Evidence.** The browser tests take 22 s instead of 33 s, pass in any order, and leave no
+servers running. Model coverage is 97%.
+
+### 7. Obsolete code and outdated documentation
+
+**Problem.** About 1,600 lines nothing used: four stale CSS files in `frontend/src/layout/`,
+`model/config_finder.py`, a committed run output, the unused `/api/config/load_empty` route,
+`SegmentedControl`, `pickFile()`, `AREAS`, unused fields (`Session.has_config`,
+`Session.schedule_path`, `_Pending.entry_id`), leftover AI-chat notes, and the shell's
+`PLACEHOLDERS` naming from Sprint 1. This README also described the shell as "a second view
+on the same Model", which it is not.
+
+**Why it mattered.** Dead code and wrong documentation send readers to the wrong place: the
+`layout/` CSS had already drifted from the `styles/` copies the app actually loads.
+
+**Change.** Removed the unused code and files, cleaned the notes, renamed `PLACEHOLDERS` to
+`COMMANDS`, and corrected the README's MVC description.
+
+**Evidence.** Each removal was confirmed unused by searching the code, tests, and docs; the
+full test suite, lint, `ty`, and both frontend builds pass after it.
 
 ## Layout
 
@@ -455,7 +613,8 @@ src/zimpasta/
                     ask_output_path) and the fixed acceptance-scenario messages
   welcome_page.py   the welcome banner
   view.py           text summary and table for the in-session schedules
-  model/            the Model, shared by the shell and the GUI
+  model/            the Model: the GUI's, except the shell's last three; both use generate.py
+                    and schedule_format.py
     workspace.py      ConfigWorkspace: the configuration, validated edits, unsaved changes
     references.py     who refers to what: delete impact, cascades, renames
     issues.py         library validation errors located by area, item, and field
@@ -463,9 +622,10 @@ src/zimpasta/
     catalog.py        choices and help text for form controls, read from the library
     generation_job.py background generation with per-run overrides, progress, cancel
     schedules.py      ScheduleSet: import, export, room and faculty views
+    schedule_format.py clock_text() and DAY_NAMES: how every schedule view writes times
+    wording.py        plural(): counted nouns in messages ("1 problem", "3 problems")
     generate.py       schedule generation through the library's Scheduler
     config_loader.py  load_config(path): read a configuration file (shell)
-    config_finder.py  ConfigFinder: look up items by id or name (shell)
     results.py        ScheduleStore: the shell's generated schedules
     export.py         the shell's JSON and CSV export with overwrite protection
   controller/       the Controller
@@ -485,6 +645,7 @@ src/zimpasta/
     run.py, results.py, export_flow.py                 run schedule, schedules ...
     display_schedules.py                               display
     help.py                                            help
+    common.py                                          shared wording and the config loader
 tests/
   conftest.py       fixtures: config_data, config, config_file (from tests/fixtures/)
   fixtures/         minimal_config.json: two courses, solved in milliseconds
@@ -499,7 +660,8 @@ frontend/           the View: React + Vite, JavaScript (see docs/gui.md)
     main.jsx, router.jsx, App.jsx, modes.js   entry, routes, frame, the three modes
     api/client.js     every API call
     api/backend.js    the server, or Python in a Web Worker (api/browser/) for build:browser
-    state/            app state polling, useAction, toasts, eventHandlers.js (editor actions)
+    state/            app state polling, useAction, useWarnBeforeUnload, toasts,
+                      eventHandlers.js (editor actions)
     components/       Button, Card, Dialog, ...
     layout/           header, connection banner, error pages
     modes/editor|generator|viewer/   one folder per mode
@@ -525,7 +687,7 @@ new server-side workflow as an `AppController` method with pytest tests.
    Invocation | None` that asks for whatever required values are missing (use
    `invocation.missing()` and `invocation.with_values(...)`) and returns `None` if the
    user cancels. Read values with `invocation.get("name")`.
-3. In `src/zimpasta/cli.py`, add your `SPECS` to `PLACEHOLDERS`. Keep the grammar the team
+3. In `src/zimpasta/cli.py`, add your `SPECS` to `COMMANDS`. Keep the grammar the team
    agreed on. `commands/delete.py` is a good model to follow.
 4. Test with `ScriptedConsole` from `tests/helpers.py`: call `evaluate(console, session,
    "your command line", Registry(SPECS))` for the direct path and a bare verb for the
@@ -538,8 +700,8 @@ new server-side workflow as an `AppController` method with pytest tests.
    validation error. Never read `examples/sample_config.json` from a command; work on
    `session.config`, and leave writing it to disk to `save`.
 6. A `course_id` is not unique: a configuration lists one entry per section, so the example
-   has `CMSC 140` twice. Look items up with `ConfigFinder`, which returns every match, and
-   decide how your command picks one (`delete` uses `--section`).
+   has `CMSC 140` twice. A lookup by id can match several entries, so decide how your
+   command picks one (`delete` uses `--section`).
 
 ## Known limitations
 

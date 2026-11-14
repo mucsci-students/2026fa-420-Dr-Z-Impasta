@@ -1,54 +1,61 @@
+"""The Configuration Editor in a real browser (Playwright), against a real server.
+
+Each test gets its own server on a free port, so no test sees another's edits. The tests
+are skipped until the GUI is built (``npm run build`` in ``frontend/``).
+"""
+
 import re
+import socket
 import subprocess
 import time
 import urllib.request
+from collections.abc import Iterator
 
 import pytest
 from playwright.sync_api import Page, expect
-from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 
 from tests.helpers import EXAMPLE_CONFIG
+from zimpasta.controller.static import BUILT_GUI
 
-LOCAL_URL = "http://localhost:8000"
+pytestmark = pytest.mark.skipif(
+    not (BUILT_GUI / "index.html").exists(),
+    reason="The GUI isn't built; run `npm run build` in frontend/ first.",
+)
 
-# commands to start up server from here, rather than manually doing it
-RUN_SERVER = ["uv", "run", "zimpasta", "--gui"]
+# The server, without opening a browser window of its own; the port is added per test.
+RUN_SERVER = ["uv", "run", "zimpasta", "--gui", "--no-browser"]
+STARTUP_SECONDS = 30
 
 
-@pytest.fixture(scope="session", autouse=True)
-def start_website():
+def free_port() -> int:
+    """A port nothing is listening on right now."""
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as probe:
+        probe.bind(("127.0.0.1", 0))
+        return probe.getsockname()[1]
 
-    # start website in the background
-    server = subprocess.Popen(
-        RUN_SERVER,
-        # stdout=subprocess.DEVNULL,
-        # stderr=subprocess.DEVNULL,
-    )
 
+@pytest.fixture
+def site() -> Iterator[str]:
+    """A fresh server for this test only; yields its address and stops it afterwards."""
+    port = free_port()
+    url = f"http://127.0.0.1:{port}"
+    server = subprocess.Popen([*RUN_SERVER, "--port", str(port)])
     try:
-        # give some time for the server to respond & start up
-        overtime = time.time() + 30
-
-        while time.time() < overtime:
+        deadline = time.time() + STARTUP_SECONDS
+        while time.time() < deadline:
             if server.poll() is not None:
                 raise RuntimeError("Server stopped before it became ready.")
-
             try:
-                with urllib.request.urlopen(LOCAL_URL, timeout=1):
+                with urllib.request.urlopen(url, timeout=1):
                     break
             except Exception:
-                time.sleep(0.5)
+                time.sleep(0.2)
         else:
-            raise RuntimeError(f"Website did not start within 30 seconds: {LOCAL_URL}")
-
-        # run pytests while the server is running
-        yield
-
+            raise RuntimeError(f"Website did not start within {STARTUP_SECONDS} seconds: {url}")
+        yield url
     finally:
-        # shut down server when testing finishes
         if server.poll() is None:
             server.terminate()
-
             try:
                 server.wait(timeout=5)
             except subprocess.TimeoutExpired:
@@ -57,16 +64,12 @@ def start_website():
 
 
 @pytest.fixture
-def loaded_config_page(page: Page) -> Page:
-    # loads a config file into the website
-
-    page.goto("http://localhost:8000")
+def loaded_config_page(page: Page, site: str) -> Page:
+    """The editor with the example configuration loaded through Load JSON…."""
+    page.goto(site)
 
     page.get_by_role("button", name="Load JSON...").click()
     page.locator('input[type="file"]').set_input_files(EXAMPLE_CONFIG)
-
-    if page.get_by_role("button", name="Discard and load").is_visible():
-        page.get_by_role("button", name="Discard and load").click()
 
     expect(
         page.get_by_role("heading", level=2, name="No configuration loaded", exact=True)
@@ -75,9 +78,9 @@ def loaded_config_page(page: Page) -> Page:
     return page
 
 
-def test_init_page_load(page: Page):
+def test_init_page_load(page: Page, site: str):
 
-    page.goto("http://localhost:8000")
+    page.goto(site)
 
     expect(page.get_by_role("heading", level=1, name="Configuration", exact=True)).to_be_visible()
     expect(page.get_by_role("button", name="New")).to_be_visible()
@@ -85,14 +88,6 @@ def test_init_page_load(page: Page):
 
 
 def test_config_editor_page(loaded_config_page: Page):
-
-    # load new config for this test function & discard previous, unsaved edits
-    discardBtn = loaded_config_page.get_by_role("button", name="Discard and load")
-    try:
-        discardBtn.wait_for(state="visible", timeout=5000)
-        discardBtn.click()
-    except PlaywrightTimeoutError:
-        pass
 
     expect(loaded_config_page.get_by_role("heading", level=1, name="Configuration")).to_be_visible()
     expect(loaded_config_page.get_by_role("heading", name="Faculty")).to_be_visible()
@@ -105,14 +100,6 @@ def test_config_editor_page(loaded_config_page: Page):
 
 
 def test_add_faculty_buttons(loaded_config_page: Page):
-
-    # load new config for this test function & discard previous, unsaved edits
-    discardBtn = loaded_config_page.get_by_role("button", name="Discard and load")
-    try:
-        discardBtn.wait_for(state="visible", timeout=5000)
-        discardBtn.click()
-    except PlaywrightTimeoutError:
-        pass
 
     # test '+ Add faculty' button
     loaded_config_page.get_by_role("button", name="Add faculty").click()
@@ -174,14 +161,6 @@ def test_add_faculty_buttons(loaded_config_page: Page):
 
 def test_adding_a_faculty_member(loaded_config_page: Page):
 
-    # load new config for this test function & discard previous, unsaved edits
-    discardBtn = loaded_config_page.get_by_role("button", name="Discard and load")
-    try:
-        discardBtn.wait_for(state="visible", timeout=5000)
-        discardBtn.click()
-    except PlaywrightTimeoutError:
-        pass
-
     # get the number of faculty appearing on the screen before adding a faculty
     faculty_section = loaded_config_page.locator("section.editor-row").filter(
         has=loaded_config_page.get_by_role("heading", level=2, name="Faculty")
@@ -207,14 +186,6 @@ def test_adding_a_faculty_member(loaded_config_page: Page):
 
 
 def test_adding_a_course(loaded_config_page: Page):
-
-    # load new config for this test function & discard previous, unsaved edits
-    discardBtn = loaded_config_page.get_by_role("button", name="Discard and load")
-    try:
-        discardBtn.wait_for(state="visible", timeout=5000)
-        discardBtn.click()
-    except PlaywrightTimeoutError:
-        pass
 
     # get the number of courses appearing on the screen before adding a course
     course_section = loaded_config_page.locator("section.editor-row").filter(
@@ -244,14 +215,6 @@ def test_adding_a_course(loaded_config_page: Page):
 
 def test_adding_a_room(loaded_config_page: Page):
 
-    # load new config for this test function & discard previous, unsaved edits
-    discardBtn = loaded_config_page.get_by_role("button", name="Discard and load")
-    try:
-        discardBtn.wait_for(state="visible", timeout=5000)
-        discardBtn.click()
-    except PlaywrightTimeoutError:
-        pass
-
     # get the number of rooms appearing on the screen before adding a room
     room_section = loaded_config_page.locator("section.editor-row").filter(
         has=loaded_config_page.get_by_role("heading", level=2, name="Rooms")
@@ -274,14 +237,6 @@ def test_adding_a_room(loaded_config_page: Page):
 
 
 def test_adding_a_lab(loaded_config_page: Page):
-
-    # load new config for this test function & discard previous, unsaved edits
-    discardBtn = loaded_config_page.get_by_role("button", name="Discard and load")
-    try:
-        discardBtn.wait_for(state="visible", timeout=5000)
-        discardBtn.click()
-    except PlaywrightTimeoutError:
-        pass
 
     # get the number of labs appearing on the screen before adding a lab
     lab_section = loaded_config_page.locator("section.editor-row").filter(
@@ -306,14 +261,6 @@ def test_adding_a_lab(loaded_config_page: Page):
 
 def test_adding_a_class_pattern(loaded_config_page: Page):
 
-    # load new config for this test function & discard previous, unsaved edits
-    discardBtn = loaded_config_page.get_by_role("button", name="Discard and load")
-    try:
-        discardBtn.wait_for(state="visible", timeout=5000)
-        discardBtn.click()
-    except PlaywrightTimeoutError:
-        pass
-
     # get the number of rooms appearing on the screen before adding a room
     pattern_section = loaded_config_page.locator("section.editor-row").filter(
         has=loaded_config_page.get_by_role("heading", level=2, name="Class Patterns")
@@ -331,19 +278,12 @@ def test_adding_a_class_pattern(loaded_config_page: Page):
     popup.get_by_role("button", name="Add pattern").click()
 
     # test that the number of patterns on the screen incremented after an addition
-    loaded_config_page.wait_for_timeout(1000)
-    assert pattern_count_locator.inner_text().split(" ")[2] == str(number_of_patterns_before + 1)
+    expect(pattern_count_locator).to_have_text(
+        re.compile(rf"^\d+ of {number_of_patterns_before + 1} enabled$")
+    )
 
 
 def test_undo_button(loaded_config_page: Page):
-    # load new config for this test function & discard previous, unsaved edits
-    discardBtn = loaded_config_page.get_by_role("button", name="Discard and load")
-    try:
-        discardBtn.wait_for(state="visible", timeout=5000)
-        discardBtn.click()
-    except PlaywrightTimeoutError:
-        pass
-
     # get the number of patterns appearing on the screen before editing
     pattern_section = loaded_config_page.locator("section.editor-row").filter(
         has=loaded_config_page.get_by_role("heading", level=2, name="Class Patterns")
@@ -476,14 +416,6 @@ def test_undo_button(loaded_config_page: Page):
 
 
 def test_redo_button(loaded_config_page: Page):
-    # load new config for this test function & discard previous, unsaved edits
-    discardBtn = loaded_config_page.get_by_role("button", name="Discard and load")
-    try:
-        discardBtn.wait_for(state="visible", timeout=5000)
-        discardBtn.click()
-    except PlaywrightTimeoutError:
-        pass
-
     # get the number of patterns appearing on the screen before editing
     pattern_section = loaded_config_page.locator("section.editor-row").filter(
         has=loaded_config_page.get_by_role("heading", level=2, name="Class Patterns")

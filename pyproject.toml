@@ -39,6 +39,11 @@ target-version = "py312"
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]
 
+[tool.coverage.run]
+# Measure the app's own code only, the same way locally and in CI.
+source = ["zimpasta"]
+branch = true
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 # Live tests call the real OpenAI API. They run only when asked for: uv run pytest -m live

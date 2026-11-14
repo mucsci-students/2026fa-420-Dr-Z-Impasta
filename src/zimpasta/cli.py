@@ -8,10 +8,8 @@ The shell is a REPL. A complete command line such as
 bare verb, or a command missing required parts, engages that command's builder, which
 asks for the missing pieces and then runs the same command through the evaluator.
 
-To wire in your feature, put your ``CommandSpec``s in ``zimpasta/commands/<feature>.py``
-as ``SPECS`` and swap them in for your placeholder in ``PLACEHOLDERS`` below, the way
-``delete`` does. The remaining placeholders carry the agreed grammar so ``help`` is
-accurate before a feature lands.
+To add a command, put its ``CommandSpec``s in ``zimpasta/commands/<feature>.py`` as
+``SPECS`` and add them to ``COMMANDS`` below, the way ``delete`` does.
 """
 
 import argparse
@@ -43,7 +41,7 @@ from zimpasta.prompts import INVALID_CHOICE
 from zimpasta.session import Session
 from zimpasta.welcome_page import welcome
 
-PLACEHOLDERS: tuple[CommandSpec, ...] = (
+COMMANDS: tuple[CommandSpec, ...] = (
     *LOAD_SPECS,
     *SAVE_SPECS,
     *PRINT_SPECS,
@@ -67,7 +65,7 @@ QUIT = CommandSpec("quit", description="Leave the shell", handler=_quit)
 EXIT = CommandSpec("exit", description="Same as quit", handler=_quit)
 
 
-def build_registry(specs: Iterable[CommandSpec] = PLACEHOLDERS) -> Registry:
+def build_registry(specs: Iterable[CommandSpec] = COMMANDS) -> Registry:
     """Feature specs plus the shell's own ``help``, ``quit``, and ``exit``."""
     registry = Registry(specs)
     registry.register(help_spec(registry), QUIT, EXIT)

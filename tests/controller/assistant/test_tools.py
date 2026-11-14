@@ -151,6 +151,16 @@ def test_inspect_an_area_lists_items_with_indexes(app):
     ]
 
 
+def test_inspecting_another_area_lists_items_without_section_labels(app):
+    data = json.loads(run(app, "inspect_configuration", area="rooms").for_model())
+
+    assert data["summary"] == "Listed 1 room."
+    assert data["items"] == [
+        {"index": 0, "name": "Room 101", "capacity": 40, "features": [], "times": None}
+    ]
+    assert data["truncated"] is False
+
+
 def test_inspect_sections(app):
     settings = json.loads(run(app, "inspect_configuration", area="settings").for_model())
     slots = json.loads(run(app, "inspect_configuration", area="time_slots").for_model())
@@ -180,6 +190,14 @@ def test_describe_fields_gives_the_library_schema_choices_and_an_example(app):
     assert settings["choices"]["optimizer_flags"]
     slots = json.loads(run(app, "describe_fields", area="time_slots").for_model())
     assert "classes" not in slots["schema"]["properties"]
+
+
+def test_describing_an_area_with_nothing_in_it_gives_no_example(app):
+    app.new_configuration(discard_changes=True)  # no rooms yet
+
+    data = json.loads(run(app, "describe_fields", area="rooms").for_model())
+
+    assert "example" not in data and "name" in data["schema"]["properties"]
 
 
 # --------------------------------------------------------------------- editing
@@ -285,6 +303,27 @@ def test_a_delete_with_references_waits_for_confirmation(app):
     assert confirmed.ok
     assert names(app, "faculty") == ["Dr. Smith"]
     assert app.workspace.item("courses", 1)["faculty"] == ["Dr. Smith"]
+
+
+def test_a_delete_with_other_changes_names_them_in_the_confirmation(app):
+    result = edit(
+        app,
+        {"action": "delete", "area": "faculty", "index": 1},
+        {"action": "add", "area": "rooms", "item": ROOM},
+    )
+
+    pending = result.pending
+    assert pending is not None
+    assert pending.prompt == (
+        "Delete faculty member Dr. Jones and 1 reference to it and apply 1 other change?"
+    )
+    assert pending.details == (
+        "Added room Room 201",
+        "Removed faculty member Dr. Jones and 1 reference to it",
+        "Also removes Dr. Jones from course section CS 102.01 (faculty)",
+    )
+    assert pending.revision == app.workspace.revision
+    assert names(app, "rooms") == ["Room 101"]  # nothing applied yet
 
 
 def test_a_delete_other_items_depend_on_is_refused(app):

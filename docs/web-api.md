@@ -21,6 +21,9 @@ available (see *Assistant*).
   `patterns` (the time-slot class patterns), and the item's position in that list.
   Course ids repeat across sections, so a position is the only stable address. After any
   change, use the returned document; indexes after a deleted item shift down by one.
+- The field names of every reply the GUI reads are pinned by
+  `tests/controller/test_api_shapes.py`, which also names the frontend files that read
+  each one. When you rename, remove, or add a field, update that test and those files.
 
 ## Errors
 

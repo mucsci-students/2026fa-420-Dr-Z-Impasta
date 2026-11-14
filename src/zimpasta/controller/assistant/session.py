@@ -70,7 +70,6 @@ class PendingNotFound(ChatError):
 @dataclass
 class _Pending:
     id: str
-    entry_id: str
     tool: str
     action: PendingAction
     state: Literal["waiting", "confirmed", "cancelled", "saved", "expired"] = "waiting"
@@ -312,33 +311,33 @@ class Assistant:
         entry = self._add("tool", result.summary, tool=name, result=result.to_dict())
         if result.pending is not None:
             with self._lock:
-                pending = _Pending(self._next("p"), entry.id, name, result.pending)
+                pending = _Pending(self._next("p"), name, result.pending)
                 self._pending[pending.id] = pending
                 entry.pending = pending
         return entry
 
     def _settle(self, pending: _Pending, answer: str, filename: str | None) -> _Entry:
         action = pending.action
-        workspace = self._app.workspace
         if answer == "cancel":
             pending.state = "cancelled"
             text = "Not saved." if action.kind == "save" else "Cancelled. Nothing was changed."
             return self._add("notice", text)
         if action.kind == "save":
-            if workspace.saved_revision < action.revision:
+            state = self._app.configuration_state()
+            if state["saved_revision"] < action.revision:
                 raise ChatError(
                     "The configuration isn't marked saved yet. Finish saving the file first.",
                     "not_saved",
                 )
             pending.state = "saved"
-            name = filename or workspace.name or "the file"
+            name = filename or state["name"] or "the file"
             return self._add(
                 "tool",
                 f"Saved the configuration as {name}.",
                 tool="save_configuration",
                 result={"status": "done", "ok": True, "summary": f"Saved as {name}."},
             )
-        if workspace.revision != action.revision:
+        if self._app.configuration_state()["revision"] != action.revision:
             pending.state = "expired"
             return self._add(
                 "notice",
