@@ -70,7 +70,6 @@ class PendingNotFound(ChatError):
 @dataclass
 class _Pending:
     id: str
-    entry_id: str
     tool: str
     action: PendingAction
     state: Literal["waiting", "confirmed", "cancelled", "saved", "expired"] = "waiting"
@@ -312,7 +311,7 @@ class Assistant:
         entry = self._add("tool", result.summary, tool=name, result=result.to_dict())
         if result.pending is not None:
             with self._lock:
-                pending = _Pending(self._next("p"), entry.id, name, result.pending)
+                pending = _Pending(self._next("p"), name, result.pending)
                 self._pending[pending.id] = pending
                 entry.pending = pending
         return entry

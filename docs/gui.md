@@ -50,7 +50,7 @@ frontend/src/
   modes.js            the three modes, in tab order
   api/client.js       every API call, and ApiError
   api/backend.js      where calls go: the server, or Python in the browser (api/browser/)
-  files.js            pickFile() and saveFile(): the browser's open and save dialogs
+  files.js            saveFile(): the browser's save dialog
   format.js           shared wording: plural(), clockTime(), configStatus(), describeCounts()
   state/
     AppStateProvider.jsx, appStateContext.js   polls GET /api/state; useAppState()
@@ -87,7 +87,6 @@ move it to `components/`.
 | `Field`, `HelpTip` | A labelled control with required marker, help, and its error, all wired for screen readers |
 | `Dialog`, `ConfirmDialog` | Modal dialogs; `ConfirmDialog destructive` for deletes, clears, and discards |
 | `UnsavedChangesPrompt` | Put in a page with a form draft; asks before switching modes or closing the tab |
-| `SegmentedControl` | A small one-of-a-few toggle, like Room & lab / Faculty |
 | `EmptyState`, `Spinner` | Nothing to show yet (with an optional `mark` icon), or loading |
 | `Farfalle`, `Penne`, `Rotelle`, `Lasagna`, `Ravioli` | Small pasta-shaped line icons from `PastaMarks.jsx`, a nod to the team's name. Decorative only (hidden from screen readers); they take the text color, so set it with a token |
 
@@ -135,9 +134,10 @@ banner, the buttons, and "Discard changes?" on Cancel.
 when `can_force` is false too is the delete impossible; then show `problems` and change nothing.
 
 **Unsaved changes on New and Load.** Call `api.config.load({ filename, content })` with the
-file from `pickFile()`. If the error `code` is `unsaved_changes`, `error.extra.changes` lists
-them: show them in a `ConfirmDialog` and, if the user agrees, call again with
-`discardChanges: true`.
+text of the file the user picked (the editor reads it from a hidden `<input type="file">`; see
+`modes/editor/LoadJsonButton.jsx`). If the error `code` is `unsaved_changes`,
+`error.extra.changes` lists them: show them in a `ConfirmDialog` and, if the user agrees, call
+again with `discardChanges: true`.
 
 **Saving files** takes three steps so a cancelled or failed save never marks anything saved:
 

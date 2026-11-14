@@ -51,7 +51,6 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger("zimpasta.assistant")
 
-ItemArea = Literal["rooms", "labs", "courses", "faculty", "patterns"]
 EditArea = Literal["rooms", "labs", "courses", "faculty", "patterns", "time_slots", "settings"]
 InspectArea = Literal[
     "overview", "rooms", "labs", "courses", "faculty", "patterns", "time_slots", "settings"
