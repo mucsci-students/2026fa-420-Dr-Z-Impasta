@@ -124,7 +124,7 @@ def build(console: Console, session: Session, invocation: Invocation) -> Invocat
     positionals = dict(invocation.positionals)
     options = dict(invocation.options)
 
-    # if you can't ask "capacity?" before you know if it's a room or a course).
+    # Ask for the kind first: you can't ask "capacity?" before you know if it's a room or a course.
     if "kind" not in positionals:
         positionals["kind"] = ask_choice(console, "Add what? ", KINDS)
     kind = positionals["kind"]
@@ -170,7 +170,7 @@ def _required_int(invocation: Invocation, kind: str, field: str) -> int:
     raw = invocation.get(field)
     if raw is None:
         # This is the case where someone typed e.g. "add room R1" and just
-        # forgot to include capacity so, We don't try to guess a default.
+        # forgot to include capacity, so we don't try to guess a default.
         raise ValueError(f"--{field} is required for {kind}.")
     try:
         return int(str(raw))
