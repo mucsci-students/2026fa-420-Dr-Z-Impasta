@@ -81,6 +81,7 @@ async function readError(response) {
 const get = (path) => request("GET", path);
 const post = (path, body) => request("POST", path, body);
 const put = (path, body) => request("PUT", path, body);
+const patch = (path, body) => request("PATCH", path, body);
 const del = (path) => request("DELETE", path);
 const query = (params) => `?${new URLSearchParams(params)}`;
 
@@ -143,5 +144,28 @@ export const api = {
     answer: (pendingId, answer, filename) =>
       post(`/chat/pending/${encodeURIComponent(pendingId)}`, { answer, filename: filename ?? null }),
     clear: () => del("/chat"),
+  },
+
+  /** Accounts and saved states. See docs/accounts.md. Each change replies `{ states, state }`. */
+  account: {
+    /** `{ available, reason, user, state, sync }`, also polled as `state.account`. */
+    status: () => get("/account"),
+    signUp: ({ username, password, discardChanges = false }) =>
+      post("/account/signup", { username, password, discard_changes: discardChanges }),
+    logIn: ({ username, password, discardChanges = false }) =>
+      post("/account/login", { username, password, discard_changes: discardChanges }),
+    logOut: () => post("/account/logout"),
+  },
+
+  states: {
+    /** `{ states: [{ id, name, created_at, updated_at, current }], account }` */
+    list: () => get("/states"),
+    /** Saves the open state, then opens a new one: empty, or a copy with `copyCurrent`. */
+    create: ({ name, copyCurrent = false }) =>
+      post("/states", { name, copy_current: copyCurrent }),
+    /** Saves the open state, then opens state `id`. */
+    open: (id) => post(`/states/${id}/open`),
+    rename: (id, name) => patch(`/states/${id}`, { name }),
+    remove: (id) => del(`/states/${id}`),
   },
 };

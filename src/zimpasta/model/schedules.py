@@ -34,6 +34,7 @@ from scheduler.models import CourseInstance, Day
 
 from zimpasta.model.generate import GenerationResult, Schedule
 from zimpasta.model.issues import Issue
+from zimpasta.model.observable import Subject
 
 Assignment = dict
 """One ``CourseInstanceJSON`` record."""
@@ -87,14 +88,19 @@ def to_assignment(instance: CourseInstance) -> Assignment:
     return json.loads(json.dumps(instance.model_dump(by_alias=True, exclude_none=True)))
 
 
-class ScheduleSet:
+class ScheduleSet(Subject):
     """The current schedules and where they came from.
 
     Replaced as a whole, never merged, with one exception: while a run is in progress its
     schedules arrive one at a time (:meth:`start_generated`, then :meth:`add_generated`).
+
+    Observers (see :class:`~zimpasta.model.observable.Subject`) are told when the set is
+    complete: after a successful run, an import, or clearing. Schedules that arrive while a
+    run is still going are not announced, since the run may yet be cancelled.
     """
 
     def __init__(self, *, clock: Callable[[], datetime] = datetime.now) -> None:
+        super().__init__()
         self._clock = clock
         self._schedules: list[list[Assignment]] = []
         self._source: str | None = None
@@ -135,6 +141,7 @@ class ScheduleSet:
                 "completion_reason": result.completion_reason,
             },
         )
+        self._notify()
 
     def start_generated(
         self,
@@ -189,11 +196,47 @@ class ScheduleSet:
             ) from None
         schedules = _parse_schedules(data, filename)
         self._set(schedules, source="imported", name=filename, details={})
+        self._notify()
         return len(schedules)
 
     def clear(self) -> None:
         self._set([], source=None, name=None, details={})
         self._created_at = None
+        self._notify()
+
+    def record(self) -> dict:
+        """The schedules and where they came from, as JSON data for :meth:`restore`."""
+        return copy.deepcopy(
+            {
+                "schedules": self._schedules,
+                "source": self._source,
+                "name": self._name,
+                "created_at": self._created_at.isoformat() if self._created_at else None,
+                "details": self._details,
+            }
+        )
+
+    def restore(self, record: dict | None) -> None:
+        """Bring back schedules from :meth:`record`; ``None`` empties the set. Observers
+        are not told, since nothing changed that needs saving.
+
+        Raises:
+            InvalidScheduleFile: the recorded schedules are not in the schedule format. The
+                current schedules are kept.
+        """
+        if not record or not record.get("schedules"):
+            self._set([], source=None, name=None, details={})
+            self._created_at = None
+            return
+        schedules = _parse_schedules(record["schedules"], "the saved state")
+        self._set(
+            schedules,
+            source=record.get("source"),
+            name=record.get("name"),
+            details=dict(record.get("details") or {}),
+        )
+        created = record.get("created_at")
+        self._created_at = datetime.fromisoformat(created) if created else None
 
     # ------------------------------------------------------------ exporting
 

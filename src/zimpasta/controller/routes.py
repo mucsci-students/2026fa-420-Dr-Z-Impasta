@@ -60,6 +60,25 @@ class ImportRequest(BaseModel):
     content: str
 
 
+class CredentialsRequest(BaseModel):
+    username: str = Field(min_length=1, max_length=64)
+    password: str = Field(min_length=1, max_length=1024)
+    """Checked against the account rules by the Model; never logged or echoed back."""
+
+    discard_changes: bool = False
+    """Replace the open configuration even though it has unsaved changes."""
+
+
+class NewStateRequest(BaseModel):
+    name: str = Field(min_length=1, max_length=200)
+    copy_current: bool = False
+    """Start as a copy of the open state instead of empty."""
+
+
+class RenameStateRequest(BaseModel):
+    name: str = Field(min_length=1, max_length=200)
+
+
 class ChatRequest(BaseModel):
     message: str = Field(min_length=1, max_length=4000)
     """What the user typed into the chat."""
@@ -275,3 +294,52 @@ def chat_answer(app: App, pending_id: str, request: AnswerRequest) -> dict:
 @router.delete("/chat")
 def chat_clear(app: App) -> dict:
     return app.chat_clear()
+
+
+# ---------------------------------------------------------------- accounts
+
+
+@router.get("/account")
+def account_status(app: App) -> dict:
+    """Who is logged in, the open state, and whether it is saved to the account."""
+    return app.account()
+
+
+@router.post("/account/signup")
+def sign_up(app: App, request: CredentialsRequest) -> dict:
+    return app.sign_up(request.username, request.password, discard_changes=request.discard_changes)
+
+
+@router.post("/account/login")
+def log_in(app: App, request: CredentialsRequest) -> dict:
+    return app.log_in(request.username, request.password, discard_changes=request.discard_changes)
+
+
+@router.post("/account/logout")
+def log_out(app: App) -> dict:
+    return app.log_out()
+
+
+@router.get("/states")
+def list_states(app: App) -> dict:
+    return app.list_states()
+
+
+@router.post("/states", status_code=status.HTTP_201_CREATED)
+def create_state(app: App, request: NewStateRequest) -> dict:
+    return app.create_state(request.name, copy_current=request.copy_current)
+
+
+@router.post("/states/{state_id}/open")
+def open_state(app: App, state_id: int) -> dict:
+    return app.open_state(state_id)
+
+
+@router.patch("/states/{state_id}")
+def rename_state(app: App, state_id: int, request: RenameStateRequest) -> dict:
+    return app.rename_state(state_id, request.name)
+
+
+@router.delete("/states/{state_id}")
+def delete_state(app: App, state_id: int) -> dict:
+    return app.delete_state(state_id)

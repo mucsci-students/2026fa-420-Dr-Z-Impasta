@@ -692,3 +692,17 @@ def test_any_exception_undoes_the_transaction_and_is_raised(workspace):
 
     assert workspace.document() == document
     assert workspace.saved_revision == workspace.revision
+
+
+@pytest.mark.parametrize(
+    "content",
+    ['{"config": "not a configuration"}', '{"config": {"rooms": 5}}', '{"config": []}'],
+)
+def test_a_file_not_shaped_like_a_configuration_is_rejected_not_a_crash(workspace, content):
+    before = workspace.document()
+
+    with pytest.raises(InvalidFile) as caught:
+        workspace.load_text(content, filename="odd.json")
+
+    assert caught.value.code == "invalid_configuration"
+    assert workspace.document() == before

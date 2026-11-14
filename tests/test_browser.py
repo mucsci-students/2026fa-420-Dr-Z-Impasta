@@ -131,3 +131,16 @@ async def test_the_assistant_is_unavailable_in_the_browser(app):
     status, reply = await request(app, "POST", "/api/chat", {"message": "Add a room"})
     assert status == 503
     assert json.loads(reply["body"])["error"]["code"] == "ai_not_configured"
+
+
+@pytest.mark.anyio
+async def test_accounts_are_unavailable_in_the_browser(app):
+    status, reply = await request(app, "GET", "/api/account")
+    assert status == 200
+    assert json.loads(reply["body"])["available"] is False
+
+    status, reply = await request(
+        app, "POST", "/api/account/login", {"username": "ada", "password": "correct horse"}
+    )
+    assert status == 503
+    assert json.loads(reply["body"])["error"]["code"] == "accounts_unavailable"
