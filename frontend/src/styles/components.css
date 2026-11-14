@@ -547,10 +547,6 @@
   z-index: 20;
 }
 
-.login-error {
-	border: 2px red solid;
-}
-
 /* ------------------------------------------------------ segmented control */
 
 .segmented {

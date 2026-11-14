@@ -7,8 +7,8 @@
  */
 
 import Button from "../../../components/Button.jsx";
-import ConfirmDialog from "../../../components/dialogs/ConfirmDialog.jsx";
-import Dialog from "../../../components/dialogs/Dialog.jsx";
+import ConfirmDialog from "../../../components/ConfirmDialog.jsx";
+import Dialog from "../../../components/Dialog.jsx";
 import ErrorMessage from "../../../components/ErrorMessage.jsx";
 import IssueList from "../../../components/IssueList.jsx";
 import Spinner from "../../../components/Spinner.jsx";

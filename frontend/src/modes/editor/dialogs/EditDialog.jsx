@@ -6,8 +6,8 @@
 
 import { useState } from "react";
 import Button from "../../../components/Button.jsx";
-import ConfirmDialog from "../../../components/dialogs/ConfirmDialog.jsx";
-import Dialog from "../../../components/dialogs/Dialog.jsx";
+import ConfirmDialog from "../../../components/ConfirmDialog.jsx";
+import Dialog from "../../../components/Dialog.jsx";
 import ErrorMessage from "../../../components/ErrorMessage.jsx";
 import UnsavedChangesPrompt from "../../../components/UnsavedChangesPrompt.jsx";
 
