@@ -110,6 +110,7 @@ export const api = {
     remove: (area, index, force = false) => del(`/config/${area}/${index}${force ? "?force=true" : ""}`),
     updateTimeSlots: (values) => put("/config/time-slots", values),
     updateSettings: (values) => put("/config/settings", values),
+
   },
 
   generation: {
@@ -141,6 +142,7 @@ export const api = {
     answer: (pendingId, answer, filename) =>
       post(`/chat/pending/${encodeURIComponent(pendingId)}`, { answer, filename: filename ?? null }),
     clear: () => del("/chat"),
+	  getHistoryData: () => get("/chat/get-history"),
   },
 
   /** Accounts and saved states. See docs/accounts.md. Each change replies `{ states, state }`. */

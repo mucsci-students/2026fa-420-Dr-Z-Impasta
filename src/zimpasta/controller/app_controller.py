@@ -51,6 +51,7 @@ class AppController:
         ai_unavailable_reason: str | None = None,
         account_store_factory: Callable[[], AccountStore] | None = store_from_environment,
         accounts_unavailable_reason: str | None = None,
+        prevDoc: dict = {},
     ) -> None:
         """``runner`` and ``max_schedules`` are for the browser version (``zimpasta.browser``):
         generation on the event loop, and at most ``max_schedules`` per run.
@@ -196,6 +197,16 @@ class AppController:
         change = self.workspace.update_settings(values)
         return {**self.configuration(), "change": change.to_dict()}
 
+    def push_history_data(self, doc: dict):
+        """ Retrieve changes made by the AI chatbot (the backend) 
+        & send them to frontend history"""
+        self.prevDoc = doc
+
+    def set_history_data_to_empty(self):
+        """ Sets self.prevDoc to None so that data that was already 
+        retrieved isn't seen as new data"""
+        self.prevDoc = {}
+    
     # --------------------------------------------------------------- generation
 
     def start_generation(self, *, limit: object = None, optimizer_flags: object = None) -> dict:

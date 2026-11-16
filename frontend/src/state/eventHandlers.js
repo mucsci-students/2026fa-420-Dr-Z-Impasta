@@ -32,6 +32,7 @@ export const undoStepCount = () => {
   else
     return 0;
 };
+
 export const redoStepCount = () => {
   if(HISTORY != null)
     return (HISTORY.getCurrSnapshots()).length;
@@ -48,11 +49,30 @@ export const recordUndoStep = (content) => {
   ORIGINATOR.set(content);
   HISTORY.push(ORIGINATOR.storeFile());
 };
+
 const recordRedoStep = (content) => {
   ORIGINATOR.set(content);
   HISTORY.pushToCurr(ORIGINATOR.storeFile());
 };
 
+export const getHistData = async () => {
+	// getHistData() retrieves changes 
+	// made to the config file by the backend 
+	// (like the AI chatbot) and adds them to the history
+
+	try {
+		const doc = await api.chat.getHistoryData();
+		if(doc && Object.keys(doc).length > 0){
+			console.log(doc);
+			recordUndoStep(doc);
+		}
+	} 
+	catch(error) {
+		console.log(error);
+		return false;
+	}
+	return true;
+};
 
 export const redo = async(currDoc, filename, setError, setPendingLoad) => {
   const memento = HISTORY.popCurr();

@@ -9,6 +9,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api } from "../api/client.js";
 import { useAppState } from "../state/appStateContext.js";
+import { getHistData } from "../state/eventHandlers.js";
 
 /** The server's limit on one message. */
 export const MAX_MESSAGE_LENGTH = 4000;
@@ -62,6 +63,7 @@ export function useChat() {
     }
     await load();
     refresh().catch(() => {});
+	  await getHistData();
     setOutgoing(null);
     setWorking(false);
     return ok;
