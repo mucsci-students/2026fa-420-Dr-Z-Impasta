@@ -698,6 +698,9 @@ src/zimpasta/
     schedules.py      ScheduleSet: import, export, room and faculty views
     schedule_format.py clock_text() and DAY_NAMES: how every schedule view writes times
     wording.py        plural(): counted nouns in messages ("1 problem", "3 problems")
+    observable.py     Subject: change notifications from the workspace and schedule set
+    accounts/         user accounts and saved states (docs/accounts.md): service.py,
+                      records.py (the store's interface), sql_store.py, passwords.py
     generate.py       schedule generation through the library's Scheduler
     config_loader.py  load_config(path): read a configuration file (shell)
     results.py        ScheduleStore: the shell's generated schedules
