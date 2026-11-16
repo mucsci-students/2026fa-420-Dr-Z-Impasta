@@ -25,7 +25,6 @@ from tests.helpers import FakeAIClient, calling, saying, tool_call
 from zimpasta.controller import AppController, create_app
 from zimpasta.controller.assistant import AIError
 from zimpasta.controller.assistant.tools import TOOLS
-from zimpasta.model import references as refs
 from zimpasta.model.generate import generation_steps
 
 TIMEOUT = 10
@@ -287,16 +286,10 @@ def test_state(client):
     )
 
 
-def test_state_warnings(client, example_data):
-    # Disabling the only pattern that puts Hogg on their mandatory Wednesday warns.
-    load(client, example_data, "sample_config.json")
-    patterns = client.get("/api/config/patterns").json()["items"]
-    index = [refs.pattern_label(pattern) for pattern in patterns].index(
-        "4 credits: MON, WED (lab), FRI"
-    )
-    client.put(
-        f"/api/config/patterns/{index}?force=true", json={**patterns[index], "disabled": True}
-    )
+def test_state_warnings(client, config_data):
+    # Dr. Smith is CS 101's only candidate; with only Tuesday free, no class pattern fits.
+    config_data["config"]["faculty"][0]["times"] = {"TUE": ["08:00-18:00"]}
+    load(client, config_data)
 
     config = client.get("/api/state").json()["config"]
 
