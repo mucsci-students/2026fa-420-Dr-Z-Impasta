@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import SignInDialog from "./dialogs/SignInDialog.jsx";
 import AddStateDialog from "./dialogs/AddStateDialog";
+import Button from "./Button.jsx";
 
 /**
  * The account menu in the shared header. Outside clicks close the menu, while sign-in
@@ -13,6 +14,7 @@ export default function UserMenu() {
     const [signInOpen, setSignInOpen] = useState(false);
 	const[addStateOpen, setAddStateOpen] = useState(false);
 	const[formInfo, setFormInfo] = useState({});
+	const[buttons, setButtons] = useState([]);
     const menuRef = useRef(null);
 
     useEffect(() => {
@@ -30,8 +32,7 @@ export default function UserMenu() {
 
     return (
         <div className="user-menu" ref={menuRef}>
-            <button
-                type="button"
+            <Button
                 className="user-menu__button"
                 aria-label="Account"
                 aria-expanded={open}
@@ -45,30 +46,24 @@ export default function UserMenu() {
                     <circle cx="12" cy="8" r="4" fill="currentColor" />
                     <path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7H4z" fill="currentColor" />
                 </svg>
-            </button>
+            </Button>
 
             {open && (
                 <div className="user-menu__popup">
                     <p>Guest User</p>
-                    {/* AI_CONTEXT: ACCOUNT_PROJECT_SELECTION — These are placeholders with no
-                        selection handler yet. Render backend projects here and pass each
-                        project's stable ID (not its display name) to the click handler. */}
-                    <button type="button">Project 1</button>
-                    <button type="button">Project 2</button>
-                    <button type="button">Project 3</button>
-                    <button 
-		    type="button" 
-		    onClick={() => 
-			    { 
-				    setAddStateOpen(true); 
-			    }
-		    }
-		    >
-		    Add State
-		    </button>
+		    
+		    <div className="state-buttons">
+		    	{buttons.map(() => (
+				<Button>"State"</Button>
 
-                    <button
-                        type="button"
+			))}
+		    </div>
+
+		    <Button onClick={() => { setAddStateOpen(true) }}>
+		    Add State
+		    </Button>
+
+                    <Button
                         onClick={() => {
                             setOpen(false);
                             setSignInOpen(true);
@@ -76,18 +71,30 @@ export default function UserMenu() {
                     >
                         {/* AI_CONTEXT: SIGN_IN_DIALOG_TRIGGER — This opens SignInDialog below. */}
                         Sign in
-                    </button>
+                    </Button>
                 </div>
             )}
 	    <SignInDialog open={signInOpen} onClose={() => setSignInOpen(false)} />
+
 	    <AddStateDialog 
 	    open={addStateOpen} 
 	    onClose={() => setAddStateOpen(false)} 
 	    onFormSubmit={(info) => {
 		    setFormInfo(info);
 		    console.log(formInfo);
+		    const newButton = createStateButton(info);
+		    setButtons(prevButtons => [...prevButtons, newButton]);
 	    }}
 	    />
         </div>
     );
 }
+
+const createStateButton = (data) => {
+	console.log(data);
+	return (
+		<Button>
+		getattr(data, "name", "State")
+		</Button>
+	);
+};
