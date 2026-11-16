@@ -8,7 +8,10 @@ dependencies = [
     "course-constraint-scheduler>=3.0.0",
     "fastapi>=0.116",
     "openai>=3.37",
+    "psycopg[binary]>=3.3",
+    "python-dotenv>=1.2",
     "rich>=15.0.0",
+    "sqlalchemy>=2.1",
     "uvicorn[standard]>=0.35",
 ]
 

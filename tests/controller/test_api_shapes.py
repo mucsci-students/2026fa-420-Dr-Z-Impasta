@@ -97,11 +97,22 @@ STATE_SCHEDULES = {"count", "source", "name", "created_at"}
 ASSISTANT = {"busy", "entries", "last_entry", "waiting", "available", "reason", "model"}
 """``state.assistant``. chat/useChat.js."""
 
+ACCOUNT = {
+    "available": None,
+    "reason": None,
+    "user": None,
+    "state": None,
+    "sync": {"status", "saved_at", "error"},
+}
+"""``state.account``, as documented on ``api.account`` in api/client.js. ``user`` and
+``state`` are null until someone logs in, so their contents aren't checked here."""
+
 STATE = {
     "config": CONFIG_STATE,
     "generation": GENERATION,
     "schedules": STATE_SCHEDULES,
     "assistant": ASSISTANT,
+    "account": ACCOUNT,
 }
 """``GET /api/state``, polled by state/AppStateProvider.jsx for every page."""
 

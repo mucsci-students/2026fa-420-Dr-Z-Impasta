@@ -22,6 +22,18 @@ from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException
 
 from zimpasta.controller.assistant import AIError, ChatBusy, ChatError, PendingNotFound
+from zimpasta.model.accounts import (
+    AccountError,
+    InvalidAccountInput,
+    InvalidCredentials,
+    NotLoggedIn,
+    StateInUse,
+    StateNameTaken,
+    StateNotFound,
+    StorageFailed,
+    StorageUnavailable,
+    UsernameTaken,
+)
 from zimpasta.model.generation_job import GenerationBusy, InvalidOverrides
 from zimpasta.model.schedules import (
     InvalidScheduleFile,
@@ -67,8 +79,16 @@ def _respond(status: int, code: str, message: str, *, issues=(), **extra) -> JSO
 
 def _status_for(error: Exception) -> int:
     match error:
-        case ItemNotFound() | ScheduleNotFound() | PendingNotFound():
+        case ItemNotFound() | ScheduleNotFound() | PendingNotFound() | StateNotFound():
             return 404
+        case StorageUnavailable() | StorageFailed():
+            return 503
+        case InvalidCredentials() | NotLoggedIn():
+            return 401
+        case UsernameTaken() | StateNameTaken() | StateInUse():
+            return 409
+        case InvalidAccountInput():
+            return 400
         case AIError():
             return 503
         case ChatBusy():
@@ -147,6 +167,7 @@ def install(app: FastAPI) -> None:
         InvalidOverrides,
         AIError,
         ChatError,
+        AccountError,
     ):
         app.add_exception_handler(error_type, _model_error)
     app.add_exception_handler(RequestValidationError, _bad_request)
