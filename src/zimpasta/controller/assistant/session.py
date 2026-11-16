@@ -184,7 +184,7 @@ class Assistant:
                 "message_too_long",
             )
 
-        prevDoc = self._app.configuration()['document']
+        prevDoc = self._app.configuration()["document"]
         self._app.push_history_data(prevDoc)
 
         client = self._connect()
@@ -366,7 +366,7 @@ class Assistant:
             self._entries.append(entry)
             if len(self._entries) > MAX_ENTRIES:
                 del self._entries[: len(self._entries) - MAX_ENTRIES]
-            
+
             return entry
 
     def _next(self, prefix: str) -> str:

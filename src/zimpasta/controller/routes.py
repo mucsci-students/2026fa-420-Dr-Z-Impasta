@@ -290,11 +290,13 @@ def chat_answer(app: App, pending_id: str, request: AnswerRequest) -> dict:
 def chat_clear(app: App) -> dict:
     return app.chat_clear()
 
+
 @router.get("/chat/get-history")
 def get_history_data(app: App) -> dict:
     doc = app.prevDoc
-    app.set_history_data_to_empty();
+    app.set_history_data_to_empty()
     return doc
+
 
 # ---------------------------------------------------------------- accounts
 

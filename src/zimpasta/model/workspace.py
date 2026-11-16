@@ -654,7 +654,6 @@ class ConfigWorkspace(Subject):
         """Change the generation limit and optimizer flags."""
         return self._update_section(None, "settings", SETTINGS_FIELDS, values)
 
-
     @contextmanager
     def transaction(self) -> Generator[None]:
         """Make several edits as one: if any of them raises, undo all of them.
