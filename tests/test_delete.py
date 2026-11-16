@@ -289,3 +289,17 @@ def test_courses_with_no_named_faculty_survive_a_faculty_deletion(example: Combi
 
     assert DELETED.format(name="Schwartz") in console.output
     assert any(course.faculty is None for course in example.config.courses)
+
+
+def test_deleting_a_course_s_only_faculty_member_leaves_it_to_preferences(config_data: dict):
+    # An empty faculty list is rejected, so the course falls back to None, which derives
+    # its candidates from faculty preferences.
+    config_data["config"]["courses"][1]["faculty"] = ["Dr. Jones"]
+    config_data["config"]["faculty"][0]["course_preferences"] = {"CS 102": 5}
+    config = CombinedConfig.model_validate(config_data)
+    console = ScriptedConsole(["yes"])
+
+    run(console, Session(config=config), 'delete faculty "Dr. Jones"')
+
+    assert DELETED.format(name="Dr. Jones") in console.output
+    assert [course.faculty for course in config.config.courses] == [["Dr. Smith"], None]

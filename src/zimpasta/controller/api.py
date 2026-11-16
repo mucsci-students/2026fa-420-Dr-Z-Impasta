@@ -1,4 +1,4 @@
-"""Build the FastAPI application that serves the API (and, later, the built GUI)."""
+"""Build the FastAPI application that serves the API. ``zimpasta.gui`` adds the built GUI."""
 
 from collections.abc import Iterable
 

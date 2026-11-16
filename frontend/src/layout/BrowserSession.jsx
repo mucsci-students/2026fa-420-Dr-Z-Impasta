@@ -1,6 +1,6 @@
-import { useEffect } from "react";
 import Banner from "../components/Banner.jsx";
 import { useAppState } from "../state/appStateContext.js";
+import { useWarnBeforeUnload } from "../state/useWarnBeforeUnload.js";
 
 /**
  * Only in the browser version, where Python runs in this tab: says what's happening while
@@ -14,15 +14,7 @@ export default function BrowserSession() {
       (state?.schedules?.count > 0 && state.schedules.source === "generated"),
   );
 
-  useEffect(() => {
-    if (!atRisk) return undefined;
-    const warn = (event) => {
-      event.preventDefault();
-      event.returnValue = "";
-    };
-    window.addEventListener("beforeunload", warn);
-    return () => window.removeEventListener("beforeunload", warn);
-  }, [atRisk]);
+  useWarnBeforeUnload(atRisk);
 
   if (!loading) return null;
   return (

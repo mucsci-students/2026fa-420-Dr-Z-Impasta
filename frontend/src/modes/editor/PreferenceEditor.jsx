@@ -3,6 +3,7 @@
  */
 
 import Button from "../../components/Button.jsx";
+import FieldError from "../../components/FieldError.jsx";
 
 /**
  * Name → score pairs, such as { "CMSC 362": 5, "CMSC 161": 4 }. `options` are the names that
@@ -61,12 +62,7 @@ export default function PreferenceEditor({ legend, options, value, onChange, add
           {addLabel}
         </Button>
       </div>
-      {error && (
-        <p className="field__error">
-          <span aria-hidden="true">⚠ </span>
-          {error}
-        </p>
-      )}
+      <FieldError error={error} />
     </fieldset>
   );
 }

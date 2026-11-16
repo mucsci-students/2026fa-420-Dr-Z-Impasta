@@ -1,39 +1,11 @@
 /**
- * Choosing and saving files with the browser's own dialogs.
+ * Saving files with the browser's own dialog.
  *
- * Opening: `pickFile()` shows the system file picker and reads the chosen file as text.
- * Saving: `saveFile()` uses the native "Save As" dialog where the browser has one
+ * `saveFile()` uses the native "Save As" dialog where the browser has one
  * (Chrome and Edge). That dialog asks before replacing an existing file. Elsewhere the
  * file is downloaded; browsers never overwrite a download, they add " (1)" to the name.
  * Either way nothing is written without the user choosing to.
  */
-
-export class FileReadError extends Error {
-  constructor(name) {
-    super(`Couldn't read ${name}. Check that it is a text file you have permission to open.`);
-    this.name = "FileReadError";
-  }
-}
-
-/** Resolves to `{ name, text }`, or `null` if the user cancels. */
-export function pickFile({ accept = ".json,application/json" } = {}) {
-  return new Promise((resolve, reject) => {
-    const input = document.createElement("input");
-    input.type = "file";
-    input.accept = accept;
-    input.addEventListener("cancel", () => resolve(null));
-    input.addEventListener("change", async () => {
-      const file = input.files?.[0];
-      if (!file) return resolve(null);
-      try {
-        resolve({ name: file.name, text: await file.text() });
-      } catch {
-        reject(new FileReadError(file.name));
-      }
-    });
-    input.click();
-  });
-}
 
 const TYPES = {
   "application/json": { description: "JSON file", extensions: [".json"] },
