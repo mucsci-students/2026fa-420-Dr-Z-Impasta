@@ -21,6 +21,9 @@ available (see *Assistant*).
   `patterns` (the time-slot class patterns), and the item's position in that list.
   Course ids repeat across sections, so a position is the only stable address. After any
   change, use the returned document; indexes after a deleted item shift down by one.
+- The field names of every reply the GUI reads are pinned by
+  `tests/controller/test_api_shapes.py`, which also names the frontend files that read
+  each one. When you rename, remove, or add a field, update that test and those files.
 
 ## Errors
 
@@ -157,9 +160,13 @@ Poll `GET /api/generation` (every half second is plenty) while `running` is true
  "finished_at": null, "detail": null, "completion_reason": null, "cancel_requested": false}
 ```
 
-`state` ends as `succeeded` (the schedules are now in `/api/schedules`), `infeasible`,
-`solver_error`, `failed` (`detail` has specifics), or `cancelled`. Only `succeeded`
-replaces the schedules. Cancelling takes effect after the schedule in progress.
+`state` ends as `succeeded`, `infeasible`, `solver_error`, `failed` (`detail` has
+specifics), or `cancelled`. Each schedule is added to `/api/schedules` as soon as it is
+found, so the viewer can show schedule 1 while the rest are solved: the run's first
+schedule replaces the earlier ones, and `found` counts the run's schedules so far. A run
+that finds nothing leaves the earlier schedules as they were; a run that is cancelled or
+stops with an error keeps the schedules it found. Cancelling takes effect after the
+schedule in progress.
 
 In the browser version, Python is busy while it solves a schedule, so requests made then
 (including these polls) are answered when that schedule is done, typically 5 to 20
@@ -207,3 +214,10 @@ or `cancel` for a `save` entry. A confirmation whose configuration changed since
 proposed is not applied; it is answered with a `notice` whose `error.code` is
 `pending_expired`. Entry fields are described in [assistant.md](assistant.md#the-chat-panel-and-the-api).
 
+## Accounts
+
+Accounts and saved states ([accounts.md](accounts.md#api)) add `GET /api/account`,
+`POST /api/account/signup`, `/login`, and `/logout`, and `GET|POST /api/states`, `POST
+/api/states/{id}/open`, `PATCH /api/states/{id}`, and `DELETE /api/states/{id}`.
+`GET /api/state` includes `account`: `{available, reason, user, state, sync}`. Their
+errors are listed in accounts.md.

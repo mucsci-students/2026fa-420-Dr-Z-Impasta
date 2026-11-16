@@ -22,23 +22,26 @@ import copy
 import csv
 import io
 import json
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import PurePath
+from typing import cast
 
 from pydantic import TypeAdapter, ValidationError
 from scheduler.json_types import CourseInstanceJSON
-from scheduler.models import CourseInstance, Day
+from scheduler.models import CourseInstance
 
-from zimpasta.model.generate import GenerationResult
+from zimpasta.model.generate import GenerationResult, Schedule
 from zimpasta.model.issues import Issue
+from zimpasta.model.observable import Subject
+from zimpasta.model.schedule_format import DAY_NAMES, clock_text
+from zimpasta.model.wording import plural
 
 Assignment = dict
 """One ``CourseInstanceJSON`` record."""
 
 _SCHEDULE = TypeAdapter(list[CourseInstanceJSON])
-_DAY_NAMES = {day.value: day.name for day in Day}
 _MINUTES_PER_DAY = 24 * 60
 
 GROUPINGS = ("room", "faculty")
@@ -86,16 +89,27 @@ def to_assignment(instance: CourseInstance) -> Assignment:
     return json.loads(json.dumps(instance.model_dump(by_alias=True, exclude_none=True)))
 
 
-class ScheduleSet:
-    """The current schedules and where they came from. Replaced as a whole, never merged."""
+class ScheduleSet(Subject):
+    """The current schedules and where they came from.
+
+    Replaced as a whole, never merged, with one exception: while a run is in progress its
+    schedules arrive one at a time (:meth:`start_generated`, then :meth:`add_generated`).
+
+    Observers (see :class:`~zimpasta.model.observable.Subject`) are told when the set is
+    complete: after a successful run, an import, or clearing. Schedules that arrive while a
+    run is still going are not announced, since the run may yet be cancelled.
+    """
 
     def __init__(self, *, clock: Callable[[], datetime] = datetime.now) -> None:
+        super().__init__()
         self._clock = clock
         self._schedules: list[list[Assignment]] = []
         self._source: str | None = None
         self._name: str | None = None
         self._created_at: datetime | None = None
         self._details: dict = {}
+        self._growing = False
+        """True between a run's first schedule and anything else replacing the set."""
 
     @property
     def count(self) -> int:
@@ -128,6 +142,43 @@ class ScheduleSet:
                 "completion_reason": result.completion_reason,
             },
         )
+        self._notify()
+
+    def start_generated(
+        self,
+        schedule: Schedule,
+        *,
+        limit: int,
+        optimizer_flags: Sequence[str],
+        config_name: str | None = None,
+    ) -> None:
+        """Replace the schedules with the first one of a run that is still going.
+
+        The run's next schedules are added with :meth:`add_generated` as they are found,
+        and :meth:`replace_generated` sets the complete list when the run succeeds.
+        """
+        self._set(
+            [[to_assignment(instance) for instance in schedule]],
+            source="generated",
+            name=config_name,
+            details={
+                "limit": limit,
+                "optimizer_flags": list(optimizer_flags),
+                "completion_reason": None,
+            },
+        )
+        self._growing = True
+
+    def add_generated(self, schedule: Schedule) -> bool:
+        """Add the next schedule of the run in progress, after the ones already here.
+
+        Returns ``False`` and adds nothing if the schedules were imported, cleared, or
+        replaced since the run's first schedule, so a run never mixes into other schedules.
+        """
+        if not self._growing:
+            return False
+        self._schedules.append([to_assignment(instance) for instance in schedule])
+        return True
 
     def import_text(self, text: str, *, filename: str) -> int:
         """Replace the schedules with those in a JSON file, if it is valid. Returns the count.
@@ -146,11 +197,47 @@ class ScheduleSet:
             ) from None
         schedules = _parse_schedules(data, filename)
         self._set(schedules, source="imported", name=filename, details={})
+        self._notify()
         return len(schedules)
 
     def clear(self) -> None:
         self._set([], source=None, name=None, details={})
         self._created_at = None
+        self._notify()
+
+    def record(self) -> dict:
+        """The schedules and where they came from, as JSON data for :meth:`restore`."""
+        return copy.deepcopy(
+            {
+                "schedules": self._schedules,
+                "source": self._source,
+                "name": self._name,
+                "created_at": self._created_at.isoformat() if self._created_at else None,
+                "details": self._details,
+            }
+        )
+
+    def restore(self, record: dict | None) -> None:
+        """Bring back schedules from :meth:`record`; ``None`` empties the set. Observers
+        are not told, since nothing changed that needs saving.
+
+        Raises:
+            InvalidScheduleFile: the recorded schedules are not in the schedule format. The
+                current schedules are kept.
+        """
+        if not record or not record.get("schedules"):
+            self._set([], source=None, name=None, details={})
+            self._created_at = None
+            return
+        schedules = _parse_schedules(record["schedules"], "the saved state")
+        self._set(
+            schedules,
+            source=record.get("source"),
+            name=record.get("name"),
+            details=dict(record.get("details") or {}),
+        )
+        created = record.get("created_at")
+        self._created_at = datetime.fromisoformat(created) if created else None
 
     # ------------------------------------------------------------ exporting
 
@@ -217,6 +304,7 @@ class ScheduleSet:
     # ----------------------------------------------------------- internals
 
     def _set(self, schedules, *, source, name, details) -> None:
+        self._growing = False
         self._schedules = schedules
         self._source = source
         self._name = name
@@ -255,12 +343,12 @@ def meetings(assignment: Assignment) -> list[dict]:
                 "faculty": assignment["faculty"],
                 "room": assignment.get("room"),
                 "lab": lab,
-                "day": _DAY_NAMES[time["day"]],
+                "day": DAY_NAMES[time["day"]],
                 "day_number": time["day"],
                 "start": start,
                 "end": start + duration,
-                "start_time": _clock_text(start),
-                "end_time": _clock_text(start + duration),
+                "start_time": clock_text(start),
+                "end_time": clock_text(start + duration),
                 "duration": duration,
                 "kind": "lab" if position == lab_index else "lecture",
                 "delivery": time.get("delivery", "in_person"),
@@ -369,16 +457,15 @@ def _parse_schedules(data: object, filename: str) -> list[list[Assignment]]:
         try:
             validated = _SCHEDULE.validate_python(candidate)
         except ValidationError as error:
-            issues.extend(_schedule_issue(prefix, detail) for detail in error.errors())
+            issues.extend(_schedule_issue(prefix, dict(detail)) for detail in error.errors())
             continue
-        issues.extend(_format_issues(prefix, validated))
+        issues.extend(_format_issues(prefix, cast(list[dict], validated)))
         schedules.append(json.loads(json.dumps(validated)))
     if issues:
         count = len(issues)
         raise InvalidScheduleFile(
             "invalid_schedule_file",
-            f"{filename} is not in the schedule format: {count} "
-            f"{'problem' if count == 1 else 'problems'} found.",
+            f"{filename} is not in the schedule format: {plural(count, 'problem')} found.",
             issues=tuple(issues[:50]),
         )
     return schedules
@@ -391,7 +478,7 @@ def _format_issues(prefix: tuple, schedule: list[dict]) -> list[Issue]:
         times = assignment["times"]
         for column, time in enumerate(times):
             where = (*prefix, row, "times", column)
-            if time["day"] not in _DAY_NAMES:
+            if time["day"] not in DAY_NAMES:
                 problems.append(_problem((*where, "day"), "Day must be 1 (Monday) to 5 (Friday)."))
             if not 0 <= time["start"] < _MINUTES_PER_DAY:
                 problems.append(
@@ -422,8 +509,8 @@ def _csv_row(assignment: Assignment) -> str:
     lab = assignment.get("lab")
     lab_index = assignment.get("lab_index") if lab is not None else None
     times = ",".join(
-        f"{_DAY_NAMES[time['day']]} {_clock_text(time['start'])}-"
-        f"{_clock_text(time['start'] + time['duration'])}"
+        f"{DAY_NAMES[time['day']]} {clock_text(time['start'])}-"
+        f"{clock_text(time['start'] + time['duration'])}"
         f"{'@online' if time.get('delivery') == 'online' else ''}"
         f"{'^' if position == lab_index else ''}"
         for position, time in enumerate(assignment["times"])
@@ -441,14 +528,15 @@ def _csv_row(assignment: Assignment) -> str:
     return output.getvalue()
 
 
-def _clock_text(minutes: int) -> str:
-    return f"{minutes // 60:02d}:{minutes % 60:02d}"
-
-
 def _number(value: object) -> int:
     if isinstance(value, bool):
         raise ScheduleNotFound(f"{value!r} is not a schedule number.")
+
     try:
-        return int(value)
+        if isinstance(value, (int, float, str)):
+            return int(value)
+
+        raise TypeError(f"Expected int, got {type(value).__name__}")
+
     except (TypeError, ValueError):
         raise ScheduleNotFound(f"{value!r} is not a schedule number.") from None

@@ -1,6 +1,6 @@
 /**
  * One class pattern in the Class Patterns row. Its Edit button opens PatternDialog; the On/Off
- * switch saves right away through `onToggle`.
+ * switch flips the pattern's `disabled` field right away through `onToggleDisabled`.
  * A meeting's own start_time overrides the pattern's.
  */
 
@@ -8,7 +8,7 @@ import Badge from "../../../components/Badge.jsx";
 import EditButton from "./EditButton.jsx";
 
 /** A class pattern: credits, on/off, its meetings (day, length, lab, delivery, start), and start time. */
-export default function PatternCard({ pattern, onEdit, onToggle }) {
+export default function PatternCard({ pattern, onEdit, onToggleDisabled }) {
   const startText = pattern.disabled
     ? "Disabled"
     : pattern.start_time
@@ -26,8 +26,8 @@ export default function PatternCard({ pattern, onEdit, onToggle }) {
             role="switch"
             aria-label="Pattern enabled"
             checked={!pattern.disabled}
-            onChange={onToggle}
-            readOnly={!onToggle}
+            onChange={onToggleDisabled}
+            readOnly={!onToggleDisabled}
           />
         </label>
       </div>

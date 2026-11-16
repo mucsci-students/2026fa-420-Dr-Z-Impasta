@@ -65,6 +65,25 @@ def test_steps_yield_one_schedule_at_a_time_and_return_the_outcome(config, real_
     assert isinstance(outcome, GenerationSuccess) and outcome.result.count == 2
 
 
+def test_each_schedule_is_handed_over_before_progress_is_reported(config, real_schedules):
+    events = []
+
+    generate_schedules(
+        config,
+        limit=2,
+        scheduler_factory=FakeSchedulerFactory(real_schedules),
+        on_schedule=lambda schedule, number: events.append(("schedule", number, schedule)),
+        on_progress=lambda found, limit: events.append(("progress", found, limit)),
+    )
+
+    assert events == [
+        ("schedule", 1, real_schedules[0]),
+        ("progress", 1, 2),
+        ("schedule", 2, real_schedules[1]),
+        ("progress", 2, 2),
+    ]
+
+
 def test_run_never_mutates_the_session_config(config, fake_factory):
     original_limit = config.limit
 

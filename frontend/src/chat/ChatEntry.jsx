@@ -7,10 +7,10 @@ import { useState } from "react";
 import { Link } from "react-router";
 import Button from "../components/Button.jsx";
 import IssueList from "../components/IssueList.jsx";
-import Spinner from "../components/Spinner.jsx";
+import LoadingBar from "../components/LoadingBar.jsx";
 import { plural } from "../format.js";
 import { useAppState } from "../state/appStateContext.js";
-import { Save } from "../state/eventHandlers.js";
+import { saveConfig } from "../state/eventHandlers.js";
 
 /**
  * `latestEdit` / `latestRun`: this is the newest change to the configuration / the newest
@@ -115,7 +115,7 @@ function PendingAction({ pending, busy, onAnswer }) {
     setSave({ status: "saving" });
     let saved;
     try {
-      saved = await Save();
+      saved = await saveConfig();
     } catch (error) {
       setSave({ status: "failed", error });
       return;
@@ -206,11 +206,17 @@ function GenerationProgress({ generation }) {
   if (generation.running) {
     const limit = generation.settings?.limit;
     return (
-      <p className="assistant-reply__follow-up assistant-reply__note">
-        <Spinner size="sm" label="" />
-        Generating… {generation.found}
-        {limit ? ` of ${limit}` : ""} found.
-      </p>
+      <div className="assistant-reply__follow-up assistant-reply__follow-up--running">
+        <p className="assistant-reply__note">
+          Generating… {generation.found}
+          {limit ? ` of ${limit}` : ""} found.
+        </p>
+        <LoadingBar
+          label="Generating schedules"
+          value={generation.found}
+          max={limit ?? 100}
+        />
+      </div>
     );
   }
   return (

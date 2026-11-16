@@ -5,11 +5,14 @@ Usage: ``print``. Takes no arguments.
 Author: Foster VanFleet. Converted to the command model.
 """
 
+from collections.abc import Iterable, Sequence
+
+from scheduler import CombinedConfig, TimeSlotConfig
+
 from zimpasta.command import CommandSpec, Invocation
+from zimpasta.commands.common import NO_CONFIG_LOADED as NO_CONFIG
 from zimpasta.console import Console
 from zimpasta.session import Session
-
-NO_CONFIG = "No configuration is loaded."
 
 
 def print_config(console: Console, session: Session, invocation: Invocation) -> None:
@@ -17,100 +20,94 @@ def print_config(console: Console, session: Session, invocation: Invocation) -> 
     if session.config is None:
         console.say(NO_CONFIG)
         return
+    for line in _lines(session.config):
+        console.say(line)
 
-    config = session.config
-    scheduler_config = config.config
 
-    console.say("Configuration")
-    console.say("=============")
+def _lines(config: CombinedConfig) -> list[str]:
+    """The whole printout, one string per line."""
+    items = config.config
+    return [
+        "Configuration",
+        "=" * len("Configuration"),
+        *_rooms_or_labs("Rooms", items.rooms),
+        *_rooms_or_labs("Labs", items.labs),
+        *_courses(items.courses),
+        *_faculty(items.faculty),
+        *_time_slots(config.time_slot_config),
+        "",
+        f"Schedule Limit: {config.limit}",
+        f"Optimizer Flags: {_listed([str(flag) for flag in config.optimizer_flags])}",
+    ]
 
-    console.say("")
-    console.say("Rooms")
-    console.say("-----")
-    for room in scheduler_config.rooms:
-        console.say(f"{room.name}")
-        console.say(f"  Capacity: {room.capacity}")
 
-        features = ", ".join(room.features) if room.features else "None"
-        console.say(f"  Features: {features}")
+def _heading(title: str) -> list[str]:
+    """A blank line, then ``title`` underlined with dashes."""
+    return ["", title, "-" * len(title)]
 
-    console.say("")
-    console.say("Labs")
-    console.say("----")
-    for lab in scheduler_config.labs:
-        console.say(f"{lab.name}")
-        console.say(f"  Capacity: {lab.capacity}")
 
-        features = ", ".join(lab.features) if lab.features else "None"
-        console.say(f"  Features: {features}")
+def _listed(values: Iterable[str] | None) -> str:
+    """``values`` separated by commas, or ``None`` when there are none."""
+    return ", ".join(values) if values else "None"
 
-    console.say("")
-    console.say("Courses")
-    console.say("-------")
-    for course in scheduler_config.courses:
-        console.say(f"{course.course_id}")
-        console.say(f"  Credits: {course.credits}")
-        console.say(f"  Capacity: {course.capacity}")
 
-        rooms = ", ".join(course.room) if course.room else "None"
-        console.say(f"  Rooms: {rooms}")
+def _rooms_or_labs(title: str, resources: Sequence) -> list[str]:
+    lines = _heading(title)
+    for resource in resources:
+        lines += [
+            resource.name,
+            f"  Capacity: {resource.capacity}",
+            f"  Features: {_listed(resource.features)}",
+        ]
+    return lines
 
-        labs = ", ".join(course.lab) if course.lab else "None"
-        console.say(f"  Labs: {labs}")
 
-        conflicts = ", ".join(course.conflicts) if course.conflicts else "None"
-        console.say(f"  Conflicts: {conflicts}")
+def _courses(courses: Sequence) -> list[str]:
+    lines = _heading("Courses")
+    for course in courses:
+        lines += [
+            course.course_id,
+            f"  Credits: {course.credits}",
+            f"  Capacity: {course.capacity}",
+            f"  Rooms: {_listed(course.room)}",
+            f"  Labs: {_listed(course.lab)}",
+            f"  Conflicts: {_listed(course.conflicts)}",
+            f"  Faculty: {_listed(course.faculty)}",
+        ]
+    return lines
 
-        faculty = ", ".join(course.faculty) if course.faculty else "None"
-        console.say(f"  Faculty: {faculty}")
 
-    console.say("")
-    console.say("Faculty")
-    console.say("-------")
-    for faculty in scheduler_config.faculty:
-        console.say(f"{faculty.name}")
-        console.say(f"  Credits: {faculty.minimum_credits}-{faculty.maximum_credits}")
-        console.say(f"  Unique course limit: {faculty.unique_course_limit}")
+def _faculty(faculty: Sequence) -> list[str]:
+    lines = _heading("Faculty")
+    for member in faculty:
+        lines += [
+            member.name,
+            f"  Credits: {member.minimum_credits}-{member.maximum_credits}",
+            f"  Unique course limit: {member.unique_course_limit}",
+            "  Availability:",
+        ]
+        for day, times in member.times.items():
+            lines.append(f"    {day}: " + ", ".join(f"{time.start}-{time.end}" for time in times))
+    return lines
 
-        console.say("  Availability:")
-        for day, times in faculty.times.items():
-            formatted_times = ", ".join(f"{time.start}-{time.end}" for time in times)
-            console.say(f"    {day}: {formatted_times}")
 
-    console.say("")
-    console.say("Time Slots")
-    console.say("----------")
-
-    console.say("Available Times:")
-    for day, time_blocks in config.time_slot_config.times.items():
-        for time_block in time_blocks:
-            console.say(
-                f"  {day}: {time_block.start}-{time_block.end} "
-                f"({time_block.spacing} minute spacing)"
-            )
-
-    console.say("")
-    console.say("Class Patterns:")
-    for class_pattern in config.time_slot_config.classes:
-        console.say(f"  {class_pattern.credits} credits")
-
-        for meeting in class_pattern.meetings:
+def _time_slots(slots: TimeSlotConfig) -> list[str]:
+    lines = [*_heading("Time Slots"), "Available Times:"]
+    for day, blocks in slots.times.items():
+        for block in blocks:
+            lines.append(f"  {day}: {block.start}-{block.end} ({block.spacing} minute spacing)")
+    lines += ["", "Class Patterns:"]
+    for pattern in slots.classes:
+        lines.append(f"  {pattern.credits} credits")
+        for meeting in pattern.meetings:
             lab = ", lab" if meeting.lab else ""
-            console.say(f"    {meeting.day}, {meeting.duration} minutes{lab}")
-
-    console.say("")
-    console.say(f"Maximum time gap: {config.time_slot_config.max_time_gap} minutes")
-    console.say(f"Minimum time overlap: {config.time_slot_config.min_time_overlap} minutes")
-
-    console.say("")
-    console.say(f"Schedule Limit: {config.limit}")
-
-    if config.optimizer_flags:
-        flags = ", ".join(str(flag) for flag in config.optimizer_flags)
-    else:
-        flags = "None"
-
-    console.say(f"Optimizer Flags: {flags}")
+            lines.append(f"    {meeting.day}, {meeting.duration} minutes{lab}")
+    return [
+        *lines,
+        "",
+        f"Maximum time gap: {slots.max_time_gap} minutes",
+        f"Minimum time overlap: {slots.min_time_overlap} minutes",
+    ]
 
 
 SPECS = (

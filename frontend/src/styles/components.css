@@ -93,6 +93,16 @@
   }
 }
 
+/* ---------------------------------------------------------------- loading bar */
+
+.loading-bar {
+  display: block;
+  width: 100%;
+  height: 12px;
+  margin-bottom: 12px;
+  accent-color: var(--accent);
+}
+
 /* --------------------------------------------------------- badge and pill */
 
 .badge {
@@ -216,7 +226,7 @@
   padding: 16px 20px;
 }
 
-.card__body > * + * {
+.card__body>*+* {
   margin-top: var(--space-3);
 }
 
@@ -308,7 +318,7 @@
   padding-left: 18px;
 }
 
-.issues__item + .issues__item {
+.issues__item+.issues__item {
   margin-top: 2px;
 }
 
@@ -405,7 +415,7 @@
   padding: 16px 20px;
 }
 
-.dialog__body > * + * {
+.dialog__body>*+* {
   margin-top: var(--space-3);
 }
 

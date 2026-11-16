@@ -11,8 +11,8 @@ import CheckboxList from "../CheckboxList.jsx";
 import PreferenceEditor from "../PreferenceEditor.jsx";
 import EditDialog from "./EditDialog.jsx";
 import { useDraft } from "./useDraft.js";
-
-const WEEKDAYS = ["MON", "TUE", "WED", "THU", "FRI"];
+import { weekdaysFrom } from "../labels.js";
+import { toNumber } from "../forms.js";
 
 const NEW_FACULTY = {
   name: "",
@@ -26,9 +26,6 @@ const NEW_FACULTY = {
   lab_preferences: {},
   mandatory_days: [],
 };
-
-/** Text from a number box → a number, or null when empty. */
-const toNumber = (text) => (text === "" ? null : Number(text));
 
 /**
  * Add or edit a faculty member. Edits a draft; nothing changes until Save succeeds.
@@ -51,7 +48,7 @@ export default function FacultyDialog({
   const isNew = index === null;
   const original = { ...NEW_FACULTY, ...faculty }; // fill defaults the document may omit
   const { draft, set, isDirty } = useDraft(original);
-  const weekdays = options?.weekdays?.length ? options.weekdays : WEEKDAYS;
+  const weekdays = weekdaysFrom(options);
   const { errorFor, errorClass, unplaced } = formIssues(error?.issues, {
     area: "faculty",
     index: index ?? undefined,

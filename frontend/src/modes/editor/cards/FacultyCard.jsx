@@ -6,8 +6,7 @@
 
 import AvailabilityChips from "../AvailabilityChips.jsx";
 import EditButton from "./EditButton.jsx";
-
-const WEEKDAYS = ["MON", "TUE", "WED", "THU", "FRI"];
+import { WEEKDAYS } from "../labels.js";
 
 /**
  * { "CMSC 362": 5, "CMSC 161": 4 } → "CMSC 362 (5), CMSC 161 (4)", or "" when empty.

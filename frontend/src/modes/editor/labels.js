@@ -4,8 +4,13 @@
  */
 export const MODALITY_NAMES = { in_person: "In person", online: "Online", hybrid: "Hybrid" };
 export const DELIVERY_NAMES = { in_person: "In person", online: "Online" };
+/** The weekdays a schedule uses, in order. */
+export const WEEKDAYS = ["MON", "TUE", "WED", "THU", "FRI"];
+/** The library's weekdays from api.config.options(), or WEEKDAYS until those arrive. */
+export const weekdaysFrom = (options) => (options?.weekdays?.length ? options.weekdays : WEEKDAYS);
 export const DAY_NAMES = { MON: "Monday", TUE: "Tuesday", WED: "Wednesday", THU: "Thursday", FRI: "Friday", SAT: "Saturday", SUN: "Sunday" };
-export const FLAG_NAMES = {
+/** Keyed by the library's `OptimizerFlags` values, the strings in a configuration's `optimizer_flags`. */
+export const OPTIMIZER_FLAG_NAMES = {
   faculty_course: "Faculty course preferences",
   faculty_room: "Faculty room preferences",
   faculty_lab: "Faculty lab preferences",

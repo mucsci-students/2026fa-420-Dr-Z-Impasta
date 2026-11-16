@@ -66,8 +66,7 @@ def instructions(app: "AppController") -> str:
 
 
 def state_summary(app: "AppController") -> str:
-    workspace = app.workspace
-    snapshot = workspace.snapshot()
+    snapshot = app.configuration_state()
     lines: list[str] = []
     if snapshot["status"] == "none":
         lines.append("No configuration is open. The user can load a file in the editor.")
@@ -79,7 +78,7 @@ def state_summary(app: "AppController") -> str:
         if snapshot["issues"]:
             problems = "; ".join(problem["message"] for problem in snapshot["issues"][:5])
             lines.append(f"Missing before it is valid: {problems}")
-        document = workspace.document() or {}
+        document = app.configuration()["document"] or {}
         labels = refs.section_labels(refs.items(document, "courses"))
         for area in ("rooms", "labs", "faculty", "courses", "patterns"):
             listed = refs.items(document, area)
@@ -100,6 +99,6 @@ def state_summary(app: "AppController") -> str:
     lines.append(
         f"Generation: {generation['state']}"
         + (f", {generation['found']} found so far" if generation["running"] else "")
-        + f". Schedules in the viewer: {app.schedules.count}."
+        + f". Schedules in the viewer: {app.schedule_count()}."
     )
     return "\n".join(lines)

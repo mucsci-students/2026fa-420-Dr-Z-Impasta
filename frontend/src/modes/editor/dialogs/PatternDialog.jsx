@@ -8,15 +8,14 @@ import { useState } from "react";
 import Button from "../../../components/Button.jsx";
 import Field from "../../../components/Field.jsx";
 import { formIssues } from "../../../components/issues.js";
-import { DELIVERY_NAMES } from "../labels.js";
+import { DELIVERY_NAMES, weekdaysFrom } from "../labels.js";
 import EditDialog from "./EditDialog.jsx";
 import { useDraft } from "./useDraft.js";
+import { toNumber } from "../forms.js";
 
 const NEW_MEETING = { day: "MON", start_time: null, duration: 50, lab: false, delivery: "in_person" };
 const NEW_PATTERN = { credits: null, meetings: [NEW_MEETING], disabled: false, start_time: null };
-const WEEKDAYS = ["MON", "TUE", "WED", "THU", "FRI"];
 
-const toNumber = (text) => (text === "" ? null : Number(text));
 const toTime = (text) => (text === "" ? null : text);   // an empty time box means "not set"
 
 // Row keys for meetings, so removing a row doesn't hand its state to the next one
@@ -37,7 +36,7 @@ export default function PatternDialog({ index, pattern, options, busy, error, on
   // The row keys when Save was last pressed; the server's `meetings.N` errors refer to these positions
   const [savedKeys, setSavedKeys] = useState(meetingKeys);
 
-  const weekdays = options?.weekdays?.length ? options.weekdays : WEEKDAYS;
+  const weekdays = weekdaysFrom(options);
   const deliveryModes = options?.delivery_modes?.length ? options.delivery_modes : Object.keys(DELIVERY_NAMES);
 
   function save() {

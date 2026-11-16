@@ -4,6 +4,7 @@ import json
 import socket
 
 import pytest
+import uvicorn
 
 from zimpasta import cli, gui
 from zimpasta.gui import PortUnavailable, choose_port, port_is_free, serve
@@ -156,12 +157,17 @@ def test_browser_opens_once_the_server_has_started(monkeypatch):
     class Started:
         started = True
 
-    gui._open_when_ready(Started(), "http://127.0.0.1:8123/")
+    server = uvicorn.Server(uvicorn.Config(app=""))
+    monkeypatch.setattr(server, "started", True)
+
+    gui._open_when_ready(server, "http://127.0.0.1:8123/")
 
     assert opened == ["http://127.0.0.1:8123/"]
 
     class NeverStarts:
         started = False
 
-    gui._open_when_ready(NeverStarts(), "http://127.0.0.1:8123/", timeout=0.1)
+    monkeypatch.setattr(server, "started", False)
+
+    gui._open_when_ready(server, "http://127.0.0.1:8123/", timeout=0.1)
     assert opened == ["http://127.0.0.1:8123/"]

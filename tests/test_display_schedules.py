@@ -19,7 +19,9 @@ import json
 
 import pytest
 
+from zimpasta.command import CommandSpec, Invocation
 from zimpasta.commands import display_schedules as mod
+from zimpasta.session import Session
 
 
 class FakeConsole:
@@ -63,8 +65,8 @@ def run_display(console):
     """Run the display command using the fake console."""
     mod.display_schedules(
         console,
-        session=None,
-        invocation=None,
+        session=Session(),
+        invocation=Invocation(CommandSpec("none")),
     )
 
 
@@ -77,26 +79,6 @@ def workdir(tmp_path, monkeypatch):
     """
     monkeypatch.chdir(tmp_path)
     return tmp_path
-
-
-# ----------------------------------------------------------------------
-# _clock tests
-# ----------------------------------------------------------------------
-
-
-@pytest.mark.parametrize(
-    "minutes, expected",
-    [
-        (0, "00:00"),
-        (5, "00:05"),
-        (60, "01:00"),
-        (495, "08:15"),
-        (1439, "23:59"),
-    ],
-)
-def test_clock(minutes, expected):
-    """Test conversion of minutes into HH:MM format."""
-    assert mod._clock(minutes) == expected
 
 
 # ----------------------------------------------------------------------
