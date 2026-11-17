@@ -4,6 +4,8 @@ Author: Foster VanFleet
 Date: September 16th, 2026
 """
 
+from inspect import signature
+
 import pytest
 from scheduler import CourseConfig, FacultyConfig, LabConfig, RoomConfig
 
@@ -16,6 +18,7 @@ def test_find_course(config) -> None:
     result = finder.parse_config(CourseConfig, "CS 101")
 
     assert len(result) == 1
+    assert isinstance(result[0], CourseConfig)
     assert result[0].course_id == "CS 101"
 
 
@@ -33,6 +36,7 @@ def test_find_faculty(config) -> None:
     result = finder.parse_config(FacultyConfig, "Dr. Smith")
 
     assert len(result) == 1
+    assert isinstance(result[0], FacultyConfig)
     assert result[0].name == "Dr. Smith"
 
 
@@ -42,6 +46,7 @@ def test_find_room(config) -> None:
     result = finder.parse_config(RoomConfig, "Room 101")
 
     assert len(result) == 1
+    assert isinstance(result[0], RoomConfig)
     assert result[0].name == "Room 101"
 
 
@@ -51,6 +56,7 @@ def test_find_lab(config) -> None:
     result = finder.parse_config(LabConfig, "Lab 101")
 
     assert len(result) == 1
+    assert isinstance(result[0], LabConfig)
     assert result[0].name == "Lab 101"
 
 
@@ -62,7 +68,9 @@ def test_find_multiple_matches(config) -> None:
     result = finder.parse_config(CourseConfig, "CS 101")
 
     assert len(result) == 2
+    assert isinstance(result[0], CourseConfig)
     assert result[0].course_id == "CS 101"
+    assert isinstance(result[1], CourseConfig)
     assert result[1].course_id == "CS 101"
 
 
@@ -70,4 +78,6 @@ def test_unsupported_config_type(config) -> None:
     finder = ConfigFinder(config)
 
     with pytest.raises(TypeError):
-        finder.parse_config(str, "CS 101")
+        assert type(str) not in signature(finder.parse_config).parameters["config_type"].annotation
+
+        # finder.parse_config(str, "CS 101")

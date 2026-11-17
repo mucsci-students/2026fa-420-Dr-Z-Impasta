@@ -14,8 +14,9 @@ Pyodide has no threads, which changes two things:
   (:class:`~zimpasta.model.generation_job.EventLoopRunner`) and is limited to
   :data:`MAX_SCHEDULES` per run, since the page's Python is busy while it solves.
 
-The AI assistant is off here (:data:`NO_ASSISTANT`): its OpenAI key must never reach the
-browser, and ``openai`` isn't installed in Pyodide.
+The AI assistant and accounts are off here (:data:`NO_ASSISTANT`, :data:`NO_ACCOUNTS`):
+the OpenAI key and the database credentials must never reach the browser, and neither
+``openai`` nor the database driver is installed in Pyodide.
 
 Nothing else imports this module, and importing it loads nothing else: the worker reads
 :data:`REQUIREMENTS` before they are installed.
@@ -40,6 +41,12 @@ own server, which has no WebAssembly build and isn't used here."""
 NO_ASSISTANT = (
     "The AI assistant isn't available in the browser version, because the OpenAI key can't "
     "be sent to the browser. Run the app locally with `uv run zimpasta --gui` to use it."
+)
+
+NO_ACCOUNTS = (
+    "Accounts and saved states aren't available in the browser version, because the "
+    "database credentials can't be sent to the browser. Run the app locally with "
+    "`uv run zimpasta --gui` to use them."
 )
 
 _app = None
@@ -73,6 +80,8 @@ def create_browser_app():
             max_schedules=MAX_SCHEDULES,
             ai_client_factory=None,
             ai_unavailable_reason=NO_ASSISTANT,
+            account_store_factory=None,
+            accounts_unavailable_reason=NO_ACCOUNTS,
         )
     )
 

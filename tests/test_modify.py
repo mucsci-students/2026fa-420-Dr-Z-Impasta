@@ -25,7 +25,7 @@ def test_id_key_choices():
 
     assert id_key_choices("pizza") == ("", ())
 
-    assert id_key_choices(4) == ("", ())
+    assert id_key_choices(str(4)) == ("", ())
 
 
 def test_update_config(config, config_file):
@@ -37,7 +37,9 @@ def test_update_config(config, config_file):
     # != []
     # )
     assert (
-        update_config("time_slot", "times", "THU: start: 08:00", "spacing", 90, config, config_file)
+        update_config(
+            "time_slot", "times", "THU: start: 08:00", "spacing", str(90), config, config_file
+        )
         != []
     )
 

@@ -172,7 +172,12 @@ def test_kind_and_id_given_asks_only_for_capacity(config: CombinedConfig):
     console = ScriptedConsole(["30"])  # capacity only
     invocation = _SPECS[0].parse(["room", "Room 102"])
 
-    built = _SPECS[0].builder(console, Session(config=config), invocation)
+    builder = _SPECS[0].builder
+    assert builder is not None
+
+    built = builder(console, Session(config=config), invocation)
+
+    assert built is not None
 
     assert built.get("capacity") == "30"
 
@@ -186,7 +191,12 @@ def test_course_prompts_for_credits_then_capacity_then_faculty_then_room(config:
     console = ScriptedConsole(["3", "30", "Dr. Smith", "Room 101"])
     invocation = _SPECS[0].parse(["course", "CS 103"])
 
-    built = _SPECS[0].builder(console, Session(config=config), invocation)
+    builder = _SPECS[0].builder
+    assert builder is not None
+
+    built = builder(console, Session(config=config), invocation)
+
+    assert built is not None
 
     assert (
         built.get("credits"),
@@ -204,7 +214,12 @@ def test_faculty_prompts_for_all_three_limits_in_order(config: CombinedConfig):
     console = ScriptedConsole(["12", "12", "2"])  # max -> min -> unique-course-limit
     invocation = _SPECS[0].parse(["faculty", "Dr. Lee"])
 
-    built = _SPECS[0].builder(console, Session(config=config), invocation)
+    builder = _SPECS[0].builder
+    assert builder is not None
+
+    built = builder(console, Session(config=config), invocation)
+
+    assert built is not None
 
     assert (
         built.get("maximum-credits"),

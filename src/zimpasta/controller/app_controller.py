@@ -15,15 +15,22 @@ from collections.abc import Callable, Mapping
 from datetime import datetime
 from pathlib import PurePath
 
-from zimpasta.controller.assistant import AIClient, Assistant, client_from_environment
+from zimpasta.controller.assistant import AIClient, Assistant, ChatBusy, client_from_environment
 from zimpasta.model import catalog
+from zimpasta.model.accounts import AccountService, AccountStore, store_from_environment
 from zimpasta.model.generate import (
     DEFAULT_SOLVER_TIMEOUT_MS,
     GenerationResult,
     Schedule,
     generation_steps,
 )
-from zimpasta.model.generation_job import EventLoopRunner, GenerationJob, JobStatus, ThreadRunner
+from zimpasta.model.generation_job import (
+    EventLoopRunner,
+    GenerationBusy,
+    GenerationJob,
+    JobStatus,
+    ThreadRunner,
+)
 from zimpasta.model.schedules import ExportedSchedules, ScheduleSet
 from zimpasta.model.workspace import ConfigWorkspace, ExportedConfig
 
@@ -41,13 +48,19 @@ class AppController:
         max_schedules: int | None = None,
         ai_client_factory: Callable[[], AIClient] | None = client_from_environment,
         ai_unavailable_reason: str | None = None,
+        account_store_factory: Callable[[], AccountStore] | None = store_from_environment,
+        accounts_unavailable_reason: str | None = None,
     ) -> None:
         """``runner`` and ``max_schedules`` are for the browser version (``zimpasta.browser``):
         generation on the event loop, and at most ``max_schedules`` per run.
 
         ``ai_client_factory`` creates the AI assistant's connection when it is first used;
         tests pass a fake. ``None`` means this version has no assistant, for the reason in
-        ``ai_unavailable_reason``."""
+        ``ai_unavailable_reason``.
+
+        ``account_store_factory`` connects to the account database when accounts are first
+        used (``DATABASE_URL``); tests pass an in-memory SQLite store. ``None`` means this
+        version has no accounts, for ``accounts_unavailable_reason``."""
         self._clock = clock
         self._lock = threading.RLock()
         self.workspace = ConfigWorkspace(clock=clock)
@@ -67,6 +80,12 @@ class AppController:
             clock=clock,
             unavailable_reason=ai_unavailable_reason,
         )
+        self.accounts = AccountService(
+            self.workspace,
+            self.schedules,
+            store_factory=account_store_factory,
+            unavailable_reason=accounts_unavailable_reason,
+        )
 
     # -------------------------------------------------------------------- state
 
@@ -82,6 +101,7 @@ class AppController:
                     key: summary[key] for key in ("count", "source", "name", "created_at")
                 },
                 "assistant": self.assistant.summary(),
+                "account": self.accounts.status(),
             }
 
     # ------------------------------------------------------------ configuration
@@ -206,8 +226,8 @@ class AppController:
             if number == 1:
                 self.schedules.start_generated(
                     schedule,
-                    limit=status.settings.limit,
-                    optimizer_flags=status.settings.optimizer_flags,
+                    limit=getattr(status.settings, "limit", 0),
+                    optimizer_flags=getattr(status.settings, "optimizer_flags", []),
                     config_name=status.config_name,
                 )
             else:
@@ -258,6 +278,74 @@ class AppController:
 
     def chat_clear(self) -> dict:
         return self.assistant.clear()
+
+    # ----------------------------------------------------------------- accounts
+
+    def account(self) -> dict:
+        """Who is logged in, the open state, and whether it is saved to the account."""
+        return self.accounts.status()
+
+    def sign_up(self, username: str, password: str, *, discard_changes: bool = False) -> dict:
+        """Create an account and log in. What is open becomes the account's first state."""
+        with self._lock:
+            self._require_idle()
+            self.accounts.sign_up(username, password, discard_changes=discard_changes)
+            self.assistant.clear()
+            return self._account_reply()
+
+    def log_in(self, username: str, password: str, *, discard_changes: bool = False) -> dict:
+        """Log in and reopen the state that was open last time."""
+        with self._lock:
+            self._require_idle()
+            self.accounts.log_in(username, password, discard_changes=discard_changes)
+            self.assistant.clear()
+            return self._account_reply()
+
+    def log_out(self) -> dict:
+        """Save the open state, close it, and log out. The chat is cleared too."""
+        with self._lock:
+            self._require_idle()
+            self.accounts.log_out()
+            self.assistant.clear()
+            return self._account_reply()
+
+    def list_states(self) -> dict:
+        return {"states": self.accounts.list_states(), "account": self.accounts.status()}
+
+    def create_state(self, name: str, *, copy_current: bool = False) -> dict:
+        """Save the open state, then create a new one (empty, or a copy) and open it."""
+        with self._lock:
+            self._require_idle()
+            self.accounts.create_state(name, copy_current=copy_current)
+            return self._account_reply()
+
+    def open_state(self, state_id: int) -> dict:
+        """Save the open state, then switch to another."""
+        with self._lock:
+            self._require_idle()
+            self.accounts.switch_state(state_id)
+            return self._account_reply()
+
+    def rename_state(self, state_id: int, name: str) -> dict:
+        self.accounts.rename_state(state_id, name)
+        return self.list_states()
+
+    def delete_state(self, state_id: int) -> dict:
+        self.accounts.delete_state(state_id)
+        return self.list_states()
+
+    def _require_idle(self) -> None:
+        """Switching what is open mid-run or mid-chat would mix two states' work."""
+        if self.job.status().running:
+            raise GenerationBusy()
+        if self.assistant.summary()["busy"]:
+            raise ChatBusy()
+
+    def _account_reply(self) -> dict:
+        return {
+            "states": self.accounts.list_states() if self.accounts.logged_in else [],
+            "state": self.state(),
+        }
 
 
 def _file_name(name: str) -> str:

@@ -24,6 +24,10 @@ pins, and `npm run build` writes the GUI into `src/zimpasta/web/`, where the Pyt
 finds it. Run the build again after pulling GUI changes. `frontend/.nvmrc` names the Node
 version for `nvm use`.
 
+Secrets go in a `.env` file at the repository root, which is gitignored and read when the
+GUI starts: `DATABASE_URL` (the Neon connection string, for accounts) and `OPENAI_API_KEY`
+(for the AI assistant). The app works without either; only those features are then off.
+
 ## The GUI
 
 ```bash
@@ -138,6 +142,21 @@ process: it is never sent to the browser, committed, or logged. The chat's trans
 kept by the app, so it is the same on every page until you clear it.
 [docs/assistant.md](docs/assistant.md) lists the tools, how failures are handled, and the
 API the chat panel uses.
+
+## Accounts and saved states
+
+Users can sign up, log in, and keep several **states**, each one configuration with its
+schedules (for example "Biology" and "Computer Science"), and switch between them:
+
+- The open state is saved to the account automatically after every change, whether it
+  came from the editor, the generator, the viewer, or the AI assistant.
+- Logging out and back in, or restarting the app, brings everything back. Logging in
+  reopens the state that was open last.
+
+Accounts live in a PostgreSQL database (Neon) named by `DATABASE_URL` in `.env`. Passwords
+are stored only as salted scrypt hashes, and one user can never reach another's states.
+[docs/accounts.md](docs/accounts.md) has the setup, the feature's acceptance criteria and
+size, the API, and its limitations.
 
 ## The shell
 
@@ -298,16 +317,19 @@ of schedules, each a list of course assignments.
 
 ## Design patterns
 
-The application uses five design patterns in working code. MVC is described above; the
-others are below.
+The application uses these design patterns in working code. The first five were in place
+by the end of Sprint 3 (MVC is described above). Those added in Sprint 4 are marked, and
+described under *Added in Sprint 4*.
 
-| Pattern | Problem it solves | Where |
-| --- | --- | --- |
-| Model-View-Controller | Keep scheduler rules out of the interfaces, so the GUI, the shell, and the AI assistant share one source of truth | `src/zimpasta/model/`, `src/zimpasta/controller/`, `frontend/` |
-| Command | Run many different user actions through one path that parses, checks, runs, and reports them | `src/zimpasta/command.py`, `src/zimpasta/commands/`, `src/zimpasta/controller/assistant/tools.py` |
-| Strategy | Run schedule generation in the background on the server (threads) and in the browser (no threads) with the same job | `src/zimpasta/model/generation_job.py` |
-| Adapter | Use OpenAI through one small interface the app owns, instead of depending on the SDK everywhere | `src/zimpasta/controller/assistant/client.py` |
-| Memento | Undo and redo edits in the Configuration Editor by restoring earlier snapshots of the configuration | `frontend/src/state/configEditorMemento.js`, `frontend/src/state/eventHandlers.js` |
+| Pattern | Counted in | Problem it solves | Where |
+| --- | --- | --- | --- |
+| Model-View-Controller | Sprint 3 | Keep scheduler rules out of the interfaces, so the GUI, the shell, and the AI assistant share one source of truth | `src/zimpasta/model/`, `src/zimpasta/controller/`, `frontend/` |
+| Command | Sprint 3 | Run many different user actions through one path that parses, checks, runs, and reports them | `src/zimpasta/command.py`, `src/zimpasta/commands/`, `src/zimpasta/controller/assistant/tools.py` |
+| Strategy | Sprint 3 | Run schedule generation in the background on the server (threads) and in the browser (no threads) with the same job | `src/zimpasta/model/generation_job.py` |
+| Adapter | Sprint 3 | Use OpenAI through one small interface the app owns, instead of depending on the SDK everywhere | `src/zimpasta/controller/assistant/client.py` |
+| Memento | Sprint 3 | Undo and redo edits in the Configuration Editor by restoring earlier snapshots of the configuration | `frontend/src/state/configEditorMemento.js`, `frontend/src/state/eventHandlers.js` |
+| Observer | Sprint 4 | Save the open state after every change, however it was made, without the code making changes knowing about accounts | `src/zimpasta/model/observable.py`, `model/workspace.py`, `model/schedules.py`, `model/accounts/service.py` |
+| Repository | Sprint 4 | Keep users and saved states behind an interface, so the same account logic runs on Neon and on SQLite in tests | `src/zimpasta/model/accounts/records.py`, `model/accounts/sql_store.py` |
 
 ### Model-View-Controller
 
@@ -443,6 +465,58 @@ depending on what is inside.
 them as opaque objects. The editor gets undo and redo without exposing how the
 configuration is stored, and a restored state is always one the library accepted before.
 
+### Added in Sprint 4
+
+#### Observer
+
+**Problem.** A logged-in user's open state must be saved after every change. Changes come
+from many places: editor forms, the AI assistant's tools, the shell, schedule imports, and
+finished generation runs. Calling "save" from each of them would couple all of that code
+to accounts and miss any new path.
+
+**Participants.**
+- **Subject:** `Subject` in `src/zimpasta/model/observable.py` keeps a list of observers.
+  `subscribe()` adds one (and returns a function that removes it), and `_notify()` calls
+  them after a change, logging and ignoring an observer's failure.
+- **Concrete subjects:** `ConfigWorkspace` (`model/workspace.py`) notifies after each
+  committed edit, new or loaded configuration, and save. Edits inside a `transaction()`
+  notify once, only if it succeeds. `ScheduleSet` (`model/schedules.py`) notifies after a
+  finished run, an import, or clearing, but not while a run's schedules are still arriving.
+- **Observer:** `AccountService._autosave` (`model/accounts/service.py`) saves the open
+  state through the account store.
+
+**How they interact.** `AccountService` subscribes to both subjects when it is created.
+After any change, the subject calls it, and it records the workspace and schedule set and
+saves them. If the database is unreachable, the change still stands, and the failure
+shows in the account status.
+
+**Why it fits.** The subjects know only that someone is listening, not who; the service
+reacts to changes it didn't make. Covered by `tests/model/test_observable.py` and
+`tests/model/accounts/test_service.py`.
+
+#### Repository
+
+**Problem.** Account logic (logging in, switching, autosave) needs users and saved states,
+but shouldn't depend on SQL or on Neon. Tests must run without a network database.
+
+**Participants.**
+- **Repository interface:** `AccountStore` in `model/accounts/records.py`. It has methods
+  by meaning (`create_user`, `find_user`, `list_states`, `save_state`, ...), each scoped to
+  the owner's user id, and returns plain records (`User`, `StateSummary`, `SavedState`).
+- **Concrete repository:** `SqlAccountStore` in `model/accounts/sql_store.py` on
+  SQLAlchemy Core. It maps rows to records and database errors to `StorageFailed`, and
+  runs on PostgreSQL (Neon) or SQLite.
+- **Client:** `AccountService`, which only knows `AccountStore`.
+
+**How they interact.** The app creates the store from `DATABASE_URL`
+(`store_from_environment()`), and tests pass an in-memory SQLite store. The service calls
+the repository, never the database.
+
+**Why it fits.** Data access is behind a collection-like interface in the domain's own
+terms, so storage can change (another database, or a fake) without touching account
+logic. Covered by `tests/model/accounts/test_sql_store.py`, plus a live test against Neon
+(`uv run pytest -m live`).
+
 ## Layout
 
 ```
@@ -569,6 +643,8 @@ new server-side workflow as an `AppController` method with pytest tests.
 
 - [docs/gui.md](docs/gui.md): how the GUI is organized and how to build a mode on it.
 - [docs/web-api.md](docs/web-api.md): the JSON API between the GUI and the Model.
+- [docs/accounts.md](docs/accounts.md): accounts and saved states: setup, acceptance
+  criteria, API, and tests.
 - [docs/assistant.md](docs/assistant.md): the AI assistant: key setup, tools, safeguards,
   the chat API, and its tests.
 - [docs/cloudflare-pages.md](docs/cloudflare-pages.md): the browser version on Cloudflare

@@ -89,7 +89,7 @@ def modify_handler(console: Console, session: Session, inv: Invocation) -> None:
     if kind in ("time_slot", "optimizer_flag"):
         if (
             update_config(kind, field_id, field, key, value, session.config, session.config_path)
-            != []
+            != {}
         ):
             console.say(UPDATE_SUCCESS.format(kind=kind))
         else:
@@ -100,7 +100,7 @@ def modify_handler(console: Console, session: Session, inv: Invocation) -> None:
             update_config_time_slot_config(
                 kind, field_id, field, key, value, session.config, session.config_path
             )
-            != []
+            != {}
         ):
             console.say(UPDATE_SUCCESS.format(kind=kind))
         else:
@@ -110,14 +110,14 @@ def modify_handler(console: Console, session: Session, inv: Invocation) -> None:
             update_config_config(
                 kind, field_id, field, key, value, session.config, session.config_path
             )
-            != []
+            != {}
         ):
             console.say(UPDATE_SUCCESS.format(kind=kind))
         else:
             console.say(UPDATE_FAILED.format(kind=kind))
 
 
-def modify_builder(console: Console, session: Session, inv: Invocation) -> Invocation:
+def modify_builder(console: Console, session: Session, inv: Invocation) -> Invocation | None:
     """Builds a complete modify-command"""
     if session.config is None:
         console.say(NO_CONFIG)
@@ -166,7 +166,9 @@ MODIFY_SPECS = (
 )
 
 
-def id_key_choices(kind: str) -> tuple[tuple[str, ...], tuple[str, ...]]:
+def id_key_choices(
+    kind: str,
+) -> tuple[tuple[str, ...], tuple[str, ...]] | tuple[str, tuple[str, ...]]:
     """Shows the valid input options for different kinds & fields"""
 
     match kind:
@@ -208,7 +210,7 @@ def id_key_choices(kind: str) -> tuple[tuple[str, ...], tuple[str, ...]]:
                     "same_lab",
                     "pack_rooms",
                 ),
-                ("null"),
+                ("null",),
             )
 
     return ("", ())
@@ -242,12 +244,12 @@ def update_config(
                         setattr(r, key, data_type(value))
 
             """ write back to the config file """
-            with open(config_path, "w") as file:
+            with open(str(config_path), "w") as file:
                 json.dump(config.model_dump(mode="json"), file, indent=4)
 
             return record
 
-    return []
+    return {}
 
 
 def update_config_time_slot_config(
@@ -283,11 +285,11 @@ def update_config_time_slot_config(
                         else:
                             record = change_class_attr(record, key, value)
 
-                with open(config_path, "w") as file:
+                with open(str(config_path), "w") as file:
                     json.dump(config.model_dump(mode="json"), file, indent=4)
 
                 return record
-    return []
+    return {}
 
 
 def change_class_attr(record, key: str, value: str) -> dict:
@@ -302,7 +304,7 @@ def change_class_attr(record, key: str, value: str) -> dict:
             data_type = type(getattr(rec, split_key))
             setattr(rec, split_key, data_type(split_value))
             return rec
-    return None
+    return {}
 
 
 def update_config_config(
@@ -337,11 +339,11 @@ def update_config_config(
                     former_val = nested_obj[inner_key]
 
                     if key == "times":
-                        value = [
+                        value = str(
                             TimeRange.from_string(
-                                TypeAdapter(TimeRangeString).validate_python(value.strip())
+                                TypeAdapter(TimeRangeString).validate_python(str(value).strip())
                             )
-                        ]
+                        )
                     else:
                         data_type = type(former_val)
                         value = data_type(value)
@@ -352,8 +354,8 @@ def update_config_config(
                     setattr(record, key, data_type(value))
 
                 """ write back to the config file """
-                with open(config_path, "w") as file:
+                with open(str(config_path), "w") as file:
                     json.dump(config.model_dump(mode="json"), file, indent=4)
 
                 return record
-    return []
+    return {}

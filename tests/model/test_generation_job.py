@@ -337,6 +337,7 @@ def test_a_capped_run_says_so(config_data, real_schedules):
 
     started = job.start(configured(config_data, limit=10))
 
+    assert started.message is not None
     assert started.message.startswith("Generating up to 2 schedules, the most a run generates")
     assert "asks for 10" in started.message
     assert job.wait(TIMEOUT).state is JobState.SUCCEEDED

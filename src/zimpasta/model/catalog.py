@@ -32,12 +32,14 @@ def weekdays() -> tuple[str, ...]:
 @cache
 def optimizer_flag_descriptions() -> dict[str, str]:
     """One sentence per optimizer flag, from the library's member docstrings."""
-    fallback = {flag.value: flag.value.replace("_", " ").capitalize() for flag in OptimizerFlags}
+    fallback: dict[str, str] = {
+        flag.value: flag.value.replace("_", " ").capitalize() for flag in OptimizerFlags
+    }
     try:
         tree = ast.parse(textwrap.dedent(inspect.getsource(OptimizerFlags)))
     except (OSError, TypeError, SyntaxError):
         return fallback
-    body = tree.body[0].body
+    body = getattr(tree.body[0], "body", [])
     descriptions = dict(fallback)
     for statement, following in zip(body, body[1:], strict=False):
         if not (isinstance(statement, ast.Assign) and isinstance(following, ast.Expr)):

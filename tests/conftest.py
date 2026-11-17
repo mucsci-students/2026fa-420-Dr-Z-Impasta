@@ -12,6 +12,14 @@ from tests.helpers import EXAMPLE_CONFIG, FIXTURE_CONFIG, FakeSchedulerFactory, 
 from zimpasta.model.generate import generate_schedules
 
 
+@pytest.fixture(autouse=True)
+def no_real_database(monkeypatch):
+    """Tests never touch a real account database: no DATABASE_URL, and the GUI's .env
+    loading does nothing. Account tests use an in-memory SQLite store instead."""
+    monkeypatch.delenv("DATABASE_URL", raising=False)
+    monkeypatch.setattr("zimpasta.gui.load_environment", lambda: None)
+
+
 @pytest.fixture
 def config_data() -> dict:
     """A fresh copy of the small test fixture as plain JSON data; edit it freely."""

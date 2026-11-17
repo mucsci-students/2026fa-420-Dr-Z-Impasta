@@ -33,7 +33,7 @@ import FacultyDialog from "./dialogs/FacultyDialog.jsx";
 import DeleteDialog from "./dialogs/DeleteDialog.jsx";
 import DayBlocksDialog from "./dialogs/DayBlocksDialog.jsx";
 import TimeSlotsDialog from "./dialogs/TimeSlotsDialog.jsx";
-import ConfirmDialog from "../../components/ConfirmDialog.jsx";
+import ConfirmDialog from "../../components/dialogs/ConfirmDialog.jsx";
 
 import ErrorMessage from "../../components/ErrorMessage.jsx";
 import { Load, ConfirmLoad, Empty_Click, Validate, Save, ValidateAndSaveItem, DeleteItem, UpdateTimeSlot, UpdateSettings, TogglePattern, getHistoryLength, getCurrHistoryLength, redoAction, undoAction, pushToHist } from "../../state/eventHandlers";
@@ -320,7 +320,7 @@ export default function ConfigEditor() {
               onSave={async (draft) => 
 		      {
 			      pushToHist(doc.document); 
-			      await ValidateAndSaveItem(editing, draft, setEditing, setLocalError); 
+			      await ValidateAndSaveItem(editing, draft, setEditing, setLocalError);
 			      await refresh(); 
 			    
 	      }}

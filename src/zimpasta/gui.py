@@ -15,6 +15,7 @@ from collections.abc import Callable
 from pathlib import Path
 
 import uvicorn
+from dotenv import find_dotenv, load_dotenv
 from fastapi import FastAPI
 
 from zimpasta.controller import AppController, create_app
@@ -92,6 +93,7 @@ def serve(
 ) -> int:
     """Start the GUI server and block until it stops. Returns a process exit code."""
     quiet_library_logging()
+    load_environment()
     controller = AppController()
     if config is not None:
         try:
@@ -127,6 +129,12 @@ def serve(
         ).start()
     run(server)
     return 0
+
+
+def load_environment() -> None:
+    """Read settings such as DATABASE_URL and OPENAI_API_KEY from a ``.env`` file in the
+    current folder or above it. Variables already set in the environment win."""
+    load_dotenv(find_dotenv(usecwd=True), override=False)
 
 
 def _open_when_ready(server: uvicorn.Server, url: str, timeout: float = 15.0) -> None:
