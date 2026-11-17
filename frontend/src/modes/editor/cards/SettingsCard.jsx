@@ -69,7 +69,7 @@ export default function SettingsCard({ settings, optimizerFlagChoices, busy, err
   const flagsError = errorFor("optimizer_flags");
 
   return (
-    <CardRow title="Global Settings">
+    <CardRow title="Global Settings" grid gridColumns={1}>
       <Card className="settings-card">
         <ErrorMessage
           error={error && { message: error.issues?.length ? "The change was not applied." : error.message, issues: unplaced }}

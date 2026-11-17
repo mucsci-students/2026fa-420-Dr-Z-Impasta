@@ -303,6 +303,8 @@ export default function ConfigEditor() {
             meta={items.faculty.length}
             addLabel="Add faculty"
             onAdd={() => { setEditing({ area: "faculty", index: null }); }}
+            grid
+            visibleRows={1}
           >
             {items.faculty.map((f, i) => (
 
@@ -318,6 +320,8 @@ export default function ConfigEditor() {
             meta={plural(items.courses.length, "section")}
             addLabel="Add course"
             onAdd={() => { setEditing({ area: "courses", index: null }); }}
+            grid
+            visibleRows={1}
           >
             {items.courses.map((c, i) => (
               <CourseCard
@@ -335,6 +339,7 @@ export default function ConfigEditor() {
             meta={items.rooms.length}
             addLabel="Add room"
             onAdd={() => setEditing({ area: "rooms", index: null })}
+            grid
           >
             {items.rooms.map((r, i) => (
               <ResourceCard
@@ -350,6 +355,7 @@ export default function ConfigEditor() {
             meta={items.labs.length}
             addLabel="Add lab"
             onAdd={() => setEditing({ area: "labs", index: null })}
+            grid
           >
             {items.labs.map((l, i) => (
               <ResourceCard
@@ -365,6 +371,8 @@ export default function ConfigEditor() {
             meta={`${enabled} of ${patterns.length} enabled`}
             addLabel="Add pattern"
             onAdd={() => { setEditing({ area: "patterns", index: null }); }}
+            grid
+            visibleRows={1}
           >
             {patterns.map((p, i) => (
               <PatternCard

@@ -17,6 +17,7 @@ export default function TimeSlotsCard({ timeSlots, days, onEditDay, onEditTiming
     <CardRow
       title="Time Slots"
       meta={`Gap ${timeSlots.max_time_gap}m · Overlap ${timeSlots.min_time_overlap}m`}
+      grid
       actions={
         <Button size="sm" variant="ghost" onClick={onEditTiming}>
           Advanced timing options…
