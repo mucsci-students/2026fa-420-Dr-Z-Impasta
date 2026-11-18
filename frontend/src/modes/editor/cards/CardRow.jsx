@@ -6,6 +6,7 @@
 
 import { Children, useEffect, useRef, useState } from "react";
 import Button from "../../../components/Button.jsx";
+import { buildGridRows, getGridColumnCount, getGridTemplateColumns, getVisibleGridHeight } from "./gridLayout.js";
 
 /**
  * One section of the editor: a title row, then a dashed "Add" tile and the item cards.
@@ -85,11 +86,7 @@ export default function CardRow({
     const updateColumns = () => {
       const width = row.clientWidth;
       const gap = parseFloat(getComputedStyle(row).columnGap) || 0;
-      const cardWidth = 190;
-      const count = hasAdd
-        ? Math.floor((width - 100 - gap) / (cardWidth + gap)) + 1
-        : Math.floor((width + gap) / (cardWidth + gap));
-      const next = Math.max(1, Math.min(gridColumns, count));
+      const next = getGridColumnCount(width, gap, hasAdd, gridColumns);
       setColumnCount((current) => current === next ? current : next);
     };
     const resize = new ResizeObserver(updateColumns);
@@ -106,14 +103,8 @@ export default function CardRow({
     const fitVisibleRows = () => {
       const tiles = [...row.children];
       if (!tiles.length) return;
-      const rowTops = [...new Set(tiles.map((tile) => tile.offsetTop))].slice(0, visibleRows);
-      const visibleBottom = Math.max(
-        ...tiles
-          .filter((tile) => rowTops.includes(tile.offsetTop))
-          .map((tile) => tile.offsetTop + tile.offsetHeight)
-      );
       const paddingBottom = parseFloat(getComputedStyle(row).paddingBottom) || 0;
-      const maxHeight = `${visibleBottom + paddingBottom}px`;
+      const maxHeight = `${getVisibleGridHeight(tiles, visibleRows, paddingBottom)}px`;
       if (row.style.maxHeight !== maxHeight) {
         const scrollTop = row.scrollTop;
         row.style.maxHeight = maxHeight;
@@ -127,19 +118,9 @@ export default function CardRow({
     return () => resize.disconnect();
   }, [children, columnCount, grid, hasAdd, visibleRows]);
 
-  const gridRows = [];
-  if (grid) {
-    const cards = Children.toArray(children);
-    let index = 0;
-    if (hasAdd) {
-      gridRows.push(cards.slice(0, columnCount - 1));
-      index = columnCount - 1;
-    }
-    while (index < cards.length) {
-      gridRows.push(cards.slice(index, index + columnCount));
-      index += columnCount;
-    }
-  }
+  const gridRows = grid
+    ? buildGridRows(Children.toArray(children), columnCount, hasAdd)
+    : [];
 
   /**
    * Scroll one page of whole cards: right (`dir` 1) or left (`dir` -1). The target card is
@@ -179,13 +160,8 @@ export default function CardRow({
       </header>
       <div className={`editor-row__items${grid ? " editor-row__items--grid" : ""}`} ref={rowRef}>
         {grid
-          ? gridRows.map((cards, index) => {
-              const addTileRow = hasAdd && index === 0;
-              const columns = addTileRow
-                ? columnCount === 1
-                  ? "100px"
-                  : `100px repeat(${columnCount - 1}, minmax(0, 1fr))`
-                : `repeat(${columnCount}, minmax(0, 1fr))`;
+          ? gridRows.map(({ cards, hasAdd: addTileRow }, index) => {
+              const columns = getGridTemplateColumns(columnCount, addTileRow);
               return (
                 <div className="editor-row__grid-line" style={{ gridTemplateColumns: columns }} key={index}>
                   {addTileRow && (
