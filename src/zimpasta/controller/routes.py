@@ -293,8 +293,12 @@ def chat_clear(app: App) -> dict:
 
 @router.get("/chat/get-history")
 def get_history_data(app: App) -> dict:
-    doc = app.prevDoc
+    doc = app.get_prev_doc()
     app.set_history_data_to_empty()
+
+    if doc is None:
+        return {}
+
     return doc
 
 

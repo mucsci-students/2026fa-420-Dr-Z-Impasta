@@ -88,6 +88,7 @@ class AppController:
             store_factory=account_store_factory,
             unavailable_reason=accounts_unavailable_reason,
         )
+        self.prevDoc = prevDoc
 
     # -------------------------------------------------------------------- state
 
@@ -206,6 +207,9 @@ class AppController:
         """Sets self.prevDoc to None so that data that was already
         retrieved isn't seen as new data"""
         self.prevDoc = {}
+
+    def get_prev_doc(self):
+        return self.prevDoc
 
     # --------------------------------------------------------------- generation
 

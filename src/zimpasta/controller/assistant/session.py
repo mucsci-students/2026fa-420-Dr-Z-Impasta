@@ -184,9 +184,6 @@ class Assistant:
                 "message_too_long",
             )
 
-        prevDoc = self._app.configuration()["document"]
-        self._app.push_history_data(prevDoc)
-
         client = self._connect()
         self._begin()
         try:

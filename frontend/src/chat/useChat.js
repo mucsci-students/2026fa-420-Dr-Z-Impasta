@@ -63,7 +63,7 @@ export function useChat() {
     }
     await load();
     refresh().catch(() => {});
-	  await getHistData();
+    await getHistData();
     setOutgoing(null);
     setWorking(false);
     return ok;

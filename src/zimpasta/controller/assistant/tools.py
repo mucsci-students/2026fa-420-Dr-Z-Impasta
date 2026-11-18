@@ -27,6 +27,7 @@ to finish saving). Only ``done`` means the action happened.
 import json
 import logging
 from collections.abc import Callable, Iterable, Mapping
+from copy import deepcopy
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, Literal, Self
 
@@ -449,7 +450,14 @@ def describe_fields(app: "AppController", args: DescribeArguments) -> ToolResult
 
 
 def edit_configuration(app: "AppController", args: EditArguments) -> ToolResult:
-    return _apply_changes(app, args.changes, confirmed=False)
+    prevDoc = deepcopy(app.configuration()["document"])
+
+    changes = _apply_changes(app, args.changes, confirmed=False)
+
+    if changes.status == "done":
+        app.push_history_data(prevDoc)
+
+    return changes
 
 
 class _Rejected(Exception):
@@ -514,6 +522,7 @@ def _apply_changes(app: "AppController", changes: list[Change], *, confirmed: bo
         error["message"] = message
         error["change"] = rejected.number
         return ToolResult("failed", message, error=error)
+
     return ToolResult.done(
         _sentence(done),
         applied=True,
