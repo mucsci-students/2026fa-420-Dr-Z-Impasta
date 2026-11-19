@@ -53,6 +53,19 @@ const recordRedoStep = (content) => {
   HISTORY.pushToCurr(ORIGINATOR.storeFile());
 };
 
+export const isLoggedIn = async() => {
+	try {
+		const user_status = await api.account.status();
+		if(user_status["user"] == null)
+			return false;
+		else
+			return true;
+	}
+	catch(error) {
+		console.log(error);
+		return false;
+	}
+};
 
 // TODO: fix error handling
 export const authenticateUser = async(username, password) => {

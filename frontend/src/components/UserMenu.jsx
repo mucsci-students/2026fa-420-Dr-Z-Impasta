@@ -6,7 +6,7 @@ import ErrorMessage from "./ErrorMessage.jsx";
 import { api } from "../api/client.js";
 import { useAppState } from "../state/appStateContext.js";
 import { useAction } from "../state/useAction.js";
-
+import { isLoggedIn } from "../state/eventHandlers.js";
 /**
  * The account menu in the shared header. Outside clicks close the menu, while sign-in
  * opens in its own dialog.
@@ -70,7 +70,7 @@ export default function UserMenu() {
                         ))}
                     </div>
 
-                    <Button onClick={() => { setAddStateOpen(true) }}>
+                    <Button onClick={async () => { await checkLoggedIn(setSignInOpen, setAddStateOpen) }}>
                         Add State
                     </Button>
 
@@ -104,7 +104,6 @@ export default function UserMenu() {
                                 setSignInOpen(true);
                             }}
                         >
-                            {/* AI_CONTEXT: SIGN_IN_DIALOG_TRIGGER — This opens SignInDialog below. */}
                             Sign in
                         </Button>
                     )}
@@ -138,9 +137,19 @@ export default function UserMenu() {
 }
 
 const createStateButton = (data) => {
+	console.log(data);
 	return (
 		<Button>
 		getattr(data, "name", "State")
 		</Button>
 	);
 };
+
+const checkLoggedIn = async (setSignInOpen, setAddStateOpen) => {
+	const user_status = await isLoggedIn();
+	if(!user_status) {
+		setSignInOpen(true);
+	}
+	else 
+		setAddStateOpen(true);
+}
