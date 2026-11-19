@@ -59,11 +59,21 @@ export const authenticateUser = async(username, password) => {
 		await api.account.logIn({username, password});
 	}
 	catch(error) {
-		console.log(error);
-		return false;
+		return error;
 	}
 	return true;
 
+};
+
+// TODO: fix error handling
+export const createUser = async(username, password) => {
+	try {
+		await api.account.signUp({username, password});
+	}
+	catch(error) {
+		return error;
+	}
+	return true;
 };
 
 // TODO: fix error handling

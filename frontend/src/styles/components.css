@@ -440,10 +440,17 @@
   overflow-y: auto;
 }
 
+.sign-in-dialog .dialog__body,
+.sign-in-dialog .sign-in-form {
+  min-width: 0;
+  max-width: 100%;
+}
+
 .sign-in-form {
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
+  width: 100%;
 }
 
 .sign-in-form input {
@@ -452,6 +459,46 @@
 
 .sign-in-form__message {
   color: var(--ink-2);
+  min-width: 0;
+  width: 100%;
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.sign-up-requirements__title {
+  margin-bottom: var(--space-2);
+  font-weight: 600;
+}
+
+.sign-up-requirements__list {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.sign-up-requirements__item {
+  display: flex;
+  gap: var(--space-2);
+  min-width: 0;
+  max-width: 100%;
+  color: var(--ink-2);
+}
+
+.sign-up-requirements__item > span:first-child {
+  flex: 0 0 1em;
+}
+
+.sign-up-requirements__text {
+  min-width: 0;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.sign-up-requirements__item.is-met {
+  color: var(--success);
 }
 
 .dialog::backdrop {
