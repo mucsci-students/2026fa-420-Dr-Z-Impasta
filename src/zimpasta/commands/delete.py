@@ -18,14 +18,17 @@ re-runs cross-reference validation on every assignment, so removing the entry fi
 would fail against references that are about to be cleaned up anyway.
 """
 
+from dataclasses import dataclass
+
 from pydantic import ValidationError
 
 from zimpasta.command import CommandSpec, Invocation, Option, Positional
+from zimpasta.commands.common import KINDS
+from zimpasta.commands.common import NO_CONFIG_TO_EDIT as NO_CONFIG
 from zimpasta.console import Console
 from zimpasta.prompts import ask_menu, ask_yes_no
 from zimpasta.session import Session
 
-NO_CONFIG = "No configuration loaded. Load one first."
 NOTHING_TO_DELETE = "There is nothing of that type to delete."
 NOT_FOUND = "There is no {kind} named {name}."
 CANCELLED = "Cancelled. Nothing was deleted."
@@ -39,19 +42,48 @@ SECTION_LABEL = "{name} (section {number} of {count})"
 
 CANCEL = "Cancel"
 
-KINDS: tuple[str, ...] = ("course", "room", "lab", "faculty")
-"""Categories, in the order the placeholder grammar and ``help`` list them."""
+
+@dataclass(frozen=True)
+class _Reference:
+    """A field of every entry in ``where`` that may name an entry being deleted."""
+
+    where: str
+    field: str
+    empty_means_none: bool = False
+    """An empty list is rejected here, and ``None`` means "derive from preferences"."""
+
+
+@dataclass(frozen=True)
+class _Kind:
+    """Where one kind of entry lives, what names it, and what refers to it."""
+
+    items: str
+    name: str
+    references: tuple[_Reference, ...]
+    """Stripped in this order, only when the last entry of that name goes."""
+
+
+_KINDS = {
+    "room": _Kind(
+        "rooms", "name", (_Reference("courses", "room"), _Reference("faculty", "room_preferences"))
+    ),
+    "lab": _Kind(
+        "labs", "name", (_Reference("courses", "lab"), _Reference("faculty", "lab_preferences"))
+    ),
+    # Conflicts and preferences name a course, so they outlive its other sections.
+    "course": _Kind(
+        "courses",
+        "course_id",
+        (_Reference("courses", "conflicts"), _Reference("faculty", "course_preferences")),
+    ),
+    "faculty": _Kind("faculty", "name", (_Reference("courses", "faculty", empty_means_none=True),)),
+}
 
 
 def _names(scheduler, kind: str) -> list[str]:
     """Names of every entry of ``kind``, in display order. Course ids may repeat."""
-    if kind == "room":
-        return [room.name for room in scheduler.rooms]
-    if kind == "lab":
-        return [lab.name for lab in scheduler.labs]
-    if kind == "course":
-        return [course.course_id for course in scheduler.courses]
-    return [faculty.name for faculty in scheduler.faculty]
+    spec = _KINDS[kind]
+    return [getattr(entry, spec.name) for entry in getattr(scheduler, spec.items)]
 
 
 def _label(names: list[str], index: int) -> str:
@@ -84,65 +116,30 @@ def _last_of_its_name(names: list[str], index: int) -> bool:
     )
 
 
-def _remove_room(scheduler, index: int) -> None:
-    name = scheduler.rooms[index].name
-    if _last_of_its_name(_names(scheduler, "room"), index):
-        for course in scheduler.courses:
-            course.room = [room for room in course.room if room != name]
-        for faculty in scheduler.faculty:
-            faculty.room_preferences = {
-                room: rank for room, rank in faculty.room_preferences.items() if room != name
-            }
-    scheduler.rooms = [room for position, room in enumerate(scheduler.rooms) if position != index]
+def _without(value, name: str, reference: _Reference):
+    """``value`` (a list of names, or a dict keyed by name) with ``name`` taken out."""
+    if isinstance(value, dict):
+        return {key: rank for key, rank in value.items() if key != name}
+    kept = [other for other in value if other != name]
+    return (kept or None) if reference.empty_means_none else kept
 
 
-def _remove_lab(scheduler, index: int) -> None:
-    name = scheduler.labs[index].name
-    if _last_of_its_name(_names(scheduler, "lab"), index):
-        for course in scheduler.courses:
-            course.lab = [lab for lab in course.lab if lab != name]
-        for faculty in scheduler.faculty:
-            faculty.lab_preferences = {
-                lab: rank for lab, rank in faculty.lab_preferences.items() if lab != name
-            }
-    scheduler.labs = [lab for position, lab in enumerate(scheduler.labs) if position != index]
-
-
-def _remove_course(scheduler, index: int) -> None:
-    name = scheduler.courses[index].course_id
-    if _last_of_its_name(_names(scheduler, "course"), index):
-        # Conflicts and preferences name a course, so they outlive its other sections.
-        for course in scheduler.courses:
-            course.conflicts = [conflict for conflict in course.conflicts if conflict != name]
-        for faculty in scheduler.faculty:
-            faculty.course_preferences = {
-                course: rank
-                for course, rank in faculty.course_preferences.items()
-                if course != name
-            }
-    scheduler.courses = [
-        course for position, course in enumerate(scheduler.courses) if position != index
-    ]
-
-
-def _remove_faculty(scheduler, index: int) -> None:
-    name = scheduler.faculty[index].name
-    if _last_of_its_name(_names(scheduler, "faculty"), index):
-        for course in scheduler.courses:
-            if course.faculty is not None:
-                # An empty candidate list is rejected; None means "derive from preferences".
-                course.faculty = [member for member in course.faculty if member != name] or None
-    scheduler.faculty = [
-        faculty for position, faculty in enumerate(scheduler.faculty) if position != index
-    ]
-
-
-_REMOVERS = {
-    "room": _remove_room,
-    "lab": _remove_lab,
-    "course": _remove_course,
-    "faculty": _remove_faculty,
-}
+def _remove(scheduler, kind: str, index: int) -> None:
+    """Remove entry ``index`` of ``kind``, first stripping every reference to its name."""
+    spec = _KINDS[kind]
+    name = getattr(getattr(scheduler, spec.items)[index], spec.name)
+    if _last_of_its_name(_names(scheduler, kind), index):
+        for reference in spec.references:
+            for holder in getattr(scheduler, reference.where):
+                value = getattr(holder, reference.field)
+                if value is not None:  # None (derive from preferences) names no one
+                    setattr(holder, reference.field, _without(value, name, reference))
+    entries = getattr(scheduler, spec.items)
+    setattr(
+        scheduler,
+        spec.items,
+        [entry for position, entry in enumerate(entries) if position != index],
+    )
 
 
 def build(console: Console, session: Session, invocation: Invocation) -> Invocation | None:
@@ -204,7 +201,7 @@ def delete(console: Console, session: Session, invocation: Invocation) -> None:
 
     try:
         with config.edit_mode() as working:
-            _REMOVERS[kind](working.config, resolved)
+            _remove(working.config, kind, resolved)
     except ValidationError as error:
         console.say(WOULD_LEAVE_INVALID.format(name=label, error=error))
         return

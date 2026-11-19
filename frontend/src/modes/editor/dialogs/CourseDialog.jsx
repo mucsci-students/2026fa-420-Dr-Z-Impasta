@@ -12,6 +12,7 @@ import TagInput from "../TagInput.jsx";
 import { MODALITY_NAMES } from "../labels.js";
 import EditDialog from "./EditDialog.jsx";
 import { useDraft } from "./useDraft.js";
+import { toNumber } from "../forms.js";
 
 const NEW_COURSE = {
   course_id: "",
@@ -27,9 +28,6 @@ const NEW_COURSE = {
   required_lab_features: [],
   reserve_room_during_lab: true,
 };
-
-/** Text from a number box → a number, or null when empty. */
-const toNumber = (text) => (text === "" ? null : Number(text));
 
 /**
  * Add or edit a course section. Edits a draft; nothing changes until Save succeeds.

@@ -4,10 +4,9 @@
 
 import { useId, useRef } from "react";
 import Button from "../../components/Button.jsx";
-import { DAY_NAMES } from "./labels.js";
+import { DAY_NAMES, WEEKDAYS } from "./labels.js";
 import { hourAfter } from "./times.js";
-
-const WEEKDAYS = ["MON", "TUE", "WED", "THU", "FRI"];
+import FieldError from "../../components/FieldError.jsx";
 
 /** A day's first range: the same working day ResourceDialog starts rooms with. */
 const FIRST_RANGE = { start: "08:00", end: "17:00" };
@@ -120,12 +119,7 @@ export default function AvailabilityEditor({ value, onChange, days = WEEKDAYS, l
           </div>
         );
       })}
-      {weekError && (
-        <p className="field__error">
-          <span aria-hidden="true">⚠ </span>
-          {weekError}
-        </p>
-      )}
+      <FieldError error={weekError} />
     </fieldset>
   );
 }

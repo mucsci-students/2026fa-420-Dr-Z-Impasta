@@ -65,6 +65,18 @@
   font-size: 12px;
 }
 
+.state-buttons {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    width: 100%;
+    place-items: center;
+}
+.state-buttons button {
+	width: 100%;
+	padding: 6px  
+
+}
 /* ---------------------------------------------------------------- spinner */
 
 .spinner {

@@ -70,6 +70,7 @@ from zimpasta.model.generate import (
     generation_steps,
 )
 from zimpasta.model.issues import Issue, issue, issues_from_error
+from zimpasta.model.wording import plural
 
 
 class JobState(StrEnum):
@@ -415,7 +416,7 @@ class GenerationJob:
         match outcome:
             case GenerationSuccess(result=result):
                 count = result.count
-                message = f"{count} {'schedule' if count == 1 else 'schedules'} generated."
+                message = f"{plural(count, 'schedule')} generated."
                 if not result.reached_limit:
                     message += f" Stopped early: {describe_reason(result.completion_reason)}."
                 status = replace(

@@ -149,8 +149,10 @@ Design patterns:
 - **Adapter:** `OpenAIClient` adapts the OpenAI SDK to `AIClient`, so tests use a scripted
   fake.
 
-The Model gained one method, `ConfigWorkspace.transaction()`, which undoes a group of
-edits if any of them fails.
+The tools reach the configuration only through `AppController`, and they edit with the
+same methods the GUI's routes use (`add_item`, `replace_item`, `delete_item`, ...). The
+Model gained one method, `ConfigWorkspace.transaction()`, which undoes a group of edits if
+any of them fails; the tools use it as `AppController.transaction()`.
 
 ## Tests
 

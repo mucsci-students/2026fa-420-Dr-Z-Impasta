@@ -1,5 +1,6 @@
 import { cloneElement, useId } from "react";
 import HelpTip from "./HelpTip.jsx";
+import FieldError from "./FieldError.jsx";
 
 /**
  * A labelled form control with optional help and an error underneath:
@@ -31,12 +32,7 @@ export default function Field({ label, required = false, help, error, children, 
         {help && <HelpTip text={help} />}
       </label>
       {control}
-      {error && (
-        <p className="field__error" id={errorId}>
-          <span aria-hidden="true">⚠ </span>
-          {error}
-        </p>
-      )}
+      <FieldError error={error} id={errorId} />
     </div>
   );
 }

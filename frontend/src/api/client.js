@@ -85,9 +85,6 @@ const patch = (path, body) => request("PATCH", path, body);
 const del = (path) => request("DELETE", path);
 const query = (params) => `?${new URLSearchParams(params)}`;
 
-/** Areas that hold lists of items: "rooms", "labs", "courses", "faculty", "patterns". */
-export const AREAS = ["rooms", "labs", "courses", "faculty", "patterns"];
-
 export const api = {
   state: () => get("/state"),
 

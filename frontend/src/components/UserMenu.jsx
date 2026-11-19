@@ -118,25 +118,29 @@ export default function UserMenu() {
             <SignInDialog open={signInOpen} onClose={() => setSignInOpen(false)} mode="signin" />
             <SignInDialog open={signUpOpen} onClose={() => setSignUpOpen(false)} mode="signup" />
 
-            <AddStateDialog
-                open={addStateOpen}
-                onClose={() => setAddStateOpen(false)}
-                onFormSubmit={(info) => {
-                    setFormInfo(info);
-                    console.log(formInfo);
-                    const newButton = createStateButton(info);
-                    setButtons(prevButtons => [...prevButtons, newButton]);
-                }}
-            />
+	    <AddStateDialog 
+	    open={addStateOpen} 
+	    onClose={() => setAddStateOpen(false)} 
+	    onFormSubmit={(info) => {
+
+		    if(info.length != 0) {
+			    setFormInfo(info);
+			    const newButton = createStateButton(info);
+			    setButtons(prevButtons => [...prevButtons, newButton]);
+		    }
+		    else {
+			    console.log(formInfo);
+		    }
+	    }}
+	    />
         </div>
     );
 }
 
 const createStateButton = (data) => {
-    console.log(data);
-    return (
-        <Button>
-            getattr(data, "name", "State")
-        </Button>
-    );
+	return (
+		<Button>
+		getattr(data, "name", "State")
+		</Button>
+	);
 };

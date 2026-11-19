@@ -92,21 +92,10 @@ class Invocation:
         ]
         return tuple(names)
 
-    """"""
-
-    def check_for_choices(self, pos: Positional) -> tuple:
-        """Checks if a Positional has a choices attribute and returns the choices tuple, if so
-
-        If not, an empty tuple if returned
-        """
-        if hasattr(pos, "choices"):
-            return pos.choices
-        return ()
-
     def missing_with_choices(self) -> tuple[str, ...]:
         """Names of required positionals, their choices, and options that were not given."""
         names = [
-            (p.name + ": " + str(", ".join(self.check_for_choices(p))))
+            p.name + ": " + ", ".join(p.choices)
             for p in self.spec.positionals
             if p.required and p.name not in self.positionals
         ]
@@ -114,8 +103,6 @@ class Invocation:
             f"--{o.name}" for o in self.spec.options if o.required and o.name not in self.options
         ]
         return tuple(names)
-
-    """"""
 
     @property
     def complete(self) -> bool:
