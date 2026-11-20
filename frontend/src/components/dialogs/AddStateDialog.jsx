@@ -48,7 +48,7 @@ export default function AddStateDialog({open, onClose, onFormSubmit}) {
 			}}
 			>
 				<Field label="Title" required>
-					<input type="text" name="title" />
+					<input type="text" name="title" maxLength={32} />
 				</Field>
 			
 				{/*TODO: add error handling*/}

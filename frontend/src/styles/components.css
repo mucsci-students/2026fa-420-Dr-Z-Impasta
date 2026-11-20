@@ -37,6 +37,16 @@
   background: var(--accent-strong);
 }
 
+.btn--success {
+  background: var(--success);
+  border-color: var(--success);
+  color: var(--page);
+}
+
+.btn--success:hover:not(:disabled) {
+  filter: brightness(0.9);
+}
+
 .btn--danger {
   color: var(--danger);
   border-color: var(--danger-line);
@@ -68,16 +78,31 @@
 .state-buttons {
     display: flex;
     flex-direction: column;
-    align-items: flex-start;
-    width: 100%;
-    place-items: center;
+    align-items: stretch;
+    width: max-content;
+    max-width: 100%;
 }
 .state-button {
-	display: flex;
-	flex-direction: row;
-	width: 100%;
-	padding: 6px  
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  max-width: 100%;
+  padding: 6px;
+  box-sizing: border-box;
+}
 
+.state-button__name {
+  min-width: 0;
+  max-width: 32ch;
+  padding: 0 6px;
+  overflow-wrap: anywhere;
+}
+
+.state-button--active {
+  border-radius: var(--radius);
+  box-shadow: 0 7px 14px -6px var(--accent);
 }
 /* ---------------------------------------------------------------- spinner */
 
@@ -411,13 +436,30 @@
   top: calc(100% + 8px);
   right: 0;
   z-index: 20;
-  width: 20rem;
+  width: max-content;
+  min-width: 20rem;
+  max-width: min(36rem, calc(100vw - 32px));
   padding: 1rem;
   box-sizing: border-box;
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-float);
+}
+
+.user-menu__popup .banner {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.user-menu__popup .banner__text {
+  flex: 1 1 0%;
+  min-width: 0;
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .user-menu__avatar {

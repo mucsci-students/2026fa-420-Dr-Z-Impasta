@@ -2,8 +2,9 @@ import { useEffect, useRef, useState } from "react";
 import SignInDialog from "./dialogs/SignInDialog.jsx";
 import AddStateDialog from "./dialogs/AddStateDialog";
 import Button from "./Button.jsx";
-import EditButton from "../modes/editor/cards/EditButton.jsx";
+import Dialog from "./dialogs/Dialog.jsx";
 import ErrorMessage from "./ErrorMessage.jsx";
+import Field from "./Field.jsx";
 import { api } from "../api/client.js";
 import { useAppState } from "../state/appStateContext.js";
 import { useAction } from "../state/useAction.js";
@@ -25,9 +26,66 @@ export default function UserMenu() {
     const [signInOpen, setSignInOpen] = useState(false);
     const [signUpOpen, setSignUpOpen] = useState(false);
     const [addStateOpen, setAddStateOpen] = useState(false);
-    const [buttons, setButtons] = useState([]);
-    const [editState, setEditState] = useState(false);
+    const [savedStates, setSavedStates] = useState([]);
+    const [confirmingDeleteId, setConfirmingDeleteId] = useState(null);
+    const [renamingState, setRenamingState] = useState(null);
+    const [newStateName, setNewStateName] = useState("");
     const menuRef = useRef(null);
+    const deleteState = useAction(async (id) => {
+        const { states } = await api.states.remove(id);
+        setSavedStates(states);
+    });
+    const handleDeleteClick = async (id) => {
+        if (confirmingDeleteId !== id) {
+            setConfirmingDeleteId(id);
+            return;
+        }
+
+        const result = await deleteState.run(id);
+        if (result.ok) setConfirmingDeleteId(null);
+    };
+    const renameState = useAction(async (id, newName) => {
+        const { states } = await api.states.rename(id, newName);
+        setSavedStates(states);
+    });
+    const loadStates = useAction(async () => {
+        const { states } = await api.states.list();
+        setSavedStates(states);
+    });
+    const normalizedStateName = newStateName.trim().replace(/\s+/g, " ");
+    const stateNameTaken = savedStates.some((savedState) =>
+        savedState.id !== renamingState?.id && savedState.name === normalizedStateName
+    );
+    const stateNameValid =
+        normalizedStateName.length > 0 &&
+        normalizedStateName.length <= 32 &&
+        !stateNameTaken;
+    const stateNameError = normalizedStateName.length === 0
+        ? (newStateName.length > 0 ? "A state name is required." : null)
+        : normalizedStateName.length > 32
+            ? "State names must be 32 characters or fewer."
+            : stateNameTaken
+                ? "You already have a state with this name."
+                : null;
+
+    const openRenameDialog = (savedState) => {
+        renameState.clearError();
+        setRenamingState(savedState);
+        setNewStateName(savedState.name);
+    };
+
+    const closeRenameDialog = () => {
+        setRenamingState(null);
+        renameState.clearError();
+    };
+
+    const confirmRename = async (event) => {
+        event.preventDefault();
+        if (!renamingState || !stateNameValid) return;
+
+        const result = await renameState.run(renamingState.id, normalizedStateName);
+        if (result.ok) setRenamingState(null);
+    };
 
     useEffect(() => {
         if (!open) return;
@@ -65,8 +123,27 @@ export default function UserMenu() {
                     <h3 className="card_title">{state?.account?.user?.username ?? "Guest User"}</h3>
 
                     <div className="state-buttons">
-		    	{buttons}
-		    </div>
+                        {savedStates.map((savedState) => (
+                            <div
+                                className={`state-button${savedState.current ? " state-button--active" : ""}`}
+                                key={savedState.id}
+                            >
+                                <span className="state-button__name">
+                                    {savedState.name}
+                                </span>
+                                <Button onClick={() => openRenameDialog(savedState)}>
+                                    Edit
+                                </Button>
+                                <Button
+                                    variant="danger"
+                                    busy={deleteState.busy}
+                                    onClick={() => handleDeleteClick(savedState.id)}
+                                >
+                                    {confirmingDeleteId === savedState.id ? "Confirm" : "Delete"}
+                                </Button>
+                            </div>
+                        ))}
+                    </div>
 
                     <Button onClick={async () => { await checkLoggedIn(setSignInOpen, setAddStateOpen) }}>
                         Add State
@@ -110,81 +187,102 @@ export default function UserMenu() {
                         title="Couldn't sign out"
                         onDismiss={signOut.clearError}
                     />
+                    <ErrorMessage
+                        error={deleteState.error}
+                        title="Couldn't delete state"
+                        onDismiss={deleteState.clearError}
+                    />
+                    <ErrorMessage
+                        error={loadStates.error}
+                        title="Couldn't load states"
+                        onDismiss={loadStates.clearError}
+                    />
                 </div>
             )}
-            <SignInDialog 
-		    open={signInOpen} 
-		    onClose={() => setSignInOpen(false)} 
-		    mode="signin"
-		    addStates={addStateButtons}
-		    setButtons={setButtons}
-	    />
+            <SignInDialog
+                open={signInOpen}
+                onClose={() => setSignInOpen(false)}
+                mode="signin"
+                addStates={loadStates.run}
+                setButtons={setSavedStates}
+            />
 
-            <SignInDialog 
-		    open={signUpOpen} 
-		    onClose={() => setSignUpOpen(false)} 
-		    mode="signup" 
-		    addStates={addStateButtons}
-		    setButtons={setButtons}
-	    />
+            <SignInDialog
+                open={signUpOpen}
+                onClose={() => setSignUpOpen(false)}
+                mode="signup"
+                addStates={loadStates.run}
+                setButtons={setSavedStates}
+            />
 
-	<AddStateDialog
-	    open={addStateOpen}
-	    onClose={() => setAddStateOpen(false)}
-	    onFormSubmit={(title) => {
-		    const newButton = createStateButton(title);
+            <AddStateDialog
+                open={addStateOpen}
+                onClose={() => setAddStateOpen(false)}
+                onFormSubmit={async () => {
+                    await loadStates.run();
+                    setAddStateOpen(false);
+                }}
+            />
 
-		    setButtons(prevButtons => [...prevButtons, newButton]);
-		    setAddStateOpen(false);
-	    }}
-	/>
+            <Dialog
+                open={Boolean(renamingState)}
+                title="Rename state"
+                onClose={closeRenameDialog}
+                className="rename-state-dialog"
+                width="min(38ch, calc(100vw - 32px))"
+                actions={
+                    <>
+                        <Button onClick={closeRenameDialog}>
+                            Cancel
+                        </Button>
+                        <Button
+                            type="submit"
+                            form="rename-state-form"
+                            variant="success"
+                            busy={renameState.busy}
+                            disabled={!stateNameValid}
+                        >
+                            Confirm
+                        </Button>
+                    </>
+                }
+            >
+                <form id="rename-state-form" onSubmit={confirmRename}>
+                    <Field label="New state name" required error={stateNameError}>
+                        <input
+                            type="text"
+                            name="name"
+                            autoComplete="off"
+                            data-autofocus
+                            maxLength={32}
+                            value={newStateName}
+                            onChange={(event) => setNewStateName(event.target.value)}
+                        />
+                    </Field>
+                </form>
+                <ErrorMessage
+                    error={renameState.error}
+                    title="Couldn't rename state"
+                    onDismiss={renameState.clearError}
+                />
+            </Dialog>
 
         </div>
     );
 };
 
-const createStateButton = (title) => {
-	return (
-		<div className="state-button">
-			<Button>
-				{title}
-			</Button>
-
-			<EditButton 
-			label={"delete"} 
-			onEdit={() => setEditState(true)} 
-			/>
-		</div>
-	);
-};
-
 const checkLoggedIn = async (setSignInOpen, setAddStateOpen) => {
-	try {
-		const user_status = await isLoggedIn();
+    try {
+        const user_status = await isLoggedIn();
 
-		if(!user_status) {
-			setSignInOpen(true);
-		}
+        if (!user_status) {
+            setSignInOpen(true);
+        }
 
-		else 
-			setAddStateOpen(true);
-	}
-	catch(error) {
-		console.log(error);
-	}
-};
-
-export const addStateButtons = async (setButtons) => {
-	try {
-		const states = await api.states.list();
-		const statesArr = states.states;
-		for(const s of statesArr) {
-			const title = s.name;
-			const button = createStateButton(title);
-			setButtons(prevButtons => [...prevButtons, button]);
-		}
-	}
-	catch(error) {
-		console.log(error);
-	}
+        else
+            setAddStateOpen(true);
+    }
+    catch (error) {
+        console.log(error);
+    }
 };
