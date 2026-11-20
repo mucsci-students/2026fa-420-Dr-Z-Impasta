@@ -72,7 +72,9 @@
     width: 100%;
     place-items: center;
 }
-.state-buttons button {
+.state-button {
+	display: flex;
+	flex-direction: row;
 	width: 100%;
 	padding: 6px  
 

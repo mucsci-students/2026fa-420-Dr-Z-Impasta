@@ -53,10 +53,12 @@ const recordRedoStep = (content) => {
   HISTORY.pushToCurr(ORIGINATOR.storeFile());
 };
 
+// TODO: fix error handling
 export const isLoggedIn = async() => {
 	try {
 		const user_status = await api.account.status();
-		if(user_status["user"] == null)
+
+		if(user_status.user == null)
 			return false;
 		else
 			return true;

@@ -8,7 +8,7 @@ import CheckboxList from "../../modes/editor/CheckboxList.jsx";
 
 export default function AddStateDialog({open, onClose, onFormSubmit}) {
 	const [copy, setCopy] = useState(false);
-  	const [setError] = useState(null);  
+  	const [error, setError] = useState(null);  
 	
 	return (
 		<Dialog
@@ -32,11 +32,17 @@ export default function AddStateDialog({open, onClose, onFormSubmit}) {
 
 				const data = new FormData(event.currentTarget);
 				const title = data.get("title");
-				const res = await createState(title, copy, setError);
-				setCopy(false);
-				
-				if(res == true) {
-					onFormSubmit({title, res});
+				try {
+					const res = await createState(title, copy, setError);
+					console.log(res);
+					setCopy(false);
+					
+					if(res == true) {
+						onFormSubmit(title);
+					}
+				}
+				catch(error) {
+					console.log(error);
 				}
 			
 			}}

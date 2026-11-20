@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import SignInDialog from "./dialogs/SignInDialog.jsx";
 import AddStateDialog from "./dialogs/AddStateDialog";
 import Button from "./Button.jsx";
+import EditButton from "../modes/editor/cards/EditButton.jsx";
 import ErrorMessage from "./ErrorMessage.jsx";
 import { api } from "../api/client.js";
 import { useAppState } from "../state/appStateContext.js";
@@ -24,8 +25,8 @@ export default function UserMenu() {
     const [signInOpen, setSignInOpen] = useState(false);
     const [signUpOpen, setSignUpOpen] = useState(false);
     const [addStateOpen, setAddStateOpen] = useState(false);
-    const [formInfo, setFormInfo] = useState({});
     const [buttons, setButtons] = useState([]);
+    const [editState, setEditState] = useState(false);
     const menuRef = useRef(null);
 
     useEffect(() => {
@@ -61,14 +62,11 @@ export default function UserMenu() {
 
             {open && (
                 <div className="user-menu__popup">
-                    <p>{state?.account?.user?.username ?? "Guest User"}</p>
+                    <h3 className="card_title">{state?.account?.user?.username ?? "Guest User"}</h3>
 
                     <div className="state-buttons">
-                        {buttons.map(() => (
-                            <Button>"State"</Button>
-
-                        ))}
-                    </div>
+		    	{buttons}
+		    </div>
 
                     <Button onClick={async () => { await checkLoggedIn(setSignInOpen, setAddStateOpen) }}>
                         Add State
@@ -114,42 +112,79 @@ export default function UserMenu() {
                     />
                 </div>
             )}
-            <SignInDialog open={signInOpen} onClose={() => setSignInOpen(false)} mode="signin" />
-            <SignInDialog open={signUpOpen} onClose={() => setSignUpOpen(false)} mode="signup" />
-
-	    <AddStateDialog 
-	    open={addStateOpen} 
-	    onClose={() => setAddStateOpen(false)} 
-	    onFormSubmit={(info) => {
-
-		    if(info.length != 0) {
-			    setFormInfo(info);
-			    const newButton = createStateButton(info);
-			    setButtons(prevButtons => [...prevButtons, newButton]);
-		    }
-		    else {
-			    console.log(formInfo);
-		    }
-	    }}
+            <SignInDialog 
+		    open={signInOpen} 
+		    onClose={() => setSignInOpen(false)} 
+		    mode="signin"
+		    addStates={addStateButtons}
+		    setButtons={setButtons}
 	    />
+
+            <SignInDialog 
+		    open={signUpOpen} 
+		    onClose={() => setSignUpOpen(false)} 
+		    mode="signup" 
+		    addStates={addStateButtons}
+		    setButtons={setButtons}
+	    />
+
+	<AddStateDialog
+	    open={addStateOpen}
+	    onClose={() => setAddStateOpen(false)}
+	    onFormSubmit={(title) => {
+		    const newButton = createStateButton(title);
+
+		    setButtons(prevButtons => [...prevButtons, newButton]);
+		    setAddStateOpen(false);
+	    }}
+	/>
+
         </div>
     );
-}
+};
 
-const createStateButton = (data) => {
-	console.log(data);
+const createStateButton = (title) => {
 	return (
-		<Button>
-		getattr(data, "name", "State")
-		</Button>
+		<div className="state-button">
+			<Button>
+				{title}
+			</Button>
+
+			<EditButton 
+			label={"delete"} 
+			onEdit={() => setEditState(true)} 
+			/>
+		</div>
 	);
 };
 
 const checkLoggedIn = async (setSignInOpen, setAddStateOpen) => {
-	const user_status = await isLoggedIn();
-	if(!user_status) {
-		setSignInOpen(true);
+	try {
+		const user_status = await isLoggedIn();
+
+		if(!user_status) {
+			setSignInOpen(true);
+		}
+
+		else 
+			setAddStateOpen(true);
 	}
-	else 
-		setAddStateOpen(true);
-}
+	catch(error) {
+		console.log(error);
+	}
+};
+
+export const addStateButtons = async (setButtons) => {
+	try {
+		const states = await api.states.list();
+		const statesArr = states.states;
+		for(const s of statesArr) {
+			const title = s.name;
+			const button = createStateButton(title);
+			setButtons(prevButtons => [...prevButtons, button]);
+		}
+	}
+	catch(error) {
+		console.log(error);
+	}
+};

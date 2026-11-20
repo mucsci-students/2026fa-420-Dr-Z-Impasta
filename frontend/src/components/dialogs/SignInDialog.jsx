@@ -8,7 +8,7 @@ import { authenticateUser, createUser } from "../../state/eventHandlers.js";
  * Collects a username and password in a modal. The form submit handler is the integration
  * point for backend authentication; each input's `name` is its FormData key.
  */
-export default function SignInDialog({ open, onClose, mode = "signin" }) {
+export default function SignInDialog({ open, onClose, mode = "signin", addStates, setButtons }) {
   const [message, setMessage] = useState("");
   const [credentialsValid, setCredentialsValid] = useState(true);
   const [usernameValue, setUsernameValue] = useState("");
@@ -82,6 +82,7 @@ export default function SignInDialog({ open, onClose, mode = "signin" }) {
             }
           } else {
             close();
+	    addStates(setButtons);
           }
         }}
       >
