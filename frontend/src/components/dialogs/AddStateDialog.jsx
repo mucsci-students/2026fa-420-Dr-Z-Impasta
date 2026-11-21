@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { createState } from "../../state/eventHandlers.js";
+import { addStateAction } from "../../state/eventHandlers.js";
 import Button from "../Button.jsx";
 import Field from "../Field.jsx";
 import Dialog from "./Dialog.jsx";
@@ -10,6 +10,7 @@ export default function AddStateDialog({open, onClose, onFormSubmit}) {
 	const [copy, setCopy] = useState(false);
   	const [error, setError] = useState(null);  
 	const [loading, setLoading] = useState(false);
+
 
 	const close = () => {
 		onClose?.();
@@ -40,21 +41,19 @@ export default function AddStateDialog({open, onClose, onFormSubmit}) {
 			onSubmit={async (event) => {
         			// Prevent page reload
         			event.preventDefault();
-
+				
 				const data = new FormData(event.currentTarget);
 				const title = data.get("title");
-				try {
-					const res = await createState(title, copy, setError);
-					console.log(res);
-					setCopy(false);
-					
-					if(res == true) {
-						onFormSubmit(title);
-					}
-				}
-				catch(error) {
+				const res = await addStateAction(title, copy, setError);
+				
+				if(res == true)
+					onFormSubmit(true);
+				else {
+					onFormSubmit(false);
 					console.log(error);
 				}
+				setCopy(false);
+				setLoading(false);
 			
 			}}
 			>
@@ -62,7 +61,6 @@ export default function AddStateDialog({open, onClose, onFormSubmit}) {
 					<input type="text" name="title" maxLength={32} />
 				</Field>
 			
-				{/*TODO: add error handling*/}
 				<CheckboxList 
 				legend=""
 				options={["Copy Current State?"]}

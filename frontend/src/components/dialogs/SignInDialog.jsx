@@ -2,7 +2,7 @@ import { useState } from "react";
 import Button from "../Button.jsx";
 import Dialog from "./Dialog.jsx";
 import Field from "../Field.jsx";
-import { authenticateUser, createUser } from "../../state/eventHandlers.js";
+import { userSignsSubmit } from "../../state/eventHandlers.js";
 
 /**
  * Collects a username and password in a modal. The form submit handler is the integration
@@ -14,6 +14,8 @@ export default function SignInDialog({ open, onClose, mode = "signin", addStates
   const [usernameValue, setUsernameValue] = useState("");
   const [passwordValue, setPasswordValue] = useState("");
   const [loading, setLoading] = useState(null);
+  const [error, setError] = useState(null);
+
   const isSignUp = mode === "signup";
   const title = isSignUp ? "Create account" : "Sign in";
   const normalizedUsername = usernameValue.trim().toLowerCase();
@@ -67,30 +69,13 @@ export default function SignInDialog({ open, onClose, mode = "signin", addStates
         id="sign-in-form"
         className="sign-in-form"
         onSubmit={async (event) => {
-          event.preventDefault();
-          const data = new FormData(event.currentTarget);
-          const username = data.get("username");
-          const password = data.get("password");
-          const result = isSignUp
-            ? await createUser(username, password)
-            : await authenticateUser(username, password);
-          const successful = result === true;
-          setCredentialsValid(successful);
-
-          if (!successful) {
-            if (result?.code === "accounts_unavailable") {
-              setMessage(
-                'Accounts are unavailable, so sign-in and account creation will not work. Read the "Accounts and saved states" section in README to configure them.',
-              );
-            } else {
-              setMessage(
-                isSignUp ? result?.message || "Could not create account." : "Invalid login.",
-              );
-            }
-          } else {
-            close();
-	    addStates(setButtons);
-          }
+		const res = await userSignsSubmit(event, setMessage, isSignUp, setError, setCredentialsValid);
+		if(res == true) {
+			close();
+			addStates(setButtons);
+		}
+		else
+			console.log(error);
         }}
       >
         <Field label="Username" required>

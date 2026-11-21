@@ -53,8 +53,36 @@ const recordRedoStep = (content) => {
   HISTORY.pushToCurr(ORIGINATOR.storeFile());
 };
 
-// TODO: fix error handling
-export const isLoggedIn = async() => {
+export const userSignsSubmit = async(event, setMessage, isSignUp, setError, setCredentialsValid) => {
+  event.preventDefault();
+  const data = new FormData(event.currentTarget);
+  const username = data.get("username");
+  const password = data.get("password");
+  const result = isSignUp
+    ? await createUser(username, password, setError)
+    : await authenticateUser(username, password, setError);
+  const successful = result === true;
+  setCredentialsValid(successful);
+
+  if (!successful) {
+    if (result?.code === "accounts_unavailable") {
+      setMessage(
+	'Accounts are unavailable, so sign-in and account creation will not work. Read the "Accounts and saved states" section in README to configure them.',
+      );
+    } else {
+      setMessage(
+	isSignUp ? result?.message || "Could not create account." : "Invalid login.",
+      );
+    }
+   return false;
+
+  } else {
+    return true;
+
+  }
+};
+
+export const isLoggedIn = async(setError) => {
 	try {
 		const user_status = await api.account.status();
 
@@ -64,38 +92,51 @@ export const isLoggedIn = async() => {
 			return true;
 	}
 	catch(error) {
-		console.log(error);
+		showPageError(setError, error, "Couldn't create user");
 		return false;
 	}
 };
 
-// TODO: fix error handling
-export const authenticateUser = async(username, password) => {
+const authenticateUser = async(username, password, setError) => {
 	try {
 		await api.account.logIn({username, password});
 	}
 	catch(error) {
-		return error;
+		showPageError(setError, error, "Couldn't create user");
+		return false;
 	}
 	return true;
 
 };
 
-// TODO: fix error handling
-export const createUser = async(username, password) => {
+const createUser = async(username, password, setError) => {
 	try {
 		await api.account.signUp({username, password});
 	}
 	catch(error) {
-		return error;
+		showPageError(setError, error, "Couldn't create user");
+		return false;
 	}
 	return true;
 };
 
-// TODO: fix error handling
-export const createState = async(name, copy, setError) => {
+export const addStateAction = async(title, copy, setError) => {
 	try {
-		await api.states.create({name, copy});
+		const res = await createState(title, copy, setError);
+		
+		if(res == true) {
+			return true;
+		}
+	}
+	catch(error) {
+		showPageError(setError, error, error.code);
+		return false;
+	}
+};
+
+const createState = async(name, copy, setError) => {
+	try {
+		await api.states.create({name, copyCurrent: copy});
 	}
 	catch(error) {
 		showPageError(setError, error, `Couldn't create ${name}`);

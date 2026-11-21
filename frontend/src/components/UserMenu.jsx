@@ -36,6 +36,7 @@ export default function UserMenu() {
     const [deleteTimerPercent, setDeleteTimerPercent] = useState(100);
     const timerRef = useRef(null);
     const deleteTimerIntervalRef = useRef(null);
+    const [error, setError] = useState(null);
     const menuRef = useRef(null);
 
     const deleteState = useAction(async (id) => {
@@ -205,7 +206,7 @@ export default function UserMenu() {
                         ))}
                     </div>
 
-                    <Button onClick={async () => { await checkLoggedIn(setSignInOpen, setAddStateOpen) }}>
+                    <Button onClick={async () => { await checkLoggedIn(setSignInOpen, setAddStateOpen, setError) }}>
                         Add State
                     </Button>
 
@@ -281,9 +282,14 @@ export default function UserMenu() {
             <AddStateDialog
                 open={addStateOpen}
                 onClose={() => setAddStateOpen(false)}
-                onFormSubmit={async () => {
-                    await loadStates.run();
-                    setAddStateOpen(false);
+                onFormSubmit={async (isSuccess) => {
+		    if(isSuccess) {
+                    	await loadStates.run();
+                    	setAddStateOpen(false);
+		    }
+		    else
+			console.log(error);
+		
                 }}
             />
 
@@ -334,9 +340,9 @@ export default function UserMenu() {
     );
 };
 
-const checkLoggedIn = async (setSignInOpen, setAddStateOpen) => {
+const checkLoggedIn = async (setSignInOpen, setAddStateOpen, setError) => {
     try {
-        const user_status = await isLoggedIn();
+        const user_status = await isLoggedIn(setError);
 
         if (!user_status) {
             setSignInOpen(true);
@@ -346,27 +352,7 @@ const checkLoggedIn = async (setSignInOpen, setAddStateOpen) => {
             setAddStateOpen(true);
     }
     catch (error) {
-        console.log(error);
+	    setError(error);
     }
-};
-
-
-const createStatesButtons = (states) => {
-    let btns = []
-    states.forEach(state => {
-        btns.push(createStateButton(state.name, state.id));
-    });
-
-    return btns;
-};
-
-const createStateButton = (title, id) => {
-    return (
-        <div className="state-button">
-            <Button onClick={async () => await api.states.open(id)}>
-                {title}
-            </Button>
-        </div>
-    );
 };
 
