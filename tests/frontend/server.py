@@ -2,17 +2,14 @@ import socket
 import subprocess
 import time
 import urllib.request
-
 from collections.abc import Iterator
 
 import pytest
 
 from zimpasta.controller.static import BUILT_GUI
 
-
 pytestmark = pytest.mark.skipif(
-    not (BUILT_GUI / "index.html").exists(),
-    reason="Run npm run build in frontend first."
+    not (BUILT_GUI / "index.html").exists(), reason="Run npm run build in frontend first."
 )
 
 RUN_SERVER = ["uv", "run", "zimpasta", "--gui", "--no-browser"]
@@ -29,9 +26,7 @@ def site() -> Iterator[str]:
     port = free_port()
     url = f"http://127.0.0.1:{port}"
 
-    server = subprocess.Popen(
-        [*RUN_SERVER, "--port", str(port)]
-    )
+    server = subprocess.Popen([*RUN_SERVER, "--port", str(port)])
 
     try:
         deadline = time.time() + 30
