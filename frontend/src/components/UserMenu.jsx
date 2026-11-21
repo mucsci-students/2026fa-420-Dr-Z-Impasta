@@ -22,8 +22,7 @@ export default function UserMenu() {
         await api.account.logOut();
         await refresh();
     });
-    // AI_CONTEXT: USER_MENU_STATE — `open` controls the account popup; `signInOpen` controls
-    // the sign-in dialog; `menuRef` lets the outside-click handler identify popup clicks.
+
     const [open, setOpen] = useState(false);
     const [signInOpen, setSignInOpen] = useState(false);
     const [signUpOpen, setSignUpOpen] = useState(false);
@@ -34,6 +33,9 @@ export default function UserMenu() {
     const [newStateName, setNewStateName] = useState("");
     const [loading, setLoading] = useState(null);
     const [deletingId, setDeletingId] = useState(null);
+    const [deleteTimerPercent, setDeleteTimerPercent] = useState(100);
+    const timerRef = useRef(null);
+    const deleteTimerIntervalRef = useRef(null);
     const menuRef = useRef(null);
 
     const deleteState = useAction(async (id) => {
@@ -42,17 +44,42 @@ export default function UserMenu() {
     });
     const handleDeleteClick = async (id) => {
         if (confirmingDeleteId !== id) {
+            clearTimeout(timerRef.current);
+            clearInterval(deleteTimerIntervalRef.current);
+
             setConfirmingDeleteId(id);
+            setDeleteTimerPercent(100);
+
+            const deadline = Date.now() + 5000;
+            deleteTimerIntervalRef.current = setInterval(() => {
+                const remaining = Math.max(0, deadline - Date.now());
+                setDeleteTimerPercent((remaining / 5000) * 100);
+            }, 50);
+
+            timerRef.current = setTimeout(() => {
+                clearInterval(deleteTimerIntervalRef.current);
+                deleteTimerIntervalRef.current = null;
+                timerRef.current = null;
+                setConfirmingDeleteId(null);
+                setDeleteTimerPercent(100);
+            }, 5000);
+
             return;
         }
-	
-	setDeletingId(id);
-	try {
-        	const result = await deleteState.run(id);
-        	if (result.ok) setConfirmingDeleteId(null);
-	} finally {
-	    setDeletingId(null);
-	}
+
+        clearTimeout(timerRef.current);
+        clearInterval(deleteTimerIntervalRef.current);
+        timerRef.current = null;
+        deleteTimerIntervalRef.current = null;
+        setDeleteTimerPercent(100);
+
+        setDeletingId(id);
+        try {
+            const result = await deleteState.run(id);
+            if (result.ok) setConfirmingDeleteId(null);
+        } finally {
+            setDeletingId(null);
+        }
     };
     const renameState = useAction(async (id, newName) => {
         const { states } = await api.states.rename(id, newName);
@@ -114,6 +141,13 @@ export default function UserMenu() {
         return () => document.removeEventListener("pointerdown", handlePointerDown);
     }, [open]);
 
+    useEffect(() => {
+        return () => {
+            clearTimeout(timerRef.current);
+            clearInterval(deleteTimerIntervalRef.current);
+        };
+    }, []);
+
     return (
         <div className="user-menu" ref={menuRef}>
             <Button
@@ -143,12 +177,12 @@ export default function UserMenu() {
                                 key={savedState.id}
                             >
 
-			       <Button 
-				className="state-button__name"
-				id={loading === savedState.id ? "loading" : ""}
-				onClick={async() => { setLoading(savedState.id); await api.states.open(savedState.id); await refresh(); setLoading(null); }}>
-					{savedState.name}
-			       </Button>
+                                <Button
+                                    className="state-button__name"
+                                    id={loading === savedState.id ? "loading" : ""}
+                                    onClick={async () => { setLoading(savedState.id); await api.states.open(savedState.id); await refresh(); await loadStates.run(); setLoading(null); }}>
+                                    {savedState.name}
+                                </Button>
 
                                 <Button onClick={() => openRenameDialog(savedState)}>
                                     Edit
@@ -156,6 +190,13 @@ export default function UserMenu() {
                                 <Button
                                     variant="danger"
                                     busy={deletingId === savedState.id}
+                                    style={confirmingDeleteId === savedState.id
+                                        ? {
+                                            background: `linear-gradient(to right, var(--danger) ${deleteTimerPercent}%, var(--danger-soft) ${deleteTimerPercent}%)`,
+                                            borderColor: "var(--danger)",
+                                            color: "#fff",
+                                        }
+                                        : undefined}
                                     onClick={() => handleDeleteClick(savedState.id)}
                                 >
                                     {confirmingDeleteId === savedState.id ? "Confirm" : "Delete"}
@@ -187,9 +228,9 @@ export default function UserMenu() {
                             onClick={async () => {
                                 const result = await signOut.run();
                                 if (result.ok) {
-					setOpen(false);
-					setSavedStates([]);
-				}
+                                    setOpen(false);
+                                    setSavedStates([]);
+                                }
                             }}
                         >
                             Sign out
@@ -311,21 +352,21 @@ const checkLoggedIn = async (setSignInOpen, setAddStateOpen) => {
 
 
 const createStatesButtons = (states) => {
-	let btns = []
-	states.forEach(state => {
-		btns.push(createStateButton(state.name, state.id));
-	});
+    let btns = []
+    states.forEach(state => {
+        btns.push(createStateButton(state.name, state.id));
+    });
 
-	return btns;
+    return btns;
 };
 
 const createStateButton = (title, id) => {
-        return (
-                <div className="state-button">
-                       <Button onClick={async() => await api.states.open(id)}>
-                                {title}
-                       </Button>
-		</div>
-	);
+    return (
+        <div className="state-button">
+            <Button onClick={async () => await api.states.open(id)}>
+                {title}
+            </Button>
+        </div>
+    );
 };
 
