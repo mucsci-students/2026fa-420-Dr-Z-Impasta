@@ -15,7 +15,9 @@ import { isLoggedIn } from "../state/eventHandlers.js";
  */
 export default function UserMenu() {
     const { state, refresh } = useAppState();
+
     const signedIn = Boolean(state?.account?.user);
+
     const signOut = useAction(async () => {
         await api.account.logOut();
         await refresh();
@@ -30,7 +32,10 @@ export default function UserMenu() {
     const [confirmingDeleteId, setConfirmingDeleteId] = useState(null);
     const [renamingState, setRenamingState] = useState(null);
     const [newStateName, setNewStateName] = useState("");
+    const [loading, setLoading] = useState(null);
+    const [deletingId, setDeletingId] = useState(null);
     const menuRef = useRef(null);
+
     const deleteState = useAction(async (id) => {
         const { states } = await api.states.remove(id);
         setSavedStates(states);
@@ -40,9 +45,14 @@ export default function UserMenu() {
             setConfirmingDeleteId(id);
             return;
         }
-
-        const result = await deleteState.run(id);
-        if (result.ok) setConfirmingDeleteId(null);
+	
+	setDeletingId(id);
+	try {
+        	const result = await deleteState.run(id);
+        	if (result.ok) setConfirmingDeleteId(null);
+	} finally {
+	    setDeletingId(null);
+	}
     };
     const renameState = useAction(async (id, newName) => {
         const { states } = await api.states.rename(id, newName);
@@ -52,14 +62,18 @@ export default function UserMenu() {
         const { states } = await api.states.list();
         setSavedStates(states);
     });
+
     const normalizedStateName = newStateName.trim().replace(/\s+/g, " ");
+
     const stateNameTaken = savedStates.some((savedState) =>
         savedState.id !== renamingState?.id && savedState.name === normalizedStateName
     );
+
     const stateNameValid =
         normalizedStateName.length > 0 &&
         normalizedStateName.length <= 32 &&
         !stateNameTaken;
+
     const stateNameError = normalizedStateName.length === 0
         ? (newStateName.length > 0 ? "A state name is required." : null)
         : normalizedStateName.length > 32
@@ -128,15 +142,20 @@ export default function UserMenu() {
                                 className={`state-button${savedState.current ? " state-button--active" : ""}`}
                                 key={savedState.id}
                             >
-                                <span className="state-button__name">
-                                    {savedState.name}
-                                </span>
+
+			       <Button 
+				className="state-button__name"
+				id={loading === savedState.id ? "loading" : ""}
+				onClick={async() => { setLoading(savedState.id); await api.states.open(savedState.id); await refresh(); setLoading(null); }}>
+					{savedState.name}
+			       </Button>
+
                                 <Button onClick={() => openRenameDialog(savedState)}>
                                     Edit
                                 </Button>
                                 <Button
                                     variant="danger"
-                                    busy={deleteState.busy}
+                                    busy={deletingId === savedState.id}
                                     onClick={() => handleDeleteClick(savedState.id)}
                                 >
                                     {confirmingDeleteId === savedState.id ? "Confirm" : "Delete"}
@@ -167,7 +186,10 @@ export default function UserMenu() {
                             busy={signOut.busy}
                             onClick={async () => {
                                 const result = await signOut.run();
-                                if (result.ok) setOpen(false);
+                                if (result.ok) {
+					setOpen(false);
+					setSavedStates([]);
+				}
                             }}
                         >
                             Sign out
@@ -286,3 +308,24 @@ const checkLoggedIn = async (setSignInOpen, setAddStateOpen) => {
         console.log(error);
     }
 };
+
+
+const createStatesButtons = (states) => {
+	let btns = []
+	states.forEach(state => {
+		btns.push(createStateButton(state.name, state.id));
+	});
+
+	return btns;
+};
+
+const createStateButton = (title, id) => {
+        return (
+                <div className="state-button">
+                       <Button onClick={async() => await api.states.open(id)}>
+                                {title}
+                       </Button>
+		</div>
+	);
+};
+

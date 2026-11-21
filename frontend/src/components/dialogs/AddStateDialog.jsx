@@ -9,16 +9,27 @@ import CheckboxList from "../../modes/editor/CheckboxList.jsx";
 export default function AddStateDialog({open, onClose, onFormSubmit}) {
 	const [copy, setCopy] = useState(false);
   	const [error, setError] = useState(null);  
-	
+	const [loading, setLoading] = useState(false);
+
+	const close = () => {
+		onClose?.();
+		setLoading(false);
+	};	
+
 	return (
 		<Dialog
 		open={open}
 		title="Add a State"
-		onClose={onClose}
+		onClose={close}
 		className="add-state-dialog"
 		width="min(38ch, calc(100vw - 32px))"
 		actions={
-			<Button type="submit" form="add-state-form" variant="primary">
+			<Button 
+			id={loading ? "loading" : ""}
+			type="submit" 
+			form="add-state-form" 
+			variant="primary"
+			onClick={() => setLoading(true) }>
 			Create State
 			</Button>
 		}

@@ -13,6 +13,7 @@ export default function SignInDialog({ open, onClose, mode = "signin", addStates
   const [credentialsValid, setCredentialsValid] = useState(true);
   const [usernameValue, setUsernameValue] = useState("");
   const [passwordValue, setPasswordValue] = useState("");
+  const [loading, setLoading] = useState(null);
   const isSignUp = mode === "signup";
   const title = isSignUp ? "Create account" : "Sign in";
   const normalizedUsername = usernameValue.trim().toLowerCase();
@@ -41,6 +42,7 @@ export default function SignInDialog({ open, onClose, mode = "signin", addStates
     setUsernameValue("");
     setPasswordValue("");
     onClose?.();
+    setLoading(false);
   };
 
   return (
@@ -51,7 +53,12 @@ export default function SignInDialog({ open, onClose, mode = "signin", addStates
       className="sign-in-dialog"
       width="min(38ch, calc(100vw - 32px))"
       actions={
-        <Button type="submit" form="sign-in-form" variant="primary">
+        <Button 
+	      id={loading ? "loading" : ""}
+	      type="submit" 
+	      form="sign-in-form" 
+	      variant="primary"
+	      onClick={async() => {setLoading(true);}}>
           {title}
         </Button>
       }
