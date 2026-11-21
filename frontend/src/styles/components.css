@@ -526,6 +526,12 @@
   z-index: 20;
 }
 
+:root[data-theme="dark"] .help-tip__text {
+  background: var(--page);
+  color: var(--ink);
+  border: 1px solid var(--ink);
+}
+
 /* ------------------------------------------------------ segmented control */
 
 .segmented {
