@@ -37,6 +37,16 @@
   background: var(--accent-strong);
 }
 
+.btn--success {
+  background: var(--success);
+  border-color: var(--success);
+  color: var(--page);
+}
+
+.btn--success:hover:not(:disabled) {
+  filter: brightness(0.9);
+}
+
 .btn--danger {
   color: var(--danger);
   border-color: var(--danger-line);
@@ -65,6 +75,51 @@
   font-size: 12px;
 }
 
+.state-buttons {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    width: max-content;
+    max-width: 100%;
+}
+.state-button {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  max-width: 100%;
+  padding: 6px;
+  box-sizing: border-box;
+}
+
+.state-button__name {
+  min-width: 0;
+  max-width: 32ch;
+  padding: 0 6px;
+  overflow-wrap: anywhere;
+}
+
+.state-button--active {
+  border-radius: var(--radius);
+  box-shadow: 0 7px 14px -6px var(--accent);
+}
+
+#loading {
+	background-color: #2563eb;
+  	color: white;
+  	animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    background-color: #2563eb;
+  }
+
+  50% {
+    background-color: #60a5fa;
+  }
+}
 /* ---------------------------------------------------------------- spinner */
 
 .spinner {
@@ -383,6 +438,62 @@
   border-radius: var(--radius);
 }
 
+/* ------------------------------------------------------------- user menu */
+
+.user-menu {
+  position: relative;
+}
+
+.user-menu__popup {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 20;
+  width: max-content;
+  min-width: 20rem;
+  max-width: min(36rem, calc(100vw - 32px));
+  padding: 1rem;
+  box-sizing: border-box;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-float);
+}
+
+.user-menu__popup .banner {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.user-menu__popup .banner__text {
+  flex: 1 1 0%;
+  min-width: 0;
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.user-menu__avatar {
+  width: 24px;
+  height: 24px;
+  color: var(--accent);
+}
+
+.user-menu__button {
+  display: grid;
+  place-items: center;
+  padding: 6px;
+  color: var(--ink-2);
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+}
+
 /* ----------------------------------------------------------------- dialog */
 
 .dialog {
@@ -392,6 +503,74 @@
   width: min(520px, calc(100vw - 32px));
   box-shadow: var(--shadow-modal);
   color: var(--ink);
+}
+
+/* Keep the sign-in panel portrait-shaped, with scrolling on shorter screens. */
+.sign-in-dialog {
+  aspect-ratio: 1 / 2;
+  max-height: 90dvh;
+  overflow-y: auto;
+}
+
+.sign-in-dialog .dialog__body,
+.sign-in-dialog .sign-in-form {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.sign-in-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  width: 100%;
+}
+
+.sign-in-form input {
+  width: 100%;
+}
+
+.sign-in-form__message {
+  color: var(--ink-2);
+  min-width: 0;
+  width: 100%;
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.sign-up-requirements__title {
+  margin-bottom: var(--space-2);
+  font-weight: 600;
+}
+
+.sign-up-requirements__list {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.sign-up-requirements__item {
+  display: flex;
+  gap: var(--space-2);
+  min-width: 0;
+  max-width: 100%;
+  color: var(--ink-2);
+}
+
+.sign-up-requirements__item > span:first-child {
+  flex: 0 0 1em;
+}
+
+.sign-up-requirements__text {
+  min-width: 0;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.sign-up-requirements__item.is-met {
+  color: var(--success);
 }
 
 .dialog::backdrop {
@@ -424,7 +603,7 @@
   justify-content: flex-end;
   gap: var(--space-2);
   padding: 12px 20px;
-  background: var(--surface-2);
+  background: var(--surface);
   border-top: 1px solid var(--line);
   border-radius: 0 0 var(--radius-lg) var(--radius-lg);
 }
@@ -524,6 +703,10 @@
   font-size: 12px;
   font-weight: 400;
   z-index: 20;
+}
+
+.login-error {
+	border: 2px red solid;
 }
 
 :root[data-theme="dark"] .help-tip__text {

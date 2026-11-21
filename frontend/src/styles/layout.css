@@ -128,6 +128,8 @@
   padding: var(--space-4) var(--space-6) 0;
 }
 
+
+
 /* ------------------------------------------------------------------- page */
 
 .page {
@@ -179,16 +181,19 @@
   .columns {
     grid-template-columns: 1fr;
   }
+
   .topbar {
     gap: var(--space-4);
     padding: 0 var(--space-4);
   }
+
   .topbar__tagline {
     display: none;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
+
   *,
   *::before,
   *::after {

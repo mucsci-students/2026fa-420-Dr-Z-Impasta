@@ -5,62 +5,11 @@ are skipped until the GUI is built (``npm run build`` in ``frontend/``).
 """
 
 import re
-import socket
-import subprocess
-import time
-import urllib.request
-from collections.abc import Iterator
 
 import pytest
 from playwright.sync_api import Page, expect
 
 from tests.helpers import EXAMPLE_CONFIG
-from zimpasta.controller.static import BUILT_GUI
-
-pytestmark = pytest.mark.skipif(
-    not (BUILT_GUI / "index.html").exists(),
-    reason="The GUI isn't built; run `npm run build` in frontend/ first.",
-)
-
-# The server, without opening a browser window of its own; the port is added per test.
-RUN_SERVER = ["uv", "run", "zimpasta", "--gui", "--no-browser"]
-STARTUP_SECONDS = 30
-
-
-def free_port() -> int:
-    """A port nothing is listening on right now."""
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as probe:
-        probe.bind(("127.0.0.1", 0))
-        return probe.getsockname()[1]
-
-
-@pytest.fixture
-def site() -> Iterator[str]:
-    """A fresh server for this test only; yields its address and stops it afterwards."""
-    port = free_port()
-    url = f"http://127.0.0.1:{port}"
-    server = subprocess.Popen([*RUN_SERVER, "--port", str(port)])
-    try:
-        deadline = time.time() + STARTUP_SECONDS
-        while time.time() < deadline:
-            if server.poll() is not None:
-                raise RuntimeError("Server stopped before it became ready.")
-            try:
-                with urllib.request.urlopen(url, timeout=1):
-                    break
-            except Exception:
-                time.sleep(0.2)
-        else:
-            raise RuntimeError(f"Website did not start within {STARTUP_SECONDS} seconds: {url}")
-        yield url
-    finally:
-        if server.poll() is None:
-            server.terminate()
-            try:
-                server.wait(timeout=5)
-            except subprocess.TimeoutExpired:
-                server.kill()
-                server.wait()
 
 
 @pytest.fixture
