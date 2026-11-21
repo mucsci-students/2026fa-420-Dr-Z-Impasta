@@ -65,7 +65,10 @@ export default function AddStateDialog({open, onClose, onFormSubmit}) {
 				legend=""
 				options={["Copy Current State?"]}
 				value={copy ? ["Copy Current State?"] : []}
-				onChange={() => setCopy(true)}
+				onChange={(values) =>
+					setCopy(
+						values.includes("Copy Current State?"))
+				}
 				error=""
 				/>
 			</form>
