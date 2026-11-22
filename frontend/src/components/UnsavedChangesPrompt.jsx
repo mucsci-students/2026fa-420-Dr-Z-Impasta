@@ -1,6 +1,6 @@
 import { useBlocker } from "react-router";
+import ConfirmDialog from "./dialogs/ConfirmDialog.jsx";
 import { useWarnBeforeUnload } from "../state/useWarnBeforeUnload.js";
-import ConfirmDialog from "./ConfirmDialog.jsx";
 
 /**
  * Put this in a page that has a form draft. While `when` is true, switching modes or

@@ -13,7 +13,7 @@ import { useId, useState } from "react";
 
 import Banner from "../../components/Banner.jsx";
 import Button from "../../components/Button.jsx";
-import Dialog from "../../components/Dialog.jsx";
+import Dialog from "../../components/dialogs/Dialog.jsx";
 import Field from "../../components/Field.jsx";
 import { plural } from "../../format.js";
 import { useAction } from "../../state/useAction.js";
