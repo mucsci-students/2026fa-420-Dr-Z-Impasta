@@ -193,6 +193,13 @@ are stored only as salted scrypt hashes, and one user can never reach another's 
 [docs/accounts.md](docs/accounts.md) has the setup, the feature's acceptance criteria and
 size, the API, and its limitations.
 
+It needs a Database URL API key in the environment when the app starts:
+
+```bash
+export DATABASE_URL=...          # Windows PowerShell: $env:DATABASE_URL = "..."
+uv run zimpasta --gui
+```
+
 ## The shell
 
 ```bash
