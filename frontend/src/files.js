@@ -10,7 +10,13 @@
 const TYPES = {
   "application/json": { description: "JSON file", extensions: [".json"] },
   "text/csv": { description: "CSV file", extensions: [".csv"] },
+  "application/pdf": { description: "PDF document", extensions: [".pdf"] },
 };
+
+/** Text files are saved as UTF-8; a PDF is bytes and has no character set. */
+function blobType(type) {
+  return type === "application/pdf" ? type : `${type};charset=utf-8`;
+}
 
 /**
  * Resolves to `{ name, method }` where method is "picker" or "download", or `null` if the
@@ -30,11 +36,11 @@ export async function saveFile({ suggestedName, content, type = "application/jso
       throw error;
     }
     const writable = await handle.createWritable();
-    await writable.write(new Blob([content], { type: `${type};charset=utf-8` }));
+    await writable.write(new Blob([content], { type: blobType(type) }));
     await writable.close();
     return { name: handle.name, method: "picker" };
   }
-  const url = URL.createObjectURL(new Blob([content], { type: `${type};charset=utf-8` }));
+  const url = URL.createObjectURL(new Blob([content], { type: blobType(type) }));
   const link = Object.assign(document.createElement("a"), { href: url, download: suggestedName });
   document.body.append(link);
   link.click();
