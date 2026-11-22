@@ -4,7 +4,8 @@
  * Shows the session's schedules (generated or imported) grouped by room & lab or by
  * faculty, as a weekly timetable or a table. Load JSON, Export and Clear go through
  * the server (api.schedules in src/api/client.js); the schedules are read with
- * useSchedules.js and shaped for display in scheduleData.js.
+ * useSchedules.js and shaped for display in scheduleData.js. Export PDF opens
+ * PdfExportDialog.jsx, which makes a print-friendly PDF from the same schedules.
  */
 import { useMemo, useRef, useState } from "react";
 import { Link } from "react-router";
@@ -22,6 +23,7 @@ import { useAppState } from "../../state/appStateContext.js";
 import { useToast } from "../../state/toastContext.js";
 
 import { exportSchedules } from "./exportSchedule.js";
+import PdfExportDialog from "./PdfExportDialog.jsx";
 import { describeSchedulePath, toGroups } from "./scheduleData.js";
 import ScheduleTable from "./ScheduleTable.jsx";
 import Timetable from "./Timetable.jsx";
@@ -87,6 +89,7 @@ export default function ScheduleViewer() {
   const [selectedKey, setSelectedKey] = useState(null);
   const [busy, setBusy] = useState(false);
   const [actionError, setActionError] = useState(null);
+  const [pdfDialogOpen, setPdfDialogOpen] = useState(false);
   const fileInputRef = useRef(null);
 
   // Keep the selected schedule within the number the server has.
@@ -267,6 +270,18 @@ export default function ScheduleViewer() {
     });
   }
 
+  /** Close the PDF dialog and confirm where the file went, as for JSON and CSV. */
+  function handlePdfExported(saved) {
+    setPdfDialogOpen(false);
+    notify({
+      title: "Exported.",
+      message:
+        saved.method === "picker"
+          ? `Saved ${saved.name}.`
+          : `${saved.name} is in your browser's downloads folder.`,
+    });
+  }
+
   /** Confirm clearing all session schedules, then reset selection on success. */
   function clearResults() {
     if (!window.confirm("Clear all generated and loaded schedules?")) return;
@@ -313,6 +328,14 @@ export default function ScheduleViewer() {
               <option value="all:json">All schedules · JSON</option>
               <option value="all:csv">All schedules · CSV</option>
             </select>
+            <button
+              className="btn"
+              type="button"
+              onClick={() => setPdfDialogOpen(true)}
+              disabled={busy}
+            >
+              Export PDF…
+            </button>
             <button className="btn btn--danger" type="button" onClick={clearResults} disabled={busy}>
               Clear results…
             </button>
@@ -420,6 +443,17 @@ export default function ScheduleViewer() {
           <p className="muted">This schedule has no meetings to show.</p>
         )}
       </Card>
+
+      {pdfDialogOpen && (
+        <PdfExportDialog
+          scheduleCount={scheduleCount}
+          initialNumber={index + 1}
+          initialGroupBy={groupBy}
+          refreshKey={refreshKey}
+          onClose={() => setPdfDialogOpen(false)}
+          onExported={handlePdfExported}
+        />
+      )}
     </>
   );
 }
