@@ -3,12 +3,8 @@
  *
  * Runs the scheduler on the last validated configuration.
  * Run-specific settings are sent as overrides and never change the saved configuration.
- */
-/**
- * Schedule Generator (mode 02).
- *
- * Runs the scheduler on the last validated configuration.
- * Run-specific settings are sent as overrides and never change the saved configuration.
+ * Schedules can be opened in the viewer as soon as the first one is ready; the rest
+ * keep generating in the background.
  */
 
 import { useEffect, useState } from "react";
@@ -28,7 +24,7 @@ import { plural } from "../../format.js";
 import { api } from "../../api/client.js";
 import { useAppState } from "../../state/appStateContext.js";
 import { useAction } from "../../state/useAction.js";
-import { FLAG_NAMES } from "../editor/labels.js";
+import { OPTIMIZER_FLAG_NAMES } from "../editor/labels.js";
 
 const SUBTITLE =
   "Runs the scheduler on the last validated configuration. Overrides apply to this run only and never change the saved file.";
@@ -126,12 +122,12 @@ export default function ScheduleGenerator() {
   const running = generation.running;
 
   const maxLimit = options?.generation?.max_schedules ?? null;
-  const optimizerOptions = options?.optimizer_flags ?? [];
+  const optimizerFlagChoices = options?.optimizer_flags ?? [];
 
   const shownFlags = optimizerFlags ?? configured?.optimizer_flags ?? [];
   const overriding = optimizerFlags !== null;
 
-  function toggleOptimizer(flag) {
+  function toggleOptimizerFlag(flag) {
     // The first click starts an override from the configured flags
     setOptimizerFlags(shownFlags.includes(flag) ? shownFlags.filter((f) => f !== flag) : [...shownFlags, flag]);
   }
@@ -161,7 +157,7 @@ export default function ScheduleGenerator() {
           <Card title="Generation settings">
             <div className="stack">
               <Field
-                label="Number of schedules"
+                label="Generation limit"
                 help={
                   maxLimit === null
                     ? "The maximum number of schedules to generate."
@@ -181,10 +177,10 @@ export default function ScheduleGenerator() {
                 />
               </Field>
 
-              {optimizerOptions.length > 0 && (
+              {optimizerFlagChoices.length > 0 && (
                 <fieldset className="flag-list">
                   <legend>
-                    Optimizer options{" "}
+                    Optimizer flags{" "}
                     <HelpTip text="Options for optimizing the generated schedules." />
                   </legend>
                   {overriding && (
@@ -193,16 +189,16 @@ export default function ScheduleGenerator() {
                     </Button>
                   )}
 
-                  {optimizerOptions.map(({ value, description }) => (
+                  {optimizerFlagChoices.map(({ value, description }) => (
                     <span key={value} className="flag-chip">
                       <label>
                         <input
                           type="checkbox"
                           checked={shownFlags.includes(value)}
                           disabled={running || startGeneration.busy}
-                          onChange={() => toggleOptimizer(value)}
+                          onChange={() => toggleOptimizerFlag(value)}
                         />
-                        {FLAG_NAMES[value] ?? value}
+                        {OPTIMIZER_FLAG_NAMES[value] ?? value}
                       </label>
 
                       {description && (
@@ -275,10 +271,15 @@ export default function ScheduleGenerator() {
                 </div>
               )}
 
-              {generation.state === "succeeded" && schedules.count > 0 && (
+              {/* Each schedule reaches the viewer as soon as it is found, so the viewer can be
+                  opened mid-run. `found` counts only this run's schedules; a cancelled or
+                  stopped run keeps the ones it found. */}
+              {generation.found > 0 && schedules.count > 0 && (
                 <p>
                   <Link className="btn btn--primary" to="/viewer">
-                    View schedules
+                    {running
+                      ? `View the ${plural(generation.found, "schedule")} ready so far`
+                      : "View schedules"}
                   </Link>
                 </p>
               )}

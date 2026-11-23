@@ -7,17 +7,13 @@ valid configuration.
 Author: Foster VanFleet. Converted to the command model.
 """
 
-import json
 from pathlib import Path
 
-from pydantic import ValidationError
-
 from zimpasta.command import CommandError, CommandSpec, Invocation, Positional
+from zimpasta.commands.common import PATH_PROMPT, read_into_session
 from zimpasta.console import Console
-from zimpasta.model.config_loader import load_config as read_config
 from zimpasta.session import Session
 
-PATH_PROMPT = "Enter configuration file path: "
 FILE_NOT_FOUND = "File not found."
 UNREADABLE = "Unable to read file."
 INVALID = "Invalid configuration file."
@@ -26,17 +22,15 @@ LOADED = "Configuration loaded successfully."
 
 def load_into_session(session: Session, path: Path) -> str | None:
     """Load ``path`` into the session. Returns a message when it cannot be loaded, else None."""
-    try:
-        config = read_config(path)
-    except FileNotFoundError:
-        return FILE_NOT_FOUND
-    except OSError:
-        return UNREADABLE
-    except (json.JSONDecodeError, ValidationError):
-        return INVALID
-    session.config = config
-    session.config_path = path.resolve()
-    return None
+    match read_into_session(session, path):
+        case None:
+            return None
+        case FileNotFoundError():
+            return FILE_NOT_FOUND
+        case OSError():
+            return UNREADABLE
+        case _:
+            return INVALID
 
 
 def load(console: Console, session: Session, invocation: Invocation) -> None:

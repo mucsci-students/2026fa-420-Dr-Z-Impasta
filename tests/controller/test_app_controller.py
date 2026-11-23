@@ -1,10 +1,15 @@
 """Controller use cases: what each GUI action does, independent of HTTP."""
 
 import json
+from functools import partial
 
 import pytest
 
+from tests.helpers import GatedFactory
+from zimpasta.controller import AppController
+from zimpasta.model.generate import generation_steps
 from zimpasta.model.generation_job import InvalidOverrides, JobState
+from zimpasta.model.schedules import to_assignment
 from zimpasta.model.workspace import EditRejected, NoConfiguration, NotValid, UnsavedChanges
 
 TIMEOUT = 10
@@ -114,6 +119,30 @@ def test_generation_moves_results_into_the_viewer(loaded, fake_factory):
     assert summary["source"] == "generated"
     assert summary["name"] == "minimal.json"
     assert [flag.value for flag in fake_factory.last_config.optimizer_flags] == ["same_room"]
+
+
+def test_the_viewer_gets_each_schedule_while_the_run_continues(config_data, real_schedules):
+    factory = GatedFactory(real_schedules)
+    controller = AppController(generator=partial(generation_steps, scheduler_factory=factory))
+    controller.load_configuration("minimal.json", json.dumps(config_data))
+    earlier = [[to_assignment(item) for item in schedule] for schedule in real_schedules]
+    controller.import_schedules("earlier.json", json.dumps(earlier))
+
+    controller.start_generation(limit=2)
+    state = controller.state()
+    assert state["generation"]["running"] is True
+    assert state["schedules"]["source"] == "imported"  # earlier results until a new one is ready
+
+    factory.step()
+    factory.waiting.wait(TIMEOUT)  # schedule 1 is done; the run is solving schedule 2
+    state = controller.state()
+    assert state["generation"]["running"] is True
+    assert (state["schedules"]["count"], state["schedules"]["source"]) == (1, "generated")
+    assert controller.schedule_view(1)["count"] == 1
+
+    factory.step()
+    assert controller.job.wait(TIMEOUT).state is JobState.SUCCEEDED
+    assert controller.state()["schedules"]["count"] == 2
 
 
 def test_overrides_do_not_change_the_configuration(loaded):

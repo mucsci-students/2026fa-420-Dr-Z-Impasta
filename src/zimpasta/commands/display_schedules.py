@@ -22,18 +22,8 @@ from rich.table import Table
 
 from zimpasta.command import CommandSpec, Invocation
 from zimpasta.console import Console
+from zimpasta.model.schedule_format import DAY_NAMES, clock_text
 from zimpasta.session import Session
-
-# Mapping of numeric day values used by JSON schedules to their
-# three-letter day abbreviations.
-DAYS = {
-    1: "MON",
-    2: "TUE",
-    3: "WED",
-    4: "THU",
-    5: "FRI",
-}
-
 
 # Column headings used when displaying schedule information.
 HEADER = [
@@ -46,21 +36,6 @@ HEADER = [
     "Start",
     "End",
 ]
-
-
-def _clock(minutes: int) -> str:
-    """Convert a number of minutes after midnight to a clock time.
-
-    Args:
-        minutes: The number of minutes after midnight.
-
-    Returns:
-        A time string in ``HH:MM`` format.
-
-    Example:
-        ``480`` is converted to ``"08:00"``.
-    """
-    return f"{minutes // 60:02d}:{minutes % 60:02d}"
 
 
 def _rows(schedules: list) -> list[list[str]]:
@@ -100,12 +75,12 @@ def _rows(schedules: list) -> list[list[str]]:
                         assignment["faculty"],
                         assignment.get("room", ""),
                         assignment.get("lab", ""),
-                        DAYS.get(
+                        DAY_NAMES.get(
                             meeting["day"],
                             str(meeting["day"]),
                         ),
-                        _clock(start),
-                        _clock(start + meeting["duration"]),
+                        clock_text(start),
+                        clock_text(start + meeting["duration"]),
                     ]
                 )
 

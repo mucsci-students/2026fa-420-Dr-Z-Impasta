@@ -69,7 +69,9 @@ def test_default_time_slots_are_valid_for_the_library():
 def test_empty_configuration_only_lacks_required_items():
     ws = ConfigWorkspace()
     ws.new()
-    assert ws.document()["time_slot_config"] == default_time_slot_config()
+    doc = ws.document()
+    assert doc is not None
+    assert doc["time_slot_config"] == default_time_slot_config()
     assert empty_configuration()["config"]["rooms"] == []
 
 
@@ -690,3 +692,17 @@ def test_any_exception_undoes_the_transaction_and_is_raised(workspace):
 
     assert workspace.document() == document
     assert workspace.saved_revision == workspace.revision
+
+
+@pytest.mark.parametrize(
+    "content",
+    ['{"config": "not a configuration"}', '{"config": {"rooms": 5}}', '{"config": []}'],
+)
+def test_a_file_not_shaped_like_a_configuration_is_rejected_not_a_crash(workspace, content):
+    before = workspace.document()
+
+    with pytest.raises(InvalidFile) as caught:
+        workspace.load_text(content, filename="odd.json")
+
+    assert caught.value.code == "invalid_configuration"
+    assert workspace.document() == before

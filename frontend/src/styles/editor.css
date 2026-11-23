@@ -42,6 +42,35 @@
   padding-bottom: var(--space-2);
 }
 
+.editor-row__items--grid {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  scrollbar-gutter: stable;
+  scroll-snap-type: none;
+}
+
+.editor-row__grid-line {
+  display: grid;
+  flex: 0 0 auto;
+  gap: var(--space-3);
+}
+
+.editor-row__grid-line > .editor-row__add {
+  justify-self: start;
+  min-width: 100px;
+  width: 100px;
+}
+
+.editor-row__grid-line > .item-card {
+  flex: 0 0 auto;
+  max-width: none;
+  min-width: 0;
+}
+
 /* Every tile in a row: the "+ Add" tile and each card */
 .editor-row__items > * {
   scroll-snap-align: start;
@@ -52,6 +81,11 @@
 .editor-row__items > [data-partial] {
   opacity: 0;                      /* opacity, not visibility, so Tab can still reach it and scroll it into view */
   pointer-events: none;            /* can't click a card you can't see */
+}
+
+.editor-row__grid-line > [data-partial] {
+  opacity: 1;
+  pointer-events: auto;
 }
 
 .editor-row__add {

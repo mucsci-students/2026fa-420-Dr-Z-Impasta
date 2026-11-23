@@ -11,9 +11,9 @@ import AvailabilityEditor from "../AvailabilityEditor.jsx";
 import TagInput from "../TagInput.jsx";
 import EditDialog from "./EditDialog.jsx";
 import { useDraft } from "./useDraft.js";
+import { weekdaysFrom } from "../labels.js";
 
 const NEW_RESOURCE = { name: "", capacity: null, features: [], times: null };
-const WEEKDAYS = ["MON", "TUE", "WED", "THU", "FRI"];
 /** Where set hours start when "Unrestricted availability" is unticked, so the room isn't left unusable. */
 const WORKDAY = [{ start: "08:00", end: "17:00" }];
 
@@ -26,7 +26,7 @@ export default function ResourceDialog({ area, index, resource, suggestions, opt
   const kind = area === "rooms" ? "room" : "lab";
   const original = { ...NEW_RESOURCE, ...resource };   // fill defaults the document may omit
   const { draft, set, isDirty } = useDraft(original);
-  const weekdays = options?.weekdays?.length ? options.weekdays : WEEKDAYS;
+  const weekdays = weekdaysFrom(options);
   // The hours to bring back when "Unrestricted availability" is unticked
   const [lastHours, setLastHours] = useState(original.times);
   const { errorFor, errorClass, unplaced } = formIssues(error?.issues, {

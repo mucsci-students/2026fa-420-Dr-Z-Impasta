@@ -4,7 +4,8 @@
  * Shows the session's schedules (generated or imported) grouped by room & lab or by
  * faculty, as a weekly timetable or a table. Load JSON, Export and Clear go through
  * the server (api.schedules in src/api/client.js); the schedules are read with
- * useSchedules.js and shaped for display in scheduleData.js.
+ * useSchedules.js and shaped for display in scheduleData.js. Export PDF opens
+ * PdfExportDialog.jsx, which makes a print-friendly PDF from the same schedules.
  */
 import { useMemo, useRef, useState } from "react";
 import { Link } from "react-router";
@@ -22,6 +23,7 @@ import { useAppState } from "../../state/appStateContext.js";
 import { useToast } from "../../state/toastContext.js";
 
 import { exportSchedules } from "./exportSchedule.js";
+import PdfExportDialog from "./PdfExportDialog.jsx";
 import { describeSchedulePath, toGroups } from "./scheduleData.js";
 import ScheduleTable from "./ScheduleTable.jsx";
 import Timetable from "./Timetable.jsx";
@@ -87,6 +89,7 @@ export default function ScheduleViewer() {
   const [selectedKey, setSelectedKey] = useState(null);
   const [busy, setBusy] = useState(false);
   const [actionError, setActionError] = useState(null);
+  const [pdfDialogOpen, setPdfDialogOpen] = useState(false);
   const fileInputRef = useRef(null);
 
   // Keep the selected schedule within the number the server has.
@@ -103,6 +106,10 @@ export default function ScheduleViewer() {
   } = useSchedules({ number: index + 1, group: groupBy, refreshKey });
 
   const scheduleCount = scheduleView?.count ?? 0;
+  const generating = state?.generation?.state === "running";
+  // Schedules this run has found. Until the first one, the viewer still has the earlier ones.
+  const found = state?.generation?.found ?? 0;
+  const runLimit = state?.generation?.settings?.limit;
   const groups = useMemo(() => toGroups(scheduleView), [scheduleView]);
   const currentGroup = groups.find((group) => group.key === selectedKey) ?? groups[0] ?? null;
 
@@ -162,7 +169,9 @@ export default function ScheduleViewer() {
   );
 
   // --- Early returns ---
-  if (loading || schedulesLoading) {
+  // The spinner is only for the first load. Later reloads (a new schedule finished while
+  // generating, for example) keep the schedule on screen instead of blanking the page.
+  if (loading || (schedulesLoading && !scheduleView)) {
     return (
       <>
         <PageHeader title="Schedules" />
@@ -193,7 +202,6 @@ export default function ScheduleViewer() {
   }
 
   if (!scheduleCount) {
-    const generating = state?.generation?.state === "running";
     const canGenerate = QUICK_GENERATE && state?.config?.status === "valid";
 
     return (
@@ -262,6 +270,18 @@ export default function ScheduleViewer() {
     });
   }
 
+  /** Close the PDF dialog and confirm where the file went, as for JSON and CSV. */
+  function handlePdfExported(saved) {
+    setPdfDialogOpen(false);
+    notify({
+      title: "Exported.",
+      message:
+        saved.method === "picker"
+          ? `Saved ${saved.name}.`
+          : `${saved.name} is in your browser's downloads folder.`,
+    });
+  }
+
   /** Confirm clearing all session schedules, then reset selection on success. */
   function clearResults() {
     if (!window.confirm("Clear all generated and loaded schedules?")) return;
@@ -276,6 +296,14 @@ export default function ScheduleViewer() {
     <>
       <PageHeader title="Schedules" subtitle={plural(scheduleCount, "schedule")} />
       {errorMessage}
+
+      {generating && (
+        <p className="viewer-progress" role="status">
+          {found > 0
+            ? `Still generating: ${found}${runLimit ? ` of ${runLimit}` : ""} ready. New schedules are added to the list as they finish.`
+            : "Generating new schedules. These are the earlier ones until the first new schedule is ready."}
+        </p>
+      )}
 
       <Card
         className="schedule-viewer"
@@ -300,6 +328,14 @@ export default function ScheduleViewer() {
               <option value="all:json">All schedules · JSON</option>
               <option value="all:csv">All schedules · CSV</option>
             </select>
+            <button
+              className="btn"
+              type="button"
+              onClick={() => setPdfDialogOpen(true)}
+              disabled={busy}
+            >
+              Export PDF…
+            </button>
             <button className="btn btn--danger" type="button" onClick={clearResults} disabled={busy}>
               Clear results…
             </button>
@@ -407,6 +443,17 @@ export default function ScheduleViewer() {
           <p className="muted">This schedule has no meetings to show.</p>
         )}
       </Card>
+
+      {pdfDialogOpen && (
+        <PdfExportDialog
+          scheduleCount={scheduleCount}
+          initialNumber={index + 1}
+          initialGroupBy={groupBy}
+          refreshKey={refreshKey}
+          onClose={() => setPdfDialogOpen(false)}
+          onExported={handlePdfExported}
+        />
+      )}
     </>
   );
 }

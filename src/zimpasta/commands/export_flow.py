@@ -1,5 +1,6 @@
 """The interactive export step shared by the run and results commands."""
 
+from zimpasta.command import Invocation, Option
 from zimpasta.console import Console
 from zimpasta.model.export import ExportFormat, ExportResult, export_schedules
 from zimpasta.model.generate import Schedule
@@ -7,10 +8,42 @@ from zimpasta.prompts import (
     UNWRITABLE_FILENAME,
     VALID_FILENAME_PROMPT,
     OutputTarget,
+    ask_format,
     ask_output_path,
     ask_yes_no,
     overwrite_prompt,
 )
+
+FORMATS = tuple(fmt.value for fmt in ExportFormat)
+FORMAT_PROMPT = "Output format (csv/Json): "
+
+EXPORT_OPTIONS = (
+    Option("format", required=True, choices=FORMATS),
+    Option("output", required=True, help="output file; the extension is added"),
+    Option("overwrite", flag=True, help="replace an existing output file"),
+)
+"""The ``--format``, ``--output``, and ``--overwrite`` options of every command that exports."""
+
+
+def ask_missing_export_options(console: Console, invocation: Invocation) -> dict[str, str | bool]:
+    """Ask for ``--format`` and ``--output`` when the command line left them out.
+
+    Returns only the options that were asked for, ready to merge into the builder's
+    options; ``overwrite`` is set when the user agreed to replace an existing file.
+    """
+    asked: dict[str, str | bool] = {}
+    given_format = invocation.get("format")
+    if given_format is None:
+        fmt = ask_format(console, FORMAT_PROMPT)
+        asked["format"] = fmt.value
+    else:
+        fmt = ExportFormat(str(given_format))
+    if invocation.get("output") is None:
+        target = ask_output_path(console, fmt)
+        asked["output"] = str(target.path)
+        if target.overwrite:
+            asked["overwrite"] = True
+    return asked
 
 
 def export_with_prompts(

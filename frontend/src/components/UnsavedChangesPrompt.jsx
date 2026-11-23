@@ -1,6 +1,6 @@
-import { useEffect } from "react";
 import { useBlocker } from "react-router";
-import ConfirmDialog from "./ConfirmDialog.jsx";
+import ConfirmDialog from "./dialogs/ConfirmDialog.jsx";
+import { useWarnBeforeUnload } from "../state/useWarnBeforeUnload.js";
 
 /**
  * Put this in a page that has a form draft. While `when` is true, switching modes or
@@ -13,15 +13,7 @@ export default function UnsavedChangesPrompt({
 }) {
   const blocker = useBlocker(when);
 
-  useEffect(() => {
-    if (!when) return undefined;
-    const warn = (event) => {
-      event.preventDefault();
-      event.returnValue = "";
-    };
-    window.addEventListener("beforeunload", warn);
-    return () => window.removeEventListener("beforeunload", warn);
-  }, [when]);
+  useWarnBeforeUnload(when);
 
   return (
     <ConfirmDialog

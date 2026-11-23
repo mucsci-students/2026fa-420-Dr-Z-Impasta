@@ -2,6 +2,11 @@
 
 import json
 import shutil
+import socket
+import subprocess
+import time
+import urllib.request
+from collections.abc import Iterator
 from functools import partial
 from pathlib import Path
 
@@ -9,7 +14,22 @@ import pytest
 from scheduler import CombinedConfig, Scheduler
 
 from tests.helpers import EXAMPLE_CONFIG, FIXTURE_CONFIG, FakeSchedulerFactory, build_config_data
+from zimpasta.controller.static import BUILT_GUI
 from zimpasta.model.generate import generate_schedules
+
+pytestmark = pytest.mark.skipif(
+    not (BUILT_GUI / "index.html").exists(), reason="Run npm run build in frontend first."
+)
+
+RUN_SERVER = ["uv", "run", "zimpasta", "--gui", "--no-browser"]
+
+
+@pytest.fixture(autouse=True)
+def no_real_database(monkeypatch):
+    """Tests never touch a real account database: no DATABASE_URL, and the GUI's .env
+    loading does nothing. Account tests use an in-memory SQLite store instead."""
+    monkeypatch.delenv("DATABASE_URL", raising=False)
+    monkeypatch.setattr("zimpasta.gui.load_environment", lambda: None)
 
 
 @pytest.fixture
@@ -60,3 +80,43 @@ def fake_factory(real_schedules: list) -> FakeSchedulerFactory:
 def fake_generator(fake_factory: FakeSchedulerFactory):
     """``generate_schedules`` wired to the fake solver, for command-level tests."""
     return partial(generate_schedules, scheduler_factory=fake_factory)
+
+
+def free_port():
+    with socket.socket() as probe:
+        probe.bind(("127.0.0.1", 0))
+        return probe.getsockname()[1]
+
+
+@pytest.fixture
+def site() -> Iterator[str]:
+    port = free_port()
+    url = f"http://127.0.0.1:{port}"
+
+    server = subprocess.Popen([*RUN_SERVER, "--port", str(port)])
+
+    try:
+        deadline = time.time() + 30
+
+        while time.time() < deadline:
+            if server.poll() is not None:
+                raise RuntimeError("Server stopped unexpectedly.")
+
+            try:
+                urllib.request.urlopen(url, timeout=1)
+                break
+            except Exception:
+                time.sleep(0.2)
+        else:
+            raise RuntimeError("Server failed to start.")
+
+        yield url
+
+    finally:
+        if server.poll() is None:
+            server.terminate()
+            try:
+                server.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                server.kill()
+                server.wait()

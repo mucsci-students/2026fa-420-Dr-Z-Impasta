@@ -7,8 +7,7 @@ import Field from "../../../components/Field.jsx";
 import { formIssues } from "../../../components/issues.js";
 import EditDialog from "./EditDialog.jsx";
 import { useDraft } from "./useDraft.js";
-
-const toNumber = (text) => (text === "" ? null : Number(text));
+import { toNumber } from "../forms.js";
 
 /**
  * The "Advanced timing options": max_time_gap and min_time_overlap. Save hands back
