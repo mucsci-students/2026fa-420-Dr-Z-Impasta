@@ -1,0 +1,258 @@
+[
+  [
+    {
+      "course": "CMSC 161.01",
+      "faculty": "Dr. Smith",
+      "room": "Roddy 140",
+      "times": [
+        {
+          "day": 1,
+          "start": 540,
+          "duration": 50,
+          "delivery": "in_person"
+        },
+        {
+          "day": 3,
+          "start": 540,
+          "duration": 50,
+          "delivery": "in_person"
+        },
+        {
+          "day": 5,
+          "start": 540,
+          "duration": 50,
+          "delivery": "in_person"
+        }
+      ],
+      "reserve_room_during_lab": true
+    },
+    {
+      "course": "CMSC 162.01",
+      "faculty": "Dr. Jones",
+      "room": "Roddy 140",
+      "lab": "Linux",
+      "times": [
+        {
+          "day": 2,
+          "start": 660,
+          "duration": 75,
+          "delivery": "in_person"
+        },
+        {
+          "day": 4,
+          "start": 660,
+          "duration": 75,
+          "delivery": "in_person"
+        },
+        {
+          "day": 3,
+          "start": 780,
+          "duration": 110,
+          "delivery": "in_person"
+        }
+      ],
+      "lab_index": 2,
+      "reserve_room_during_lab": true
+    },
+    {
+      "course": "CMSC 340.02",
+      "faculty": "Dr. Smith",
+      "room": "Roddy 147",
+      "lab": "Mac",
+      "times": [
+        {
+          "day": 1,
+          "start": 840,
+          "duration": 50,
+          "delivery": "in_person"
+        },
+        {
+          "day": 5,
+          "start": 840,
+          "duration": 50,
+          "delivery": "in_person"
+        },
+        {
+          "day": 2,
+          "start": 480,
+          "duration": 110,
+          "delivery": "in_person"
+        }
+      ],
+      "lab_index": 2,
+      "reserve_room_during_lab": false
+    },
+    {
+      "course": "CMSC 420.01",
+      "faculty": "Dr. Maximiliana Alexandrovna Featherstonehaugh-Montgomery-Vanderbilt III",
+      "room": "Annex 12",
+      "times": [
+        {
+          "day": 2,
+          "start": 810,
+          "duration": 75,
+          "delivery": "in_person"
+        },
+        {
+          "day": 4,
+          "start": 810,
+          "duration": 75,
+          "delivery": "in_person"
+        }
+      ],
+      "reserve_room_during_lab": true
+    },
+    {
+      "course": "CMSC 453.01",
+      "faculty": "Dr. Brown",
+      "room": "Roddy 147",
+      "lab": "Annex 12",
+      "times": [
+        {
+          "day": 1,
+          "start": 600,
+          "duration": 50,
+          "delivery": "in_person"
+        },
+        {
+          "day": 3,
+          "start": 600,
+          "duration": 50,
+          "delivery": "in_person"
+        },
+        {
+          "day": 4,
+          "start": 960,
+          "duration": 110,
+          "delivery": "in_person"
+        }
+      ],
+      "lab_index": 2,
+      "reserve_room_during_lab": true
+    },
+    {
+      "course": "CMSC 101.01",
+      "faculty": "Dr. Jones",
+      "times": [
+        {
+          "day": 1,
+          "start": 600,
+          "duration": 75,
+          "delivery": "in_person"
+        },
+        {
+          "day": 3,
+          "start": 600,
+          "duration": 75,
+          "delivery": "in_person"
+        }
+      ],
+      "reserve_room_during_lab": true
+    },
+    {
+      "course": "CMSC 110.90",
+      "faculty": "Dr. Brown",
+      "room": "Roddy 140",
+      "times": [
+        {
+          "day": 2,
+          "start": 1080,
+          "duration": 150,
+          "delivery": "online"
+        }
+      ],
+      "reserve_room_during_lab": true
+    },
+    {
+      "course": "CMSC 161.02",
+      "faculty": "Dr. Smith",
+      "room": "Roddy 140",
+      "times": [
+        {
+          "day": 1,
+          "start": 480,
+          "duration": 50,
+          "delivery": "in_person"
+        },
+        {
+          "day": 3,
+          "start": 480,
+          "duration": 50,
+          "delivery": "in_person"
+        },
+        {
+          "day": 5,
+          "start": 480,
+          "duration": 50,
+          "delivery": "in_person"
+        }
+      ],
+      "reserve_room_during_lab": true
+    }
+  ],
+  [
+    {
+      "course": "CMSC 161.01",
+      "faculty": "Dr. Jones",
+      "room": "Roddy 147",
+      "times": [
+        {
+          "day": 2,
+          "start": 570,
+          "duration": 75,
+          "delivery": "in_person"
+        },
+        {
+          "day": 4,
+          "start": 570,
+          "duration": 75,
+          "delivery": "in_person"
+        }
+      ],
+      "reserve_room_during_lab": true
+    },
+    {
+      "course": "CMSC 340.02",
+      "faculty": "Dr. Smith",
+      "room": "Roddy 140",
+      "lab": "Mac",
+      "times": [
+        {
+          "day": 1,
+          "start": 840,
+          "duration": 50,
+          "delivery": "in_person"
+        },
+        {
+          "day": 5,
+          "start": 840,
+          "duration": 50,
+          "delivery": "in_person"
+        },
+        {
+          "day": 2,
+          "start": 480,
+          "duration": 110,
+          "delivery": "in_person"
+        }
+      ],
+      "lab_index": 2,
+      "reserve_room_during_lab": true
+    }
+  ],
+  [
+    {
+      "course": "CMSC 110.90",
+      "faculty": "Dr. Brown",
+      "times": [
+        {
+          "day": 2,
+          "start": 1080,
+          "duration": 150,
+          "delivery": "online"
+        }
+      ],
+      "reserve_room_during_lab": true
+    }
+  ]
+]

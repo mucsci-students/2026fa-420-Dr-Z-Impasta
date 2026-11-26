@@ -4,8 +4,9 @@ import { useEffect, useId, useRef } from "react";
  * A modal dialog built on the native <dialog> element, which keeps keyboard focus inside
  * it and closes on Escape (calling `onClose`). Render it with `open` and put the buttons
  * in `actions`; give the one that should have focus first a `data-autofocus` attribute.
+ * Use `width` and `className` to customize its frame.
  */
-export default function Dialog({ open, title, onClose, actions, tone, children, width }) {
+export default function Dialog({ open, title, onClose, actions, tone, children, width, className = "" }) {
   const ref = useRef(null);
   const titleId = useId();
 
@@ -22,7 +23,7 @@ export default function Dialog({ open, title, onClose, actions, tone, children, 
   return (
     <dialog
       ref={ref}
-      className={`dialog ${tone ? `dialog--${tone}` : ""}`}
+      className={`dialog ${tone ? `dialog--${tone}` : ""} ${className}`.trim()}
       aria-labelledby={titleId}
       style={width ? { width } : undefined}
       onCancel={(event) => {

@@ -307,3 +307,78 @@
   color: var(--danger);
   font-size: 14px;
 }
+/* Export PDF dialog (PdfExportDialog.jsx) */
+.pdf-export {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.pdf-export__choice {
+  /* a fieldset, without the box */
+  border: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-5);
+}
+
+.pdf-export__choice legend {
+  width: 100%;
+  padding: 0;
+  margin-bottom: 6px;
+  font-weight: 500;
+  color: var(--ink-2);
+}
+
+.pdf-export__option {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+
+.pdf-export__option input {
+  width: auto;
+  margin: 0;
+  accent-color: var(--accent);
+}
+
+.pdf-export__review {
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface-2);
+}
+
+.pdf-export__review h3 {
+  margin-bottom: var(--space-2);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.pdf-export__review dl {
+  display: grid;
+  gap: 4px;
+  margin: 0 0 var(--space-2);
+}
+
+.pdf-export__review dl > div {
+  display: grid;
+  grid-template-columns: 110px 1fr;
+  gap: var(--space-2);
+}
+
+.pdf-export__review dt {
+  color: var(--muted);
+}
+
+.pdf-export__review dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.pdf-export__review p {
+  font-size: 12px;
+}

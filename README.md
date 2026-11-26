@@ -109,8 +109,43 @@ header shows how many there are (*3 schedules*).
 - **Export…** saves *This schedule* or *All schedules* as JSON or CSV. Saving works as
   described under **Files** above, and a message confirms the file name. JSON exports load
   back with **Load JSON…**; CSV is the same format the shell writes.
+- **Export PDF…** makes a print-friendly PDF of one schedule, generated or loaded, without
+  generating again. Choose the *Schedule* (the one on screen is preselected), *Group by*
+  **Room / Lab** or **Faculty**, the *Export scope* (all rooms and labs, all faculty
+  members, or one room, lab, or faculty member from that schedule), and the *Paper* (US
+  Letter by default, or A4). The *Review* box shows what will be exported and the file
+  name (`schedule_1_room_lab.pdf`, `schedule_1_faculty.pdf`, `schedule_1_room_roddy_140.pdf`,
+  `schedule_1_lab_linux.pdf`, `schedule_1_faculty_hardy.pdf`); **Export PDF** saves it as
+  described under **Files** above. See [Schedule PDFs](#schedule-pdfs).
 - **Clear results…** removes every generated and loaded schedule after you confirm. The
   configuration is not affected.
+
+#### Schedule PDFs
+
+A PDF has a header (the schedule, the grouping, the scope, and when it was made), then one
+bold heading and one table per room, lab, or faculty member, and *Page N of M* at the
+bottom of every page.
+
+- **By room and lab:** rooms first, then labs, each by name; a room and a lab with the
+  same name are separate. Columns: course, section, type, faculty, days, start, end. A lab
+  meeting is listed under its lab, and also under the section's room as *Lab (room
+  reserved)* when that room stays reserved. Online meetings and meetings without a room
+  are not in a room or lab, so they are counted in a note instead; the faculty PDF lists
+  them.
+- **By faculty:** faculty by name. Columns: course, section, type, room or lab, days,
+  start, end. An online meeting says *Online*, and a meeting with no room says *No
+  physical resource assigned*.
+- **Rows:** meetings of one section that differ only by weekday share a row (*MWF*). Rows
+  are ordered by their first weekday, then start time, then course, then section. Times
+  are 12-hour (*9:00 AM*); a missing value prints as *TBA* or *Not assigned*.
+- **Printing:** portrait, 0.75 in margins, black text with gray rules, so it reads the same
+  in black and white. Long names wrap inside their column. A table that continues on the
+  next page repeats its column headings and names its room, lab, or faculty member again;
+  a row is never split across pages.
+- **Safeguards:** exporting only reads the schedules. A schedule with nothing to export, a
+  missing choice, or a failure is explained in the dialog, and the schedules stay as they
+  were. The PDF is made in the browser, so where it is saved is the browser's choice (see
+  **Files**).
 
 If the schedules can't be read from the server, the page says so and offers **Retry**.
 Nothing is deleted.
@@ -157,6 +192,13 @@ Accounts live in a PostgreSQL database (Neon) named by `DATABASE_URL` in `.env`.
 are stored only as salted scrypt hashes, and one user can never reach another's states.
 [docs/accounts.md](docs/accounts.md) has the setup, the feature's acceptance criteria and
 size, the API, and its limitations.
+
+It needs a Database URL API key in the environment when the app starts:
+
+```bash
+export DATABASE_URL=...          # Windows PowerShell: $env:DATABASE_URL = "..."
+uv run zimpasta --gui
+```
 
 ## The shell
 
@@ -234,6 +276,10 @@ npm run build
 npm run build:browser
 npm run test:browser
 ```
+
+`npm test` in `frontend/` runs the PDF export's tests (`tests/test_schedule_pdf_export.js`),
+which draw real PDFs and read them back. `tests/test_pdf_export_gui.py` exports PDFs
+through the dialog in a browser, as part of `uv run pytest`; it needs `npm run build` first.
 
 `uv run ruff format .` fixes Python formatting in place. `uv run pytest` is the whole test
 suite: the Model, the Controller (including every API route), and the shell. It never calls
@@ -791,6 +837,10 @@ new server-side workflow as an `AppController` method with pytest tests.
   nothing else while a schedule is being solved, and loses its session when the tab closes.
 - The AI assistant needs `uv run zimpasta --gui` and an OpenAI key; the hosted browser
   version has no assistant. It answers one message at a time.
+- Schedule PDFs use the PDF format's built-in Helvetica, which has Western European
+  characters only: other letters lose their accents (*Nguyễn* prints as *Nguyen*) or print
+  as *?*. A PDF covers one schedule; export each schedule you need. The PDF is a table,
+  not a picture of the timetable.
 - The Viewer's timetable covers 08:00–20:00. A meeting outside those hours is cut off or
   left off the grid; the Table view lists every meeting.
 
