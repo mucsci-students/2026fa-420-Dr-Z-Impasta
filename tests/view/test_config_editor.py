@@ -6,25 +6,7 @@ are skipped until the GUI is built (``npm run build`` in ``frontend/``).
 
 import re
 
-import pytest
 from playwright.sync_api import Page, expect
-
-from tests.helpers import EXAMPLE_CONFIG
-
-
-@pytest.fixture
-def loaded_config_page(page: Page, site: str) -> Page:
-    """The editor with the example configuration loaded through Load JSON…."""
-    page.goto(site)
-
-    page.get_by_role("button", name="Load JSON...").click()
-    page.locator('input[type="file"]').set_input_files(EXAMPLE_CONFIG)
-
-    expect(
-        page.get_by_role("heading", level=2, name="No configuration loaded", exact=True)
-    ).not_to_be_visible(timeout=10000)
-
-    return page
 
 
 def test_init_page_load(page: Page, site: str):

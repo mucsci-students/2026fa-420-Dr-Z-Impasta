@@ -209,7 +209,10 @@ class AppController:
         self.prevDoc = {}
 
     def get_prev_doc(self):
-        return self.prevDoc
+        with self._lock:
+            doc = self.prevDoc
+            self.set_history_data_to_empty()
+            return doc
 
     # --------------------------------------------------------------- generation
 

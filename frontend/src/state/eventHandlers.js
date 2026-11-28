@@ -55,20 +55,55 @@ const recordRedoStep = (content) => {
   HISTORY.pushToCurr(ORIGINATOR.storeFile());
 };
 
-export const getHistData = async () => {
-	// getHistData() retrieves changes 
+export const undo = async(currDoc, filename, setError, setPendingLoad) => {
+  const memento = HISTORY.pop();
+  if(memento == undefined) return false;
+
+  // push snapshot of current state, before undoing, to redo-action's history array
+  recordRedoStep(currDoc);
+
+  ORIGINATOR.restore(memento);
+  return sendLoad(filename, JSON.stringify(ORIGINATOR.doc), true, setError, setPendingLoad);
+};
+export const redo = async(currDoc, filename, setError, setPendingLoad) => {
+  const memento = HISTORY.popCurr();
+  if(memento == undefined) return false;
+
+  // push snapshot of current state, before re-doing, to undo-action's history array
+  recordUndoStep(currDoc);
+
+  ORIGINATOR.restore(memento);
+  return sendLoad(filename, JSON.stringify(ORIGINATOR.doc), true, setError, setPendingLoad);
+};
+
+
+export const setConfigHistory = async (setError) => {
+	// setConfigHistory() retrieves changes 
 	// made to the config file by the backend 
 	// (like the AI chatbot) and adds them to the history
 
 	try {
 		const doc = await api.chat.getHistoryData();
-		if(doc && Object.keys(doc).length > 0){
-			console.log(doc);
+
+		//Handles case if the AI made an edit 
+		//before an initial config file was loaded in
+		if(Object.keys(doc).length == 0) {
+			ORIGINATOR.set({});
+			HISTORY = new ConfigFileHistory(ORIGINATOR);
+		}
+
+		else if(doc && Object.keys(doc).length > 0) {
 			recordUndoStep(doc);
 		}
+		return true;
 	} 
 	catch(error) {
-		console.log(error);
+		
+		showPageError(setError, error, error.code);
+		return false;
+	}
+};
+
 export const userSignsSubmit = async(event, setMessage, isSignUp, setError, setCredentialsValid) => {
   event.preventDefault();
   const data = new FormData(event.currentTarget);
@@ -161,27 +196,6 @@ const createState = async(name, copy, setError) => {
 	return true;
 };
 
-export const redo = async(currDoc, filename, setError, setPendingLoad) => {
-  const memento = HISTORY.popCurr();
-  if(memento == undefined) return false;
-
-  // push snapshot of current state, before re-doing, to undo-action's history array
-  recordUndoStep(currDoc);
-
-  ORIGINATOR.restore(memento);
-  return sendLoad(filename, JSON.stringify(ORIGINATOR.doc), true, setError, setPendingLoad);
-};
-
-export const undo = async(currDoc, filename, setError, setPendingLoad) => {
-  const memento = HISTORY.pop();
-  if(memento == undefined) return false;
-
-  // push snapshot of current state, before undoing, to redo-action's history array
-  recordRedoStep(currDoc);
-
-  ORIGINATOR.restore(memento);
-  return sendLoad(filename, JSON.stringify(ORIGINATOR.doc), true, setError, setPendingLoad);
-};
 
 /** Send a file's text to the server, then show what happened. */
 const sendLoad = async(filename, content, discardChanges, setError, setPendingLoad) => {

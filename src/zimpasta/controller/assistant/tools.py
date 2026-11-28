@@ -450,14 +450,11 @@ def describe_fields(app: "AppController", args: DescribeArguments) -> ToolResult
 
 
 def edit_configuration(app: "AppController", args: EditArguments) -> ToolResult:
-    prevDoc = deepcopy(app.configuration()["document"])
+    return _apply_changes(app, args.changes, confirmed=False)
 
-    changes = _apply_changes(app, args.changes, confirmed=False)
 
-    if changes.status == "done":
-        app.push_history_data(prevDoc)
-
-    return changes
+def push_to_history(app: "AppController", prevDoc: dict):
+    app.push_history_data(prevDoc)
 
 
 class _Rejected(Exception):
@@ -477,6 +474,8 @@ def _apply_changes(app: "AppController", changes: list[Change], *, confirmed: bo
     indexes of existing items don't move. Deletes run last, highest index first, so every
     index means what it meant before the call.
     """
+    prevDoc = deepcopy(app.configuration()["document"])
+
     numbered = list(enumerate(changes, start=1))
     deletes = [(n, c) for n, c in numbered if c.action == "delete"]
     targets = [(c.area, c.index) for _, c in deletes]
@@ -522,6 +521,9 @@ def _apply_changes(app: "AppController", changes: list[Change], *, confirmed: bo
         error["message"] = message
         error["change"] = rejected.number
         return ToolResult("failed", message, error=error)
+
+    # push old config document to history
+    push_to_history(app, prevDoc)
 
     return ToolResult.done(
         _sentence(done),
